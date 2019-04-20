@@ -233,6 +233,11 @@ class PCE {
 		this.VScreenWidthArray[0x30] = 128;
 
 		this.SPLine = new Array(576);
+		for(let i=0; i<this.SPLine.length; i++)
+			this.SPLine[i] = {data: 0x00,
+					  palette: 0x00,
+					  no: 255,
+					  priority: 0x00};
 
 		this.ReverseBit = new Array(0x100);
 		for(let i=0; i<this.ReverseBit.length; i++)
@@ -502,16 +507,10 @@ class PCE {
 	/* **** CPU **** */
 	/* ************* */
 	CPUReset() {
-		this.TransferSource = 0x0000;
-		this.TransferDestination = 0x0000;
-		this.TransferLength = 0;
-		this.TransferAlternate = 1;
-		this.TransferIFlag = 0;
-
-		this.CPUBaseClock = this.BaseClock1;
-
 		this.SetIFlag();
 		this.PC = this.Get16(0xFFFE);
+		this.CPUBaseClock = this.BaseClock1;
+		this.LastInt = 0x00;
 	}
 
 
@@ -523,15 +522,8 @@ class PCE {
 		this.S = 0;
 		this.P = 0x00;
 
-		this.TransferSource = 0x0000;
-		this.TransferDestination = 0x0000;
-		this.TransferLength = 0;
-		this.TransferAlternate = 1;
-		this.TransferIFlag = 0;
-
 		this.ProgressClock = 0;
 		this.CPUBaseClock = this.BaseClock1;
-
 		this.LastInt = 0x00;
 	}
 
@@ -2525,7 +2517,7 @@ class PCE {
 				}
 			}
 
-			if(this.VLineCount == (this.VDS + this.VSW - 16 + this.VDW + 2)) {
+			if(this.VLineCount == (this.VDS + this.VSW - 16 + this.VDW + 3)) {
 				this.VDCStatus |= (this.VDCRegister[0x05] & 0x08) << 2;//SetVSync INT
 				this.Ctx.putImageData(this.ImageData, 0, 0, 0, 0, this.ScreenSize[this.VCEBaseClock], 240);
 				this.DrawFlag = true;
@@ -2546,7 +2538,7 @@ class PCE {
 			else
 				this.RasterCount++;
 
-			if(this.RasterCount == this.VDCRegister[0x06])
+			if(this.RasterCount == this.VDCRegister[0x06] && (this.VDCStatus & 0x20) == 0x00)
 				this.VDCStatus |= this.VDCRegister[0x05] & 0x04;//SetRaster INT
 		}
 	}
@@ -2812,23 +2804,20 @@ class PCE {
 		this.SoundInit();
 
 		for(let i=0; i<this.PSGChannel.length; i++)
-			this.PSGChannel[i] = {R:[0,0,0,0,0,0,0,0,0,0],
-					      keyon:false,
+			this.PSGChannel[i] = {R: new Array(10).fill(0),
+					      keyon: false,
 					      dda: false,
-					      freq:0,
-					      count:0,
-					      vol:0,
-					      leftvol:0,
-					      rightvol:0,
-					      noiseon:false,
-					      noisefreq:0,
-					      noise:0x8000,
-					      noisestate:0,
-					      index:0,
-					      wave:[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]};
+					      freq: 0,
+					      count: 0,
+					      vol: 0,
+					      leftvol: 0,
+					      rightvol: 0,
+					      noiseon: false,
+					      noisefreq: 0,
+					      noise: 0x8000,
+					      noisestate: 0,
+					      index: 0,
+					      wave: new Array(32).fill(0)};
 	}
 
 
