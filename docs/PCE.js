@@ -1989,9 +1989,12 @@ class PCE {
 	}
 
 
-	SetROM(rom, type) {
+	SetROM(rom) {
 		this.Init();
-		this.Mapper = new this.Mapper0(rom.slice(rom.length % 8192), this);
+		let tmp = rom.slice(rom.length % 8192);
+		//if(tmp[0x001FFF] < 0xE0)
+		//	tmp = tmp.map((d) => {return this.ReverseBit[d];});
+		this.Mapper = new this.Mapper0(tmp, this);
 		this.CPUReset();
 	}
 
