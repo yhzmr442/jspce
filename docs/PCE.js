@@ -96,10 +96,6 @@ class PCE {
 		this.INTIRQ2 = 0x00;
 		this.IntDisableRegister = 0;
 
-		this.ROMTypePCE = 0;
-		this.ROMTypeTG16 = 1;
-		this.ROMTypeAUTO = 2;
-
 		this.Mapper = null;
 
 		this.MapperBase = class {
@@ -298,7 +294,7 @@ class PCE {
 
 		this.CountryTypePCE = 1;
 		this.CountryTypeTG16 = 0;
-		this.CountryType = this.CountryTypeTG16;
+		this.CountryType = this.CountryTypePCE;
 
 		this.Keybord = [[0xBF, 0xBF, 0xBF, 0xBA],
 				[0xBF, 0xBF, 0xBF, 0xBA],
@@ -506,14 +502,6 @@ class PCE {
 	/* **** CPU **** */
 	/* ************* */
 	CPUReset() {
-		this.TransferSource = 0x0000;
-		this.TransferDestination = 0x0000;
-		this.TransferLength = 0;
-		this.TransferAlternate = 1;
-		this.TransferIFlag = 0;
-
-		this.CPUBaseClock = this.BaseClock1;
-
 		this.SetIFlag();
 		this.PC = this.Get16(0xFFFE);
 	}
@@ -526,12 +514,6 @@ class PCE {
 		this.PC = 0;
 		this.S = 0;
 		this.P = 0x00;
-
-		this.TransferSource = 0x0000;
-		this.TransferDestination = 0x0000;
-		this.TransferLength = 0;
-		this.TransferAlternate = 1;
-		this.TransferIFlag = 0;
 
 		this.ProgressClock = 0;
 		this.CPUBaseClock = this.BaseClock1;
@@ -2001,7 +1983,7 @@ class PCE {
 	}
 
 
-	SetROM(rom, type) {
+	SetROM(rom) {
 		this.Init();
 		let tmp = rom.slice(rom.length % 8192);
 		//if(tmp[0x001FFF] < 0xE0)
@@ -2813,23 +2795,20 @@ class PCE {
 		this.SoundInit();
 
 		for(let i=0; i<this.PSGChannel.length; i++)
-			this.PSGChannel[i] = {R:[0,0,0,0,0,0,0,0,0,0],
-					      keyon:false,
-					      dda: false,
-					      freq:0,
-					      count:0,
-					      vol:0,
-					      leftvol:0,
-					      rightvol:0,
-					      noiseon:false,
-					      noisefreq:0,
-					      noise:0x8000,
-					      noisestate:0,
-					      index:0,
-					      wave:[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]};
+			this.PSGChannel[i] = {  R: new Array(10).fill(0),
+						keyon: false,
+						dda: false,
+						freq: 0,
+						count: 0,
+						vol: 0,
+						leftvol: 0,
+						rightvol: 0,
+						noiseon: false,
+						noisefreq: 0,
+						noise: 0x8000,
+						noisestate: 0,
+						index: 0,
+						wave: new Array(32).fill(0)};
 	}
 
 
