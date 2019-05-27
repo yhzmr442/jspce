@@ -32,22 +32,22 @@ class PCE {
 		 2, 7, 7, 0, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6];//0xF0
 
 		this.OpBytes = [
-		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 0, 3, 3, 3, 0,// 0x00
-		 0, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 0, 3, 3, 3, 0,// 0x10
-		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 0, 3, 3, 3, 0,// 0x20
-		 0, 2, 2, 0, 2, 2, 2, 2, 1, 3, 1, 0, 3, 3, 3, 0,// 0x30
-		 0, 2, 1, 2, 0, 2, 2, 2, 1, 2, 1, 0, 0, 3, 3, 0,// 0x40
-		 0, 2, 2, 2, 1, 2, 2, 2, 1, 3, 1, 0, 0, 3, 3, 0,// 0x50
-		 0, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 0, 0, 3, 3, 0,// 0x60
-		 0, 2, 2, 0, 2, 2, 2, 2, 1, 3, 1, 0, 0, 3, 3, 0,// 0x70
-		 0, 2, 1, 3, 2, 2, 2, 2, 1, 2, 1, 0, 3, 3, 3, 0,// 0x80
-		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 0, 3, 3, 3, 0,// 0x90
-		 2, 2, 2, 3, 2, 2, 2, 2, 1, 2, 1, 0, 3, 3, 3, 0,// 0xA0
-		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 0, 3, 3, 3, 0,// 0xB0
-		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 0, 3, 3, 3, 0,// 0xC0
-		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 0, 0, 3, 3, 0,// 0xD0
-		 2, 2, 0, 0, 2, 2, 2, 2, 1, 2, 1, 0, 3, 3, 3, 0,// 0xE0
-		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 0, 0, 3, 3, 0];//0xF0
+		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x00
+		 0, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x10
+		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x20
+		 0, 2, 2, 1, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x30
+		 0, 2, 1, 2, 0, 2, 2, 2, 1, 2, 1, 1, 0, 3, 3, 0,// 0x40
+		 0, 2, 2, 2, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0,// 0x50
+		 0, 2, 1, 1, 2, 2, 2, 2, 1, 2, 1, 1, 0, 3, 3, 0,// 0x60
+		 0, 2, 2, 0, 2, 2, 2, 2, 1, 3, 1, 1, 0, 3, 3, 0,// 0x70
+		 0, 2, 1, 3, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x80
+		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x90
+		 2, 2, 2, 3, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xA0
+		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0xB0
+		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xC0
+		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0,// 0xD0
+		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xE0
+		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0];//0xF0
 
 		this.A = 0;
 		this.X = 0;
@@ -95,6 +95,10 @@ class PCE {
 
 		this.INTIRQ2 = 0x00;
 		this.IntDisableRegister = 0;
+
+		this.ROMTypePCE = 0;
+		this.ROMTypeTG16 = 1;
+		this.ROMTypeAUTO = 2;
 
 		this.Mapper = null;
 
@@ -233,11 +237,6 @@ class PCE {
 		this.VScreenWidthArray[0x30] = 128;
 
 		this.SPLine = new Array(576);
-		for(let i=0; i<this.SPLine.length; i++)
-			this.SPLine[i] = {data: 0x00,
-					  palette: 0x00,
-					  no: 255,
-					  priority: 0x00};
 
 		this.ReverseBit = new Array(0x100);
 		for(let i=0; i<this.ReverseBit.length; i++)
@@ -299,7 +298,7 @@ class PCE {
 
 		this.CountryTypePCE = 1;
 		this.CountryTypeTG16 = 0;
-		this.CountryType = this.CountryTypePCE;
+		this.CountryType = this.CountryTypeTG16;
 
 		this.Keybord = [[0xBF, 0xBF, 0xBF, 0xBA],
 				[0xBF, 0xBF, 0xBF, 0xBA],
@@ -507,10 +506,16 @@ class PCE {
 	/* **** CPU **** */
 	/* ************* */
 	CPUReset() {
+		this.TransferSource = 0x0000;
+		this.TransferDestination = 0x0000;
+		this.TransferLength = 0;
+		this.TransferAlternate = 1;
+		this.TransferIFlag = 0;
+
+		this.CPUBaseClock = this.BaseClock1;
+
 		this.SetIFlag();
 		this.PC = this.Get16(0xFFFE);
-		this.CPUBaseClock = this.BaseClock1;
-		this.LastInt = 0x00;
 	}
 
 
@@ -522,8 +527,15 @@ class PCE {
 		this.S = 0;
 		this.P = 0x00;
 
+		this.TransferSource = 0x0000;
+		this.TransferDestination = 0x0000;
+		this.TransferLength = 0;
+		this.TransferAlternate = 1;
+		this.TransferIFlag = 0;
+
 		this.ProgressClock = 0;
 		this.CPUBaseClock = this.BaseClock1;
+
 		this.LastInt = 0x00;
 	}
 
@@ -1493,7 +1505,7 @@ class PCE {
 				this.CPUBaseClock = this.BaseClock1;
 				break;
 			default:
-				this.CPUReset();
+				this.ClearTFlag();//NOP
 				break;
 		}
 		this.PC += this.OpBytes[op];
@@ -1989,7 +2001,7 @@ class PCE {
 	}
 
 
-	SetROM(rom) {
+	SetROM(rom, type) {
 		this.Init();
 		let tmp = rom.slice(rom.length % 8192);
 		//if(tmp[0x001FFF] < 0xE0)
@@ -2566,14 +2578,8 @@ class PCE {
 		let tmp = this.ScreenSize[this.VCEBaseClock];
 
 		if(this.MainCanvas.width != tmp) {
-			this.MainCanvas.style.width = (tmp * 2) + 'px';
+			//this.MainCanvas.style.width = (tmp * 2) + 'px';//<--
 			this.MainCanvas.width = tmp;
-			for(let i=0; i<576*263*4; i+=4) {
-				this.ImageData.data[i] = 0;
-				this.ImageData.data[i + 1] = 0;
-				this.ImageData.data[i + 2] = 0;
-				this.ImageData.data[i + 3] = 255;
-			}
 		}
 		this.VDCBurst = (r[0x05] & 0x00C0) == 0x0000 ? true : false;
 	}
@@ -2807,20 +2813,23 @@ class PCE {
 		this.SoundInit();
 
 		for(let i=0; i<this.PSGChannel.length; i++)
-			this.PSGChannel[i] = {R: new Array(10).fill(0),
-					      keyon: false,
+			this.PSGChannel[i] = {R:[0,0,0,0,0,0,0,0,0,0],
+					      keyon:false,
 					      dda: false,
-					      freq: 0,
-					      count: 0,
-					      vol: 0,
-					      leftvol: 0,
-					      rightvol: 0,
-					      noiseon: false,
-					      noisefreq: 0,
-					      noise: 0x8000,
-					      noisestate: 0,
-					      index: 0,
-					      wave: new Array(32).fill(0)};
+					      freq:0,
+					      count:0,
+					      vol:0,
+					      leftvol:0,
+					      rightvol:0,
+					      noiseon:false,
+					      noisefreq:0,
+					      noise:0x8000,
+					      noisestate:0,
+					      index:0,
+					      wave:[0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+						    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00]};
 	}
 
 
@@ -2961,7 +2970,13 @@ class PCE {
 
 
 	GetPSG(r) {
-		return r <= 9 ? (r == 0 || r  == 1 || r == 8 || r == 9 ? this.PSGChannel[0].R[r] : this.PSGChannel[this.PSGChannel[0].R[0]].R[r]) : 0xFF;
+		if(r > 9)
+			return 0xFF;
+		if(r == 0 || r  == 1 || r == 8 || r == 9)
+			return this.PSGChannel[0].R[r];
+		if(this.PSGChannel[0].R[0] > 5)
+			return 0xFF;
+		return this.PSGChannel[this.PSGChannel[0].R[0]].R[r];
 	}
 
 
