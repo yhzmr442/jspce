@@ -2491,14 +2491,15 @@ class PCE {
 				this.GetScreenSize();
 			}
 
-			if(this.VLineCount == (this.VDS + this.VSW - 16))
-				this.DrawBGLineCount = this.VDCRegister[0x08] & this.VScreenHeightMask;
-
 			if(this.VLineCount < 240) {
 				if(this.VLineCount >= (this.VDS + this.VSW - 16) && this.VLineCount <= (this.VDS + this.VSW - 16 + this.VDW)) {
+					if(this.VLineCount == (this.VDS + this.VSW - 16))
+						this.DrawBGLineCount = this.VDCRegister[0x08] & this.VScreenHeightMask;
+					else
+						this.DrawBGLineCount = (this.DrawBGLineCount + 1) & this.VScreenHeightMask;
+
 					this.MakeSpriteLine();
 					this.MakeBGLine();
-					this.DrawBGLineCount = (this.DrawBGLineCount + 1) & this.VScreenHeightMask;
 				} else {
 					let data = this.ImageData.data;
 					let imageIndex = this.VLineCount * 576 * 4;
