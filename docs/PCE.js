@@ -2541,10 +2541,9 @@ class PCE {
 					this.DrawBGLine = this.VDCRegister[0x08] & this.VScreenHeightMask;
 				else
 					this.DrawBGLine = (this.DrawBGLine + 1) & this.VScreenHeightMask;
-
 				this.MakeSpriteLine();
 				this.MakeBGLine();
-			} else if(this.DrawBGYLine < (this.VDS + this.VSW + this.VDW + this.VCR + 3)) {//OVER SCAN
+			} else  {//OVER SCAN
 				this.MakeBGColorLine();
 			}
 
@@ -2553,7 +2552,7 @@ class PCE {
 			} else if(this.VLineCount < 14 + 242) {//ACTIVE DISPLAY
 			} else if(this.VLineCount < 14 + 242 + 4) {//OVER SCAN
 				this.MakeBGColorLine();
-			} else if(this.VLineCount < 14 + 242 + 4 + 3) {//BLANK SYNC
+			} else {//BLANK SYNC
 				this.MakeBlankColorLine();
 				if(this.VLineCount == 14 + 242 + 4) {
 					this.VDCStatus |= (this.VDCRegister[0x05] & 0x08) << 2;//SetVSync INT
@@ -2693,6 +2692,8 @@ class PCE {
 
 		if(this.VDCRegisterSelect == 0x01) {
 			this.VDCRegister[0x02] = this.VRAM[this.VDCRegister[0x01]];
+			this.VDCRegister[0x03] = this.VDCRegister[0x02];
+			this.VDCRegister[0x01] = (this.VDCRegister[0x01] + this.GetVRAMIncrement()) & 0xFFFF;
 			return;
 		}
 
@@ -2753,10 +2754,11 @@ class PCE {
 
 
 	GetVDCHigh(a) {
-		if(this.VDCRegisterSelect == 0x02) {
+		if(this.VDCRegisterSelect == 0x02 || this.VDCRegisterSelect == 0x03) {
 			let tmp = (this.VDCRegister[0x02] & 0xFF00) >> 8;
-			this.VDCRegister[0x01] = (this.VDCRegister[0x01] + this.GetVRAMIncrement()) & 0xFFFF;
 			this.VDCRegister[0x02] = this.VRAM[this.VDCRegister[0x01]];
+			this.VDCRegister[0x03] = this.VDCRegister[0x02];
+			this.VDCRegister[0x01] = (this.VDCRegister[0x01] + this.GetVRAMIncrement()) & 0xFFFF;
 			return tmp;
 		}
 
