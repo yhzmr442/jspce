@@ -205,6 +205,7 @@ class PCE {
 		this.VRAMtoVRAMCount = 0;
 
 		this.RasterCount = 0;
+		this.RasterCountAdd = 0;
 		this.VLineCount = 0;
 		this.VDCProgressClock = 0;
 		this.DrawBGYLine = 0;
@@ -2284,7 +2285,7 @@ class PCE {
 			return;
 
 		let dotcount = 0;
-		let line = this.VLineCount - (this.VDS + this.VSW);
+		let line = this.DrawBGYLine - (this.VDS + this.VSW);
 
 		let vram = this.VRAM;
 		let satb = this.SATB;
@@ -2383,11 +2384,11 @@ class PCE {
 					sp[x].no = i;
 
 				if(i != 0 && sp[x].no == 0) {
-					this.VDCStatus |= this.VDCRegister[0x05] & 0x01;//SetSpriteCollisionINT
+					this.VDCStatus |= this.VDCRegister[0x05] & 0x0001;//SetSpriteCollisionINT
 				}
 
 				if(++dotcount == 256) {
-					this.VDCStatus |= this.VDCRegister[0x05] & 0x02;//SetSpriteOverINT
+					this.VDCStatus |= this.VDCRegister[0x05] & 0x0002;//SetSpriteOverINT
 					if(this.SpriteLimit)
 						return;
 				}
@@ -2507,7 +2508,7 @@ class PCE {
 			this.VRAMtoSTABCount -= this.ProgressClock;
 			if(this.VRAMtoSTABCount <= 0) {
 				this.VDCStatus &= 0xBF;
-				this.VDCStatus |= (this.VDCRegister[0x0F] & 0x01) << 3;//VRAMtoSTAB INT
+				this.VDCStatus |= (this.VDCRegister[0x0F] & 0x0001) << 3;//VRAMtoSTAB INT
 			}
 		}
 
@@ -2515,7 +2516,7 @@ class PCE {
 			this.VRAMtoVRAMCount -= this.ProgressClock;
 			if(this.VRAMtoVRAMCount <= 0) {
 				this.VDCStatus &= 0xBF;
-				this.VDCStatus |= (this.VDCRegister[0x0F] & 0x02) << 3;//VRAMtoVRAM INT
+				this.VDCStatus |= (this.VDCRegister[0x0F] & 0x0002) << 3;//VRAMtoVRAM INT
 			}
 		}
 
@@ -2529,6 +2530,8 @@ class PCE {
 				this.VLineCount = 0;
 				this.DrawBGYLine = 0;
 				this.GetScreenSize();
+
+				this.RasterCountAdd =  (this.VDCRegister[0x05] & 0x0040) == 0x0000 ? 1 : 0;
 			}
 
 			if(this.DrawBGYLine == (this.VDS + this.VSW + this.VDW + this.VCR + 3))
@@ -2555,7 +2558,7 @@ class PCE {
 			} else {//BLANK SYNC
 				this.MakeBlankColorLine();
 				if(this.VLineCount == 14 + 242 + 4) {
-					this.VDCStatus |= (this.VDCRegister[0x05] & 0x08) << 2;//SetVSync INT
+					this.VDCStatus |= (this.VDCRegister[0x05] & 0x0008) << 2;//SetVSync INT
 					this.Ctx.putImageData(this.ImageData, 0, 0);
 					this.DrawFlag = true;
 					if(this.VRAMtoSTABStartFlag) {//VRAMtoSTAB
@@ -2563,7 +2566,7 @@ class PCE {
 							this.SATB[i] = this.VRAM[addr];
 						this.VRAMtoSTABCount = 256 * this.VCEBaseClock;
 						this.VDCStatus |= 0x40;
-						this.VRAMtoSTABStartFlag = (this.VDCRegister[0x0F] & 0x10) == 0x10;
+						this.VRAMtoSTABStartFlag = (this.VDCRegister[0x0F] & 0x0010) == 0x0010;
 					}
 				}
 			}
@@ -2576,8 +2579,8 @@ class PCE {
 			else
 				this.RasterCount++;
 
-			if(this.RasterCount == this.VDCRegister[0x06] && (this.VDCStatus & 0x20) == 0x00)
-				this.VDCStatus |= this.VDCRegister[0x05] & 0x04;//SetRaster INT
+			if(this.RasterCount == (this.VDCRegister[0x06] + this.RasterCountAdd) && (this.VDCStatus & 0x20) == 0x00)
+				this.VDCStatus |= this.VDCRegister[0x05] & 0x0004;//SetRaster INT
 		}
 	}
 
@@ -2645,6 +2648,7 @@ class PCE {
 		this.VRAMtoVRAMCount = 0;
 
 		this.VLineCount = 0;
+		this.RasterCountAdd = 0;
 		this.RasterCount = 64;
 		this.VDCProgressClock = 0;
 
@@ -2703,8 +2707,8 @@ class PCE {
 		}
 
 		if(this.VDCRegisterSelect == 0x12) {//VRAMtoVRAM
-			let si = (this.VDCRegister[0x0F] & 0x04) == 0x00 ? 1 : -1;
-			let di = (this.VDCRegister[0x0F] & 0x08) == 0x00 ? 1 : -1;
+			let si = (this.VDCRegister[0x0F] & 0x0004) == 0x0000 ? 1 : -1;
+			let di = (this.VDCRegister[0x0F] & 0x0008) == 0x0000 ? 1 : -1;
 
 			let s = this.VDCRegister[0x10];
 			let d = this.VDCRegister[0x11];
