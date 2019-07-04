@@ -56,11 +56,9 @@ class PCE {
 		this.S = 0;
 		this.P = 0;
 
-		this.NZCacheTable = new Array(0x100);
+		this.NZCacheTable = new Array(0x100).fill(0x00);
+		this.NZCacheTable = this.NZCacheTable.map((d, i) => { return i & 0x80; });
 		this.NZCacheTable[0x00] = 0x02;
-		for (let i=1; i<0x100; i++) {
-			this.NZCacheTable[i] = i & 0x80;
-		}
 
 		this.NFlag = 0x80;
 		this.VFlag = 0x40;
@@ -176,7 +174,6 @@ class PCE {
 			}
 		};
 
-
 		/* ************* */
 		/* **** VCE **** */
 		/* ************* */
@@ -205,7 +202,6 @@ class PCE {
 		this.VRAMtoVRAMCount = 0;
 
 		this.RasterCount = 0;
-		this.RasterCountAdd = 0;
 		this.VLineCount = 0;
 		this.VDCProgressClock = 0;
 		this.DrawBGYLine = 0;
@@ -240,16 +236,14 @@ class PCE {
 
 		this.SPLine = new Array(576);
 
-		this.ReverseBit = new Array(0x100);
-		for(let i=0; i<this.ReverseBit.length; i++)
-			this.ReverseBit[i] = ((i & 0x80) >> 7) | ((i & 0x40) >> 5) | 
-					     ((i & 0x20) >> 3) | ((i & 0x10) >> 1) | 
-					     ((i & 0x08) << 1) | ((i & 0x04) << 3) | 
-					     ((i & 0x02) << 5) | ((i & 0x01) << 7);
+		this.ReverseBit = new Array(0x100).fill(0x00);
+		this.ReverseBit = this.ReverseBit.map((d, i) => { return ((i & 0x80) >> 7) | ((i & 0x40) >> 5) | 
+									 ((i & 0x20) >> 3) | ((i & 0x10) >> 1) | 
+									 ((i & 0x08) << 1) | ((i & 0x04) << 3) | 
+									 ((i & 0x02) << 5) | ((i & 0x01) << 7); });
 
-		this.ReverseBit16 = new Array(0x10000);
-		for(let i=0; i<this.ReverseBit16.length; i++)
-			this.ReverseBit16[i] = (this.ReverseBit[i & 0x00FF] << 8) | this.ReverseBit[(i & 0xFF00) >> 8];
+		this.ReverseBit16 = new Array(0x10000).fill(0x00);
+		this.ReverseBit16 = this.ReverseBit16.map((d, i) => { return (this.ReverseBit[i & 0x00FF] << 8) | this.ReverseBit[(i & 0xFF00) >> 8]; });
 
 		/* *************** */
 		/* **** Sound **** */
@@ -2383,9 +2377,8 @@ class PCE {
 				if(sp[x].no == 255)
 					sp[x].no = i;
 
-				if(i != 0 && sp[x].no == 0) {
+				if(i != 0 && sp[x].no == 0)
 					this.VDCStatus |= this.VDCRegister[0x05] & 0x0001;//SetSpriteCollisionINT
-				}
 
 				if(++dotcount == 256) {
 					this.VDCStatus |= this.VDCRegister[0x05] & 0x0002;//SetSpriteOverINT
@@ -2413,7 +2406,45 @@ class PCE {
 
 		let sp = this.SPLine;
 
-		if((this.VDCRegister[0x05] & 0x0080) == 0x0000) {
+		if((this.VDCRegister[0x05] & 0x0080) == 0x0080) {
+			let WidthMask = this.VScreenWidth - 1;
+
+			let x = this.VDCRegister[0x07];
+			let index_x = (x >> 3) & WidthMask;
+			x = x & 0x07;
+
+			let y = this.DrawBGLine;
+			let index_y = ((y >> 3) & (this.VScreenHeight - 1)) * this.VScreenWidth;
+			y = y & 0x07;
+
+			let vram = this.VRAM;
+			let bgx = 0;
+
+			let revbit = this.ReverseBit;
+			while(bgx < this.ScreenWidth) {
+				let tmp = vram[index_x + index_y];
+				let address = ((tmp & 0x0FFF) << 4) + y;
+				let palette = (tmp & 0xF000) >> 8;
+
+				let data0 = revbit[vram[address] & 0x00FF];
+				let data1 = revbit[(vram[address] & 0xFF00) >> 8] << 1;
+				let data2 = revbit[vram[address + 8] & 0x00FF] << 2;
+				let data3 = revbit[(vram[address + 8] & 0xFF00) >> 8] << 3;
+
+				for(let j=x; j<8 && bgx < this.ScreenWidth; j++, bgx++, imageIndex+=4) {
+					let dot = ((data0 >> j) & 0x01) | ((data1 >> j) & 0x02) | ((data2 >> j) & 0x04) | ((data3 >> j) & 0x08);
+					let spcolor = sp[bgx].data;
+					let color = spcolor != 0x00 && (dot == 0x00 || sp[bgx].priority == 0x0080) ?
+								palettes[spcolor | sp[bgx].palette] : palettes[dot | (dot == 0x00 ? 0x00 : palette)];
+
+					data[imageIndex]     = color.r;
+					data[imageIndex + 1] = color.g;
+					data[imageIndex + 2] = color.b;
+				}
+				x = 0;
+				index_x = (index_x + 1) & WidthMask;
+			}
+		} else {
 			for(let i=0; i<this.ScreenWidth; i++, imageIndex+=4) {
 				let spcolor = sp[i].data;
 				let color = spcolor != 0x00 ? palettes[spcolor | sp[i].palette] : black;
@@ -2422,45 +2453,6 @@ class PCE {
 				data[imageIndex + 1] = color.g;
 				data[imageIndex + 2] = color.b;
 			}
-			return;
-		}
-
-		let WidthMask = this.VScreenWidth - 1;
-
-		let x = this.VDCRegister[0x07];
-		let index_x = (x >> 3) & WidthMask;
-		x = x & 0x07;
-
-		let y = this.DrawBGLine;
-		let index_y = ((y >> 3) & (this.VScreenHeight - 1)) * this.VScreenWidth;
-		y = y & 0x07;
-
-		let vram = this.VRAM;
-		let bgx = 0;
-
-		let revbit = this.ReverseBit;
-		while(bgx < this.ScreenWidth) {
-			let tmp = vram[index_x + index_y];
-			let address = ((tmp & 0x0FFF) << 4) + y;
-			let palette = (tmp & 0xF000) >> 8;
-
-			let data0 = revbit[vram[address] & 0x00FF];
-			let data1 = revbit[(vram[address] & 0xFF00) >> 8] << 1;
-			let data2 = revbit[vram[address + 8] & 0x00FF] << 2;
-			let data3 = revbit[(vram[address + 8] & 0xFF00) >> 8] << 3;
-
-			for(let j=x; j<8 && bgx < this.ScreenWidth; j++, bgx++, imageIndex+=4) {
-				let dot = ((data0 >> j) & 0x01) | ((data1 >> j) & 0x02) | ((data2 >> j) & 0x04) | ((data3 >> j) & 0x08);
-				let spcolor = sp[bgx].data;
-				let color = spcolor != 0x00 && (dot == 0x00 || sp[bgx].priority == 0x0080) ?
-							palettes[spcolor | sp[bgx].palette] : palettes[dot | (dot == 0x00 ? 0x00 : palette)];
-
-				data[imageIndex]     = color.r;
-				data[imageIndex + 1] = color.g;
-				data[imageIndex + 2] = color.b;
-			}
-			x = 0;
-			index_x = (index_x + 1) & WidthMask;
 		}
 
 		for(let i=0; i<this.ScreenSize[this.VCEBaseClock] - (this.ScreenWidth + this.HDS); i++) {
@@ -2530,8 +2522,6 @@ class PCE {
 				this.VLineCount = 0;
 				this.DrawBGYLine = 0;
 				this.GetScreenSize();
-
-				this.RasterCountAdd =  (this.VDCRegister[0x05] & 0x0040) == 0x0000 ? 1 : 0;
 			}
 
 			if(this.DrawBGYLine == (this.VDS + this.VSW + this.VDW + this.VCR + 3))
@@ -2540,10 +2530,7 @@ class PCE {
 			if(this.DrawBGYLine < (this.VDS + this.VSW)) {//OVER SCAN
 				this.MakeBGColorLine();
 			} else if(this.DrawBGYLine < (this.VDS + this.VSW + this.VDW)) {//ACTIVE DISPLAY
-				if(this.DrawBGYLine == (this.VDS + this.VSW))
-					this.DrawBGLine = this.VDCRegister[0x08] & this.VScreenHeightMask;
-				else
-					this.DrawBGLine = (this.DrawBGLine + 1) & this.VScreenHeightMask;
+				this.DrawBGLine = (this.DrawBGYLine == (this.VDS + this.VSW) ? this.VDCRegister[0x08] : (this.DrawBGLine + 1)) & this.VScreenHeightMask;
 				this.MakeSpriteLine();
 				this.MakeBGLine();
 			} else  {//OVER SCAN
@@ -2554,13 +2541,8 @@ class PCE {
 				this.MakeBlankColorLine();
 			} else if(this.VLineCount < 14 + 242) {//ACTIVE DISPLAY
 			} else if(this.VLineCount < 14 + 242 + 4) {//OVER SCAN
-				this.MakeBGColorLine();
-			} else {//BLANK SYNC
-				this.MakeBlankColorLine();
-				if(this.VLineCount == 14 + 242 + 4) {
+				if(this.VLineCount == 14 + 242) {
 					this.VDCStatus |= (this.VDCRegister[0x05] & 0x0008) << 2;//SetVSync INT
-					this.Ctx.putImageData(this.ImageData, 0, 0);
-					this.DrawFlag = true;
 					if(this.VRAMtoSTABStartFlag) {//VRAMtoSTAB
 						for(let i=0, addr=this.VDCRegister[0x13]; i<256; i++, addr++)
 							this.SATB[i] = this.VRAM[addr];
@@ -2569,17 +2551,23 @@ class PCE {
 						this.VRAMtoSTABStartFlag = (this.VDCRegister[0x0F] & 0x0010) == 0x0010;
 					}
 				}
+				this.MakeBGColorLine();
+			} else {//BLANK SYNC
+				this.MakeBlankColorLine();
+				if(this.VLineCount == 14 + 242 + 4 + 3 - 1) {
+					this.Ctx.putImageData(this.ImageData, 0, 0);
+					this.DrawFlag = true;
+				}
 			}
 
-			let tmp = this.VDS + this.VSW - 1;
-			if(tmp < 0)
-				tmp += 263;
-			if(this.DrawBGYLine == tmp)
+			if(this.DrawBGYLine == (this.VDS + this.VSW - 1))
 				this.RasterCount = 64;
+			else if(this.DrawBGYLine == (this.VDS + this.VSW))
+				this.RasterCount = (this.VDCRegister[0x05] & 0x0040) == 0x0000 ? 64 : 65;
 			else
 				this.RasterCount++;
 
-			if(this.RasterCount == (this.VDCRegister[0x06] + this.RasterCountAdd) && (this.VDCStatus & 0x20) == 0x00)
+			if(this.RasterCount == this.VDCRegister[0x06] && (this.VDCStatus & 0x20) == 0x00)
 				this.VDCStatus |= this.VDCRegister[0x05] & 0x0004;//SetRaster INT
 		}
 	}
@@ -2648,7 +2636,6 @@ class PCE {
 		this.VRAMtoVRAMCount = 0;
 
 		this.VLineCount = 0;
-		this.RasterCountAdd = 0;
 		this.RasterCount = 64;
 		this.VDCProgressClock = 0;
 
