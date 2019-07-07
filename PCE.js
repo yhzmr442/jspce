@@ -245,6 +245,16 @@ class PCE {
 		this.ReverseBit16 = new Array(0x10000).fill(0x00);
 		this.ReverseBit16 = this.ReverseBit16.map((d, i) => { return (this.ReverseBit[i & 0x00FF] << 8) | this.ReverseBit[(i & 0xFF00) >> 8]; });
 
+		this.SPAddressMask = [];
+		this.SPAddressMask[16] = [];
+		this.SPAddressMask[32] = [];
+		this.SPAddressMask[16][16] = 0x07FE;
+		this.SPAddressMask[16][32] = 0x07FE & 0x07FA;
+		this.SPAddressMask[16][64] = 0x07FE & 0x07F2;
+		this.SPAddressMask[32][16] = 0x07FC;
+		this.SPAddressMask[32][32] = 0x07FC & 0x07FA;
+		this.SPAddressMask[32][64] = 0x07FC & 0x07F2;
+
 		/* *************** */
 		/* **** Sound **** */
 		/* *************** */
@@ -2279,49 +2289,31 @@ class PCE {
 			return;
 
 		let dotcount = 0;
-		let line = this.DrawBGYLine - (this.VDS + this.VSW);
+		let line = this.DrawBGYLine - (this.VDS + this.VSW) + 64;
 
 		let vram = this.VRAM;
 		let satb = this.SATB;
 		let revbit16 = this.ReverseBit16;
 		for(let i=0, s=0; i<64; i++, s+=4) {
-
 			let y = satb[s] & 0x3FF;
 			let attribute = satb[s + 3];
 
-			let height;
-			switch(attribute & 0x3000) {
-				case 0x0000:
-					height = 16;
-					break;
-				case 0x1000:
-					height = 32;
-					break;
-				case 0x2000:
-				case 0x3000:
-					height = 64;
-					break;
-			}
+			let height = ((attribute & 0x3000) >> 8) + 16;
+			height = height > 32 ? 64 : height;
 
-			if((line + 64) < y || (line + 64) > (y + height - 1))
+			if(line < y || line > (y + height - 1))
 				continue;
 
-			let spy = (line + 64) - y;
+			let x = (satb[s + 1] & 0x3FF) - 32;
+			let width = ((attribute & 0x0100) >> 4) + 16;
+			if((x + width) <= 0)
+				continue;
+
+			let spy = line - y;
 			if((attribute & 0x8000) == 0x8000)
 				spy = (height - 1) - spy;
 
-			let width = (attribute & 0x0100) == 0x0000 ? 16 : 32;
-
-			let index = satb[s + 2] & 0x07FE;
-			if(width == 32)
-				index &= 0x07FC;
-
-			if(height == 32)
-				index &= 0x07FA;
-			else if(height == 64)
-				index &= 0x07F2;
-
-			index = (index << 5) | (((spy & 0x30) << 3) | (spy & 0x0F));
+			let index = ((satb[s + 2] & this.SPAddressMask[width][height]) << 5) | (((spy & 0x30) << 3) | (spy & 0x0F));
 
 			let data0;
 			let data1;
@@ -2353,7 +2345,6 @@ class PCE {
 
 			let palette = ((attribute & 0x000F) << 4) | 0x0100;
 			let priority = attribute  & 0x0080;
-			let x = (satb[s + 1] & 0x3FF) - 32;
 
 			let j = 0;
 			if(x < 0) {
