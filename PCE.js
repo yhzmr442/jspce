@@ -2279,10 +2279,11 @@ class PCE {
 	MakeSpriteLine() {
 		let sp = this.SPLine;
 		for(let i=0; i<this.ScreenWidth; i++) {
-			sp[i].data = 0x00;
-			sp[i].palette = 0x00;
-			sp[i].no = 255;
-			sp[i].priority = 0x00;
+			let spi = sp[i];
+			spi.data = 0x00;
+			spi.palette = 0x00;
+			spi.no = 255;
+			spi.priority = 0x00;
 		}
 
 		if((this.VDCRegister[0x05] & 0x0040) == 0x0000)
@@ -2358,17 +2359,18 @@ class PCE {
 					| (((data2 >>> j) << 2) & 0x0004)
 					| (((data3 >>> j) << 3) & 0x0008);
 
+				let spx = sp[x];
 
-				if(sp[x].data == 0x00 && dot != 0x00) {
-					sp[x].data = dot;
-					sp[x].palette = palette;
-					sp[x].priority = priority;
+				if(spx.data == 0x00 && dot != 0x00) {
+					spx.data = dot;
+					spx.palette = palette;
+					spx.priority = priority;
 				}
 
-				if(sp[x].no == 255)
-					sp[x].no = i;
+				if(spx.no == 255)
+					spx.no = i;
 
-				if(i != 0 && sp[x].no == 0)
+				if(i != 0 && spx.no == 0)
 					this.VDCStatus |= this.VDCRegister[0x05] & 0x0001;//SetSpriteCollisionINT
 
 				if(++dotcount == 256) {
@@ -2422,11 +2424,12 @@ class PCE {
 				let data2 = revbit[vram[address + 8] & 0x00FF] << 2;
 				let data3 = revbit[(vram[address + 8] & 0xFF00) >> 8] << 3;
 
-				for(let j=x; j<8 && bgx < this.ScreenWidth; j++, bgx++, imageIndex+=4) {
-					let dot = ((data0 >> j) & 0x01) | ((data1 >> j) & 0x02) | ((data2 >> j) & 0x04) | ((data3 >> j) & 0x08);
-					let spcolor = sp[bgx].data;
-					let color = spcolor != 0x00 && (dot == 0x00 || sp[bgx].priority == 0x0080) ?
-								palettes[spcolor | sp[bgx].palette] : palettes[dot | (dot == 0x00 ? 0x00 : palette)];
+				for(; x<8 && bgx < this.ScreenWidth; x++, bgx++, imageIndex+=4) {
+					let dot = ((data0 >> x) & 0x01) | ((data1 >> x) & 0x02) | ((data2 >> x) & 0x04) | ((data3 >> x) & 0x08);
+
+					let spbgx = sp[bgx];
+					let color = spbgx.data != 0x00 && (dot == 0x00 || spbgx.priority == 0x0080) ?
+								palettes[spbgx.data | spbgx.palette] : palettes[dot | (dot == 0x00 ? 0x00 : palette)];
 
 					data[imageIndex]     = color.r;
 					data[imageIndex + 1] = color.g;
@@ -2437,9 +2440,7 @@ class PCE {
 			}
 		} else {
 			for(let i=0; i<this.ScreenWidth; i++, imageIndex+=4) {
-				let spcolor = sp[i].data;
-				let color = spcolor != 0x00 ? palettes[spcolor | sp[i].palette] : black;
-
+				let color = sp[i].data != 0x00 ? palettes[sp[i].data | sp[i].palette] : black;
 				data[imageIndex]     = color.r;
 				data[imageIndex + 1] = color.g;
 				data[imageIndex + 2] = color.b;
