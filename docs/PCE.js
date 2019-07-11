@@ -197,8 +197,8 @@ class PCE {
 		this.VDCRegisterSelect = 0;
 		this.WriteVRAMData = 0;
 
-		this.VRAMtoSTABStartFlag = false;
-		this.VRAMtoSTABCount = 0;
+		this.VRAMtoSATBStartFlag = false;
+		this.VRAMtoSATBCount = 0;
 		this.VRAMtoVRAMCount = 0;
 
 		this.RasterCount = 0;
@@ -454,13 +454,13 @@ class PCE {
 
 	Run() {
 		this.CheckGamePad();
+		this.DrawFlag = false;
 		while(!this.DrawFlag) {
 			this.CPURun();
 			this.VDCRun();
 			this.TimerRun();
 			this.PSGRun();
 		}
-		this.DrawFlag = false;
 	}
 
 
@@ -2488,11 +2488,11 @@ class PCE {
 	VDCRun() {
 		this.VDCProgressClock += this.ProgressClock;
 
-		if(this.VRAMtoSTABCount > 0) {//VRAMtoSTAB
-			this.VRAMtoSTABCount -= this.ProgressClock;
-			if(this.VRAMtoSTABCount <= 0) {
+		if(this.VRAMtoSATBCount > 0) {//VRAMtoSATB
+			this.VRAMtoSATBCount -= this.ProgressClock;
+			if(this.VRAMtoSATBCount <= 0) {
 				this.VDCStatus &= 0xBF;
-				this.VDCStatus |= (this.VDCRegister[0x0F] & 0x0001) << 3;//VRAMtoSTAB INT
+				this.VDCStatus |= (this.VDCRegister[0x0F] & 0x0001) << 3;//VRAMtoSATB INT
 			}
 		}
 
@@ -2535,12 +2535,12 @@ class PCE {
 			} else if(this.VLineCount < 14 + 242 + 4) {//OVER SCAN
 				if(this.VLineCount == 14 + 242) {
 					this.VDCStatus |= (this.VDCRegister[0x05] & 0x0008) << 2;//SetVSync INT
-					if(this.VRAMtoSTABStartFlag) {//VRAMtoSTAB
+					if(this.VRAMtoSATBStartFlag) {//VRAMtoSATB
 						for(let i=0, addr=this.VDCRegister[0x13]; i<256; i++, addr++)
 							this.SATB[i] = this.VRAM[addr];
-						this.VRAMtoSTABCount = 256 * this.VCEBaseClock;
+						this.VRAMtoSATBCount = 256 * this.VCEBaseClock;
 						this.VDCStatus |= 0x40;
-						this.VRAMtoSTABStartFlag = (this.VDCRegister[0x0F] & 0x0010) == 0x0010;
+						this.VRAMtoSATBStartFlag = (this.VDCRegister[0x0F] & 0x0010) == 0x0010;
 					}
 				}
 				this.MakeBGColorLine();
@@ -2624,7 +2624,7 @@ class PCE {
 		this.DrawFlag = false;
 		this.VDCStatus = 0x00;
 
-		this.VRAMtoSTABCount = 0;
+		this.VRAMtoSATBCount = 0;
 		this.VRAMtoVRAMCount = 0;
 
 		this.VLineCount = 0;
@@ -2660,7 +2660,7 @@ class PCE {
 		}
 
 		if(this.VDCRegisterSelect == 0x0F)
-			this.VRAMtoSTABStartFlag = (this.VDCRegister[0x0F] & 0x10) == 0x10;
+			this.VRAMtoSATBStartFlag = (this.VDCRegister[0x0F] & 0x10) == 0x10;
 	}
 
 
@@ -2705,8 +2705,8 @@ class PCE {
 			return;
 		}
 
-		if(this.VDCRegisterSelect == 0x13)//VRAMtoSTAB
-			this.VRAMtoSTABStartFlag = true;
+		if(this.VDCRegisterSelect == 0x13)//VRAMtoSATB
+			this.VRAMtoSATBStartFlag = true;
 	}
 
 
