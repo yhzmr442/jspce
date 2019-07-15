@@ -219,6 +219,17 @@ class PCE {
 		this.ReverseBit16 = new Array(0x10000).fill(0x00);
 		this.ReverseBit16 = this.ReverseBit16.map((d, i) => { return (this.ReverseBit[i & 0x00FF] << 8) | this.ReverseBit[(i & 0xFF00) >> 8]; });
 
+		this.ReverseBit256 = new Array(0x100).fill(0x00);
+		this.ReverseBit256 = this.ReverseBit256.map((d, i) => { let b = this.ReverseBit[i];
+									return ((b & 0x80) << (28 - 7)) |
+									       ((b & 0x40) << (24 - 6)) |
+									       ((b & 0x20) << (20 - 5)) |
+									       ((b & 0x10) << (16 - 4)) |
+									       ((b & 0x08) << (12 - 3)) |
+									       ((b & 0x04) << ( 8 - 2)) |
+									       ((b & 0x02) << ( 4 - 1)) |
+									       ((b & 0x01) << ( 0 - 0)); });
+
 		this.SPAddressMask = [];
 		this.SPAddressMask[16] = [];
 		this.SPAddressMask[32] = [];
@@ -361,28 +372,7 @@ class PCE {
 			 [{type:"B", index:0}],// SHOT5
 			 [{type:"B", index:3}]]];// SHOT6
 
-		this.GamePadData["0f0d-0009-HORI PAD 3 TURBO"] = [// Firefox
-			[[{type:"B", index:2}],// SHOT1
-			 [{type:"B", index:1}],// SHOT2
-			 [{type:"B", index:8}],// SELECT
-			 [{type:"B", index:9}, {type:"B", index:0}],// RUN
-			 [{type:"AB", index:6}],// UP
-			 [{type:"AB", index:7}],// DOWN
-			 [{type:"AB", index:5}],// LEFT
-			 [{type:"AB", index:4}]],// RIGHT
-
-			[[{type:"B", index:2}],// SHOT1
-			 [{type:"B", index:1}],// SHOT2
-			 [{type:"B", index:8}],// SELECT
-			 [{type:"B", index:9}],// RUN
-			 [{type:"AB", index:6}],// UP
-			 [{type:"AB", index:7}],// DOWN
-			 [{type:"AB", index:5}],// LEFT
-			 [{type:"AB", index:4}],// RIGHT
-			 [{type:"B", index:7}],// SHOT3
-			 [{type:"B", index:5}],// SHOT4
-			 [{type:"B", index:0}],// SHOT5
-			 [{type:"B", index:3}]]];// SHOT6
+		this.GamePadData["0f0d-0009-HORI PAD 3 TURBO"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];// Firefox
 
 		this.GamePadKeyData = [{index:0, data:0x01}, {index:0, data:0x02},
 				       {index:0, data:0x04}, {index:0, data:0x08},
@@ -2443,17 +2433,17 @@ class PCE {
 			}
 
 			for(; j<width && x<vdcc.ScreenWidth; j++, x++) {
-				let dot =  ((data0 >>> j)       & 0x0001)
-					| (((data1 >>> j) << 1) & 0x0002)
-					| (((data2 >>> j) << 2) & 0x0004)
-					| (((data3 >>> j) << 3) & 0x0008);
-
 				let spx = sp[x];
-
-				if(spx.data == 0x00 && dot != 0x00) {
-					spx.data = dot;
-					spx.palette = palette;
-					spx.priority = priority;
+				if(spx.data == 0x00) {
+					let dot =  ((data0 >>> j)       & 0x0001)
+						| (((data1 >>> j) << 1) & 0x0002)
+						| (((data2 >>> j) << 2) & 0x0004)
+						| (((data3 >>> j) << 3) & 0x0008);
+					if(dot != 0x00) {
+						spx.data = dot;
+						spx.palette = palette;
+						spx.priority = priority;
+					}
 				}
 
 				if(spx.no == 255)
@@ -2484,7 +2474,7 @@ class PCE {
 
 			let x = vdcc.VDCRegister[0x07];
 			let index_x = (x >> 3) & WidthMask;
-			x = x & 0x07;
+			x = (x & 0x07) * 4;
 
 			let y = vdcc.DrawBGLine;
 			let index_y = ((y >> 3) & (vdcc.VScreenHeight - 1)) * vdcc.VScreenWidth;
@@ -2493,23 +2483,26 @@ class PCE {
 			let vram = vdcc.VRAM;
 			let bgx = 0;
 
-			let revbit = this.ReverseBit;
+			let revbit = this.ReverseBit256;
 			while(bgx < vdcc.ScreenWidth) {
 				let tmp = vram[index_x + index_y];
 				let address = ((tmp & 0x0FFF) << 4) + y;
 				let palette = (tmp & 0xF000) >> 8;
 
-				let data0 = revbit[vram[address] & 0x00FF];
-				let data1 = revbit[(vram[address] & 0xFF00) >> 8] << 1;
-				let data2 = revbit[vram[address + 8] & 0x00FF] << 2;
-				let data3 = revbit[(vram[address + 8] & 0xFF00) >> 8] << 3;
+				let data0 = vram[address];
+				let data1 = vram[address + 8];
+				let data = (revbit[ data0 & 0x00FF ]          ) |
+					   (revbit[(data0 & 0xFF00) >> 8] << 1) |
+					   (revbit[ data1 & 0x00FF ]      << 2) |
+					   (revbit[(data1 & 0xFF00) >> 8] << 3);
 
-				for(; x<8 && bgx < vdcc.ScreenWidth; x++, bgx++) {
-					let dot = ((data0 >> x) & 0x01) | ((data1 >> x) & 0x02) | ((data2 >> x) & 0x04) | ((data3 >> x) & 0x08);
+				for(; x<32 && bgx < vdcc.ScreenWidth; x+=4, bgx++) {
+					let dot = (data >>> x) & 0x0F;
 					let spbgx = sp[bgx];
 					bg[bgx] = spbgx.data != 0x00 && (dot == 0x00 || spbgx.priority == 0x0080) ?
 								spbgx.data | spbgx.palette : dot | (dot == 0x00 ? 0x00 : palette);
 				}
+
 				x = 0;
 				index_x = (index_x + 1) & WidthMask;
 			}
@@ -2618,73 +2611,20 @@ class PCE {
 
 
 	VDCRun() {
-		if(this.SuperGrafx)
-			this.VDCRunSGFX();
-		else
-			this.VDCRunPCE();
-	}
-
-
-	VDCRunPCE() {
-		let vdcc = this.VDC[0];
-		vdcc.VDCProgressClock += this.ProgressClock;
-
-		while(vdcc.VDCProgressClock >= 1368) {
-			this.VDCProcess(0);
-
-			if(vdcc.VLineCount < 14) {//OVER SCAN
-				this.MakeBlankColorLine(0);
-			} else if(vdcc.VLineCount < 14 + 242) {//ACTIVE DISPLAY
-				let palettes = this.Palettes;
-				let data = this.ImageData.data;
-				let imageIndex = vdcc.VLineCount * this.ScreenSize[this.BaseClock10] * 4;
-
-				let black = palettes[0x100];
-				for(let i=0; i<vdcc.HDS; i++, imageIndex+= 4) {
-					data[imageIndex]     = black.r;
-					data[imageIndex + 1] = black.g;
-					data[imageIndex + 2] = black.b;
-				}
-
-				for(let bgx=0; bgx < vdcc.ScreenWidth; bgx++, imageIndex+=4) {
-					let color = palettes[vdcc.BGLine[bgx]];
-					data[imageIndex]     = color.r;
-					data[imageIndex + 1] = color.g;
-					data[imageIndex + 2] = color.b;
-				}
-
-				for(let i=0; i<this.ScreenSize[this.VCEBaseClock] - (vdcc.ScreenWidth + vdcc.HDS); i++, imageIndex += 4) {
-					data[imageIndex]     = black.r;
-					data[imageIndex + 1] = black.g;
-					data[imageIndex + 2] = black.b;
-				}
-			} else if(vdcc.VLineCount < 14 + 242 + 4) {//OVER SCAN
-				this.MakeBGColorLine(0);
-			} else {//BLANK SYNC
-				this.MakeBlankColorLine(0);
-				if(vdcc.VLineCount == 14 + 242 + 4 + 3 - 1) {
-					this.Ctx.putImageData(this.ImageData, 0, 0);
-					vdcc.DrawFlag = true;
-				}
-			}
-		}
-	}
-
-
-	VDCRunSGFX() {
 		this.VDC[0].VDCProgressClock += this.ProgressClock;
-		this.VDC[1].VDCProgressClock += this.ProgressClock;
+		let vdccnt = 1;
+		if(this.SuperGrafx) {
+			this.VDC[1].VDCProgressClock += this.ProgressClock;
+			vdccnt = 2;
+		}
 
 		while(this.VDC[0].VDCProgressClock >= 1368) {
-			for(let vdcno=0; vdcno<2; vdcno++)
+			for(let vdcno=0; vdcno<vdccnt; vdcno++)
 				this.VDCProcess(vdcno);
 
 			if(this.VDC[0].VLineCount < 14) {//OVER SCAN
 				this.MakeBlankColorLine(0);
 			} else if(this.VDC[0].VLineCount < 14 + 242) {//ACTIVE DISPLAY
-				let window1 = this.VPCWindow1;
-				let window2 = this.VPCWindow2;
-				let priority = this.VPCPriority;
 
 				let palettes = this.Palettes;
 				let data = this.ImageData.data;
@@ -2697,32 +2637,32 @@ class PCE {
 					data[imageIndex + 2] = black.b;
 				}
 
-				for(let bgx=0; bgx < this.VDC[0].ScreenWidth; bgx++, imageIndex+=4) {
-					let wflag = 0x00;
-					if(bgx >= window1)
-						wflag |= 0x01;
-					if(bgx <= window2)
-						wflag |= 0x02;
+				if(this.SuperGrafx) {
+					let window1 = this.VPCWindow1;
+					let window2 = this.VPCWindow2;
+					let priority = this.VPCPriority;
 
-					let pri = priority[wflag];
-					let bg0 = this.VDC[0].BGLine[bgx];
-					let bg1 = this.VDC[1].BGLine[bgx];
+					let sw = this.VDC[0].ScreenWidth;
+					let bgl0 = this.VDC[0].BGLine;
+					let bgl1 = this.VDC[1].BGLine;
+					for(let bgx=0; bgx < sw; bgx++, imageIndex+=4) {
+						let wflag = 0x00;
+						if(bgx >= window1)
+							wflag |= 0x01;
+						if(bgx <= window2)
+							wflag |= 0x02;
 
-					let color;
-					if((pri & 0x03) == 0x00) {
-						color = palettes[0x100];
-					} else if((pri & 0x03) == 0x01) {
-						color = palettes[bg0];
-					} else if((pri & 0x03) == 0x02) {
-						color = palettes[bg1];
-					} else {
-						switch(pri & 0x0C) {
-							case 0x00:
-							case 0x0C:
+						let pri = priority[wflag];
+						let bg0 = bgl0[bgx];
+						let bg1 = bgl1[bgx];
+
+						let color;
+						switch(pri) {
+							case 0x00 | 0x03:
+							case 0x0C | 0x03:
 								color = palettes[(bg0 & 0x0FF) != 0x000 ? bg0 : bg1];
 								break;
-
-							case 0x04:
+							case 0x04 | 0x03:
 								if(bg0 > 0x100)
 									color = palettes[bg0];
 								else if(bg1 > 0x100)
@@ -2732,7 +2672,7 @@ class PCE {
 								else
 									color = palettes[bg1];
 								break;
-							case 0x08:
+							case 0x08 | 0x03:
 								if(bg0 < 0x100 && bg0 != 0x000)
 									color = palettes[bg0];
 								else if(bg1 > 0x100)
@@ -2742,11 +2682,36 @@ class PCE {
 								else
 									color = palettes[bg0];
 								break;
+							case 0x00 | 0x01:
+							case 0x04 | 0x01:
+							case 0x08 | 0x01:
+							case 0x0C | 0x01:
+								color = palettes[bg0];
+								break;
+							case 0x00 | 0x02:
+							case 0x04 | 0x02:
+							case 0x08 | 0x02:
+							case 0x0C | 0x02:
+								color = palettes[bg1];
+								break;
+							default:
+								color = palettes[0x100];
+								break;
 						}
+
+						data[imageIndex]     = color.r;
+						data[imageIndex + 1] = color.g;
+						data[imageIndex + 2] = color.b;
 					}
-					data[imageIndex]     = color.r;
-					data[imageIndex + 1] = color.g;
-					data[imageIndex + 2] = color.b;
+				} else {
+					let sw = this.VDC[0].ScreenWidth;
+					let bgl0 = this.VDC[0].BGLine;
+					for(let bgx=0; bgx < sw; bgx++, imageIndex+=4) {
+						let color = palettes[bgl0[bgx]];
+						data[imageIndex]     = color.r;
+						data[imageIndex + 1] = color.g;
+						data[imageIndex + 2] = color.b;
+					}
 				}
 
 				for(let i=0; i<this.ScreenSize[this.VCEBaseClock] - (this.VDC[0].ScreenWidth + this.VDC[0].HDS); i++, imageIndex += 4) {
