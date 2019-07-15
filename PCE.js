@@ -2356,8 +2356,6 @@ class PCE {
 	MakeSpriteLine(vdcno) {
 		let vdcc = this.VDC[vdcno];
 
-		let thisdotarray = new Array(4);
-
 		let sp = vdcc.SPLine;
 		for(let i=0; i<vdcc.ScreenWidth; i++) {
 			let spi = sp[i];
