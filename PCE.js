@@ -203,9 +203,17 @@ class PCE {
 		this.VDC = new Array(2);
 
 		this.ScreenSize = [];
-		this.ScreenSize[this.BaseClock5] = 320;
-		this.ScreenSize[this.BaseClock7] = 480;
-		this.ScreenSize[this.BaseClock10] = 640;
+		this.ScreenSize[this.BaseClock5] = 256;
+		this.ScreenSize[this.BaseClock7] = 352;
+		this.ScreenSize[this.BaseClock10] = 512;
+
+		this.ScreenSizeMAX = 512;
+
+		this.ScreenHDS = [];
+		this.ScreenHDS[this.BaseClock5] = 0x02 + 0x02;
+		this.ScreenHDS[this.BaseClock7] = 0x03 + 0x03;
+		this.ScreenHDS[this.BaseClock10] = 0x02 + 0x0B;
+
 
 		this.VScreenWidthArray = [];
 		this.VScreenWidthArray[0x00] = 32;
@@ -307,7 +315,6 @@ class PCE {
 		this.GamePadSelect = 0;
 		this.GamePadButtonSelect = 1;
 		this.GamePadButton6 = false;
-		//this.GamePadButton6 = true;//<--
 		this.MultiTap = false;
 
 		this.GamePadData = [];
@@ -465,7 +472,7 @@ class PCE {
 			return false;
 
 		this.Ctx = this.MainCanvas.getContext("2d");
-		this.ImageData = this.Ctx.createImageData(this.ScreenSize[this.BaseClock10], 263);
+		this.ImageData = this.Ctx.createImageData(this.ScreenSizeMAX, 263);
 		this.ClearImageData();
 		this.Ctx.putImageData(this.ImageData, 0, 0);
 
@@ -474,7 +481,7 @@ class PCE {
 
 
 	ClearImageData() {
-		for(let i=0; i<this.ScreenSize[this.BaseClock10]*263*4; i+=4) {
+		for(let i=0; i<this.ScreenSizeMAX*263*4; i+=4) {
 			this.ImageData.data[i] = 0;
 			this.ImageData.data[i + 1] = 0;
 			this.ImageData.data[i + 2] = 0;
@@ -2481,7 +2488,13 @@ class PCE {
 		vdcc.BGLine.fill(0x100);
 		let sp = vdcc.SPLine;
 		let bg = vdcc.BGLine;
-		let right = vdcc.HSW + vdcc.HDS;
+		let right = 0;
+		let sw = vdcc.ScreenWidth;
+
+		if((vdcc.HSW + vdcc.HDS) > this.ScreenHDS[this.VCEBaseClock]) {
+			right = ((vdcc.HSW + vdcc.HDS) - this.ScreenHDS[this.VCEBaseClock]) << 3;
+			sw -= right;
+		}
 
 		if((vdcc.VDCRegister[0x05] & 0x0080) == 0x0080) {
 			let WidthMask = vdcc.VScreenWidth - 1;
@@ -2498,7 +2511,7 @@ class PCE {
 			let bgx = 0;
 
 			let revbit = this.ReverseBit256;
-			while(bgx < vdcc.ScreenWidth) {
+			while(bgx < sw) {
 				let tmp = vram[index_x + index_y];
 				let address = ((tmp & 0x0FFF) << 4) + y;
 				let palette = (tmp & 0xF000) >> 8;
@@ -2510,7 +2523,7 @@ class PCE {
 					   (revbit[ data1 & 0x00FF ]      << 2) |
 					   (revbit[(data1 & 0xFF00) >> 8] << 3);
 
-				for(; x<32 && bgx < vdcc.ScreenWidth; x+=4, bgx++) {
+				for(; x<32 && bgx < sw; x+=4, bgx++) {
 					let dot = (data >>> x) & 0x0F;
 					let spbgx = sp[bgx];
 					bg[bgx + right] = spbgx.data != 0x00 && (dot == 0x00 || spbgx.priority == 0x0080) ?
@@ -2521,7 +2534,7 @@ class PCE {
 				index_x = (index_x + 1) & WidthMask;
 			}
 		} else {
-			for(let i=0; i<vdcc.ScreenWidth; i++)
+			for(let i=0; i<sw; i++)
 				bg[i + right] = sp[i].data != 0x00 ? sp[i].data | sp[i].palette : 0x100;
 		}
 	}
@@ -2534,7 +2547,7 @@ class PCE {
 
 	MakeBGColorLine(vdcno) {
 		let data = this.ImageData.data;
-		let imageIndex = this.VDC[vdcno].VLineCount * this.ScreenSize[this.BaseClock10] * 4;
+		let imageIndex = this.VDC[vdcno].VLineCount * this.ScreenSizeMAX * 4;
 		let black = (this.VCEControl & 0x80) == 0x00 ? this.PaletteData[0x100] : this.MonoPaletteData[0x100];
 
 		let cnt = this.ScreenSize[this.VCEBaseClock];
@@ -2549,7 +2562,7 @@ class PCE {
 
 	MakeBlankColorLine(vdcno) {
 		let data = this.ImageData.data;
-		let imageIndex = this.VDC[vdcno].VLineCount * this.ScreenSize[this.BaseClock10] * 4;
+		let imageIndex = this.VDC[vdcno].VLineCount * this.ScreenSizeMAX * 4;
 		let cnt = this.ScreenSize[this.VCEBaseClock];
 		for(let i=0; i<cnt; i++) {
 			data[imageIndex]     = 0;
@@ -2641,7 +2654,7 @@ class PCE {
 				let palettes = (this.VCEControl & 0x80) == 0x00 ? this.PaletteData : this.MonoPaletteData;
 
 				let data = this.ImageData.data;
-				let imageIndex = this.VDC[0].VLineCount * this.ScreenSize[this.BaseClock10] * 4;
+				let imageIndex = this.VDC[0].VLineCount * this.ScreenSizeMAX * 4;
 				let black = palettes[0x100];
 
 				let sw = this.ScreenSize[this.VCEBaseClock];
@@ -2734,13 +2747,13 @@ class PCE {
 		vdcc.VScreenHeightMask = vdcc.VScreenHeight * 8 - 1;
 		vdcc.ScreenWidth = ((r[0x0B] & 0x007F) + 1) * 8;
 
-		if(vdcc.ScreenWidth > this.ScreenSize[this.BaseClock10])
-			vdcc.ScreenWidth = this.ScreenSize[this.BaseClock10];
+		if(vdcc.ScreenWidth > this.ScreenSizeMAX)
+			vdcc.ScreenWidth = this.ScreenSizeMAX;
 
-		vdcc.HDS = (r[0x0A] & 0x7F00) >> 5;
-		vdcc.HSW = (r[0x0A] & 0x001F) << 3;
+		vdcc.HDS = (r[0x0A] & 0x7F00) >> 8;
+		vdcc.HSW = r[0x0A] & 0x001F;
 
-		vdcc.HDE = (r[0xBA] & 0x7F00) >> 5;
+		vdcc.HDE = (r[0xBA] & 0x7F00) >> 8;
 		vdcc.HDW = r[0x0B] & 0x007F;
 
 		vdcc.VDS = ((r[0x0C] & 0xFF00) >> 8) - 1;
@@ -2771,8 +2784,8 @@ class PCE {
 				DrawFlag: false,
 				SpriteLimit: false,
 
-				SPLine: new Array(this.ScreenSize[this.BaseClock10]),
-				BGLine: new Array(this.ScreenSize[this.BaseClock10]).fill(0x00),
+				SPLine: new Array(this.ScreenSizeMAX),
+				BGLine: new Array(this.ScreenSizeMAX).fill(0x00),
 
 				VDCStatus: 0x00,
 				VDCRegisterSelect: 0x00,
