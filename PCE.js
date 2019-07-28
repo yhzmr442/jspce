@@ -214,7 +214,6 @@ class PCE {
 		this.ScreenHDS[this.BaseClock7] = 0x03 + 0x03;
 		this.ScreenHDS[this.BaseClock10] = 0x02 + 0x0B;
 
-
 		this.VScreenWidthArray = [];
 		this.VScreenWidthArray[0x00] = 32;
 		this.VScreenWidthArray[0x10] = 64;
@@ -2380,7 +2379,7 @@ class PCE {
 		for(let i=0; i<vdcc.ScreenWidth; i++) {
 			let spi = sp[i];
 			spi.data = 0x00;
-			spi.palette = 0x00;
+			spi.palette = 0x100;
 			spi.no = 255;
 			spi.priority = 0x00;
 		}
@@ -2485,23 +2484,22 @@ class PCE {
 	MakeBGLine(vdcno) {
 		let vdcc = this.VDC[vdcno];
 
-		vdcc.BGLine.fill(0x100);
 		let sp = vdcc.SPLine;
 		let bg = vdcc.BGLine;
 		let right = 0;
 		let sw = vdcc.ScreenWidth;
 
-		if((vdcc.HSW + vdcc.HDS) > this.ScreenHDS[this.VCEBaseClock]) {
+		bg.fill(0x100);
+
+		if((vdcc.HSW + vdcc.HDS) > this.ScreenHDS[this.VCEBaseClock])
 			right = ((vdcc.HSW + vdcc.HDS) - this.ScreenHDS[this.VCEBaseClock]) << 3;
-			sw -= right;
-		}
 
 		if((vdcc.VDCRegister[0x05] & 0x0080) == 0x0080) {
 			let WidthMask = vdcc.VScreenWidth - 1;
 
 			let x = vdcc.VDCRegister[0x07];
 			let index_x = (x >> 3) & WidthMask;
-			x = (x & 0x07) * 4;
+			x = (x & 0x07) << 2;
 
 			let y = vdcc.DrawBGLine;
 			let index_y = ((y >> 3) & (vdcc.VScreenHeight - 1)) * vdcc.VScreenWidth;
@@ -2509,8 +2507,8 @@ class PCE {
 
 			let vram = vdcc.VRAM;
 			let bgx = 0;
-
 			let revbit = this.ReverseBit256;
+
 			while(bgx < sw) {
 				let tmp = vram[index_x + index_y];
 				let address = ((tmp & 0x0FFF) << 4) + y;
@@ -2523,7 +2521,7 @@ class PCE {
 					   (revbit[ data1 & 0x00FF ]      << 2) |
 					   (revbit[(data1 & 0xFF00) >> 8] << 3);
 
-				for(; x<32 && bgx < sw; x+=4, bgx++) {
+				for(; x<32 && bgx<sw; x+=4, bgx++) {
 					let dot = (data >>> x) & 0x0F;
 					let spbgx = sp[bgx];
 					bg[bgx + right] = spbgx.data != 0x00 && (dot == 0x00 || spbgx.priority == 0x0080) ?
@@ -2535,7 +2533,7 @@ class PCE {
 			}
 		} else {
 			for(let i=0; i<sw; i++)
-				bg[i + right] = sp[i].data != 0x00 ? sp[i].data | sp[i].palette : 0x100;
+				bg[i + right] = sp[i].data | sp[i].palette;
 		}
 	}
 
@@ -2573,24 +2571,25 @@ class PCE {
 	}
 
 
-	VDCProcess(vdcno) {
+	VDCProcessDMA(vdcno) {
 		let vdcc = this.VDC[vdcno];
 
 		if(vdcc.VRAMtoSATBCount > 0) {//VRAMtoSATB
 			vdcc.VRAMtoSATBCount -= this.ProgressClock;
-			if(vdcc.VRAMtoSATBCount <= 0) {
-				vdcc.VDCStatus &= 0xBF;
-				vdcc.VDCStatus |= (vdcc.VDCRegister[0x0F] & 0x0001) << 3;//VRAMtoSATB INT
-			}
+			if(vdcc.VRAMtoSATBCount <= 0)
+				vdcc.VDCStatus = (vdcc.VDCStatus & 0xBF) | ((vdcc.VDCRegister[0x0F] & 0x0001) << 3);//VRAMtoSATB INT
 		}
 
 		if(vdcc.VRAMtoVRAMCount > 0) {//VRAMtoVRAM
 			vdcc.VRAMtoVRAMCount -= this.ProgressClock;
-			if(vdcc.VRAMtoVRAMCount <= 0) {
-				vdcc.VDCStatus &= 0xBF;
-				vdcc.VDCStatus |= (vdcc.VDCRegister[0x0F] & 0x0002) << 3;//VRAMtoVRAM INT
-			}
+			if(vdcc.VRAMtoVRAMCount <= 0)
+				vdcc.VDCStatus = (vdcc.VDCStatus & 0xBF) | ((vdcc.VDCRegister[0x0F] & 0x0002) << 3);//VRAMtoVRAM INT
 		}
+	}
+
+
+	VDCProcess(vdcno) {
+		let vdcc = this.VDC[vdcno];
 
 		vdcc.VDCProgressClock -= 1368;
 		vdcc.VLineCount++;
@@ -2639,9 +2638,13 @@ class PCE {
 
 
 	VDCRun() {
+		this.VDCProcessDMA(0);
 		this.VDC[0].VDCProgressClock += this.ProgressClock;
-		if(this.SuperGrafx)
+
+		if(this.SuperGrafx) {
+			this.VDCProcessDMA(1);
 			this.VDC[1].VDCProgressClock += this.ProgressClock;
+		}
 
 		while(this.VDC[0].VDCProgressClock >= 1368) {
 			this.VDCProcess(0);
