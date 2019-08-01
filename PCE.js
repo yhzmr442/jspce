@@ -83,6 +83,11 @@ class PCE {
 		this.BaseClock7 = 3;
 		this.BaseClock10 = 2;
 
+		this.TransferSrc = 0;
+		this.TransferDist = 0;
+		this.TransferLen = 0;
+		this.TransferAlt = 0;
+
 		/* ***************** */
 		/* **** Storage **** */
 		/* ***************** */
@@ -509,6 +514,11 @@ class PCE {
 		this.ProgressClock = 0;
 		this.CPUBaseClock = this.BaseClock1;
 
+		this.TransferSrc = 0;
+		this.TransferDist = 0;
+		this.TransferLen = 0;
+		this.TransferAlt = 0;
+
 		this.LastInt = 0x00;
 	}
 
@@ -519,7 +529,7 @@ class PCE {
 		let tmp = this.LastInt;
 		this.LastInt = (this.P & this.IFlag) == 0x00 ? this.GetIntStatus() : 0x00;
 
-		if(tmp != 0x00) {
+		if(tmp != 0x00 && this.TransferLen == 0) {
 			this.LastInt = 0x00;
 
 			if((tmp & this.TIQFlag) == this.TIQFlag) {//TIQ
@@ -1385,83 +1395,105 @@ class PCE {
 					if((data & (bit << i)) != 0x00)
 						 this.A = this.MPR[i] >>> 13;
 				break;
+
 			case 0xF3: // TAI
-				src = this.Get16(this.PC + 1);
-				dist = this.Get16(this.PC + 3);
-				len = this.Get16(this.PC + 5);
-				alt = 1;
-				this.ProgressClock = 17;
-				do {
-					this.Set(dist, this.Get(src));
-					src = (src + alt) & 0xFFFF;
-					dist = (dist + 1) & 0xFFFF;
-					len = (len - 1) & 0xFFFF;
-					alt = alt == 1 ? -1 : 1;
-					this.ProgressClock += 6;
-				} while(len != 0)
-				this.ClearTFlag();
-				this.PC += 7;
+				if(this.TransferLen == 0) {
+					this.TransferSrc = this.Get16(this.PC + 1);
+					this.TransferDist = this.Get16(this.PC + 3);
+					this.TransferLen = this.Get16(this.PC + 5);
+					this.TransferAlt = 1;
+					this.ProgressClock = 17;
+				}
+
+				this.Set(this.TransferDist, this.Get(this.TransferSrc));
+				this.TransferSrc = (this.TransferSrc + this.TransferAlt) & 0xFFFF;
+				this.TransferDist = (this.TransferDist + 1) & 0xFFFF;
+				this.TransferLen = (this.TransferLen - 1) & 0xFFFF;
+				this.TransferAlt = this.TransferAlt == 1 ? -1 : 1;
+				this.ProgressClock += 6;
+
+				if(this.TransferLen == 0) {
+					this.ClearTFlag();
+					this.PC += 7;
+				}
 				break;
 			case 0xC3: // TDD
-				src = this.Get16(this.PC + 1);
-				dist = this.Get16(this.PC + 3);
-				len = this.Get16(this.PC + 5);
-				this.ProgressClock = 17;
-				do {
-					this.Set(dist, this.Get(src));
-					src = (src - 1) & 0xFFFF;
-					dist = (dist - 1) & 0xFFFF;
-					len = (len - 1) & 0xFFFF;
-					this.ProgressClock += 6;
-				} while(len != 0)
-				this.ClearTFlag();
-				this.PC += 7;
+				if(this.TransferLen == 0) {
+					this.TransferSrc = this.Get16(this.PC + 1);
+					this.TransferDist = this.Get16(this.PC + 3);
+					this.TransferLen = this.Get16(this.PC + 5);
+					this.ProgressClock = 17;
+				}
+
+				this.Set(this.TransferDist, this.Get(this.TransferSrc));
+				this.TransferSrc = (this.TransferSrc - 1) & 0xFFFF;
+				this.TransferDist = (this.TransferDist - 1) & 0xFFFF;
+				this.TransferLen = (this.TransferLen - 1) & 0xFFFF;
+				this.ProgressClock += 6;
+
+				if(this.TransferLen == 0) {
+					this.ClearTFlag();
+					this.PC += 7;
+				}
 				break;
 			case 0xE3: // TIA
-				src = this.Get16(this.PC + 1);
-				dist = this.Get16(this.PC + 3);
-				len = this.Get16(this.PC + 5);
-				alt = 1;
-				this.ProgressClock = 17;
-				do {
-					this.Set(dist, this.Get(src));
-					src = (src + 1) & 0xFFFF;
-					dist = (dist + alt) & 0xFFFF;
-					len = (len - 1) & 0xFFFF;
-					alt = alt == 1 ? -1 : 1;
-					this.ProgressClock += 6;
-				} while(len != 0)
-				this.ClearTFlag();
-				this.PC += 7;
+				if(this.TransferLen == 0) {
+					this.TransferSrc = this.Get16(this.PC + 1);
+					this.TransferDist = this.Get16(this.PC + 3);
+					this.TransferLen = this.Get16(this.PC + 5);
+					this.TransferAlt = 1;
+					this.ProgressClock = 17;
+				}
+
+				this.Set(this.TransferDist, this.Get(this.TransferSrc));
+				this.TransferSrc = (this.TransferSrc + 1) & 0xFFFF;
+				this.TransferDist = (this.TransferDist + this.TransferAlt) & 0xFFFF;
+				this.TransferLen = (this.TransferLen - 1) & 0xFFFF;
+				this.TransferAlt = this.TransferAlt == 1 ? -1 : 1;
+				this.ProgressClock += 6;
+
+				if(this.TransferLen == 0) {
+					this.ClearTFlag();
+					this.PC += 7;
+				}
 				break;
 			case 0x73: // TII
-				src = this.Get16(this.PC + 1);
-				dist = this.Get16(this.PC + 3);
-				len = this.Get16(this.PC + 5);
-				this.ProgressClock = 17;
-				do {
-					this.Set(dist, this.Get(src));
-					src = (src + 1) & 0xFFFF;
-					dist = (dist + 1) & 0xFFFF;
-					len = (len - 1) & 0xFFFF;
-					this.ProgressClock += 6;
-				} while(len != 0)
-				this.ClearTFlag();
-				this.PC += 7;
+				if(this.TransferLen == 0) {
+					this.TransferSrc = this.Get16(this.PC + 1);
+					this.TransferDist = this.Get16(this.PC + 3);
+					this.TransferLen = this.Get16(this.PC + 5);
+					this.ProgressClock = 17;
+				}
+
+				this.Set(this.TransferDist, this.Get(this.TransferSrc));
+				this.TransferSrc = (this.TransferSrc + 1) & 0xFFFF;
+				this.TransferDist = (this.TransferDist + 1) & 0xFFFF;
+				this.TransferLen = (this.TransferLen - 1) & 0xFFFF;
+				this.ProgressClock += 6;
+
+				if(this.TransferLen == 0) {
+					this.ClearTFlag();
+					this.PC += 7;
+				}
+
 				break;
 			case 0xD3: // TIN
-				src = this.Get16(this.PC + 1);
-				dist = this.Get16(this.PC + 3);
-				len = this.Get16(this.PC + 5);
-				this.ProgressClock = 17;
-				do {
-					this.Set(dist, this.Get(src));
-					src = (src + 1) & 0xFFFF;
-					len = (len - 1) & 0xFFFF;
-					this.ProgressClock += 6;
-				} while(len != 0)
-				this.ClearTFlag();
-				this.PC += 7;
+				if(this.TransferLen == 0) {
+					this.TransferSrc = this.Get16(this.PC + 1);
+					this.TransferDist = this.Get16(this.PC + 3);
+					this.TransferLen = this.Get16(this.PC + 5);
+					this.ProgressClock = 17;
+				}
+
+				this.Set(this.TransferDist, this.Get(this.TransferSrc));
+				this.TransferSrc = (this.TransferSrc + 1) & 0xFFFF;
+				this.TransferLen = (this.TransferLen - 1) & 0xFFFF;
+				this.ProgressClock += 6;
+
+				if(this.TransferLen == 0) {
+					this.ClearTFlag();
+					this.PC += 7;
+				}
 				break;
 
 			case 0xD4: // CSH
@@ -2606,12 +2638,15 @@ class PCE {
 
 		if(vdcc.DrawBGYLine < (vdcc.VDS + vdcc.VSW)) {//OVER SCAN
 			this.MakeBGColorLineVDC(vdcno);
-		} else if(vdcc.DrawBGYLine < (vdcc.VDS + vdcc.VSW + vdcc.VDW)) {//ACTIVE DISPLAY
+			vdcc.LineProcessing = false;
+		} else if(vdcc.DrawBGYLine <= (vdcc.VDS + vdcc.VSW + vdcc.VDW)) {//ACTIVE DISPLAY
 			vdcc.DrawBGLine = (vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW) ? vdcc.VDCRegister[0x08] : (vdcc.DrawBGLine + 1)) & vdcc.VScreenHeightMask;
 			this.MakeSpriteLine(vdcno);
 			this.MakeBGLine(vdcno);
+			vdcc.LineProcessing = true;
 		} else {//OVER SCAN
 			this.MakeBGColorLineVDC(vdcno);
+			vdcc.LineProcessing = false;
 		}
 
 		if(vdcc.VLineCount == 14 + 242) {
@@ -2767,7 +2802,6 @@ class PCE {
 		vdcc.VCR = r[0x0E] & 0x00FF;
 
 		let tmp = this.ScreenSize[this.VCEBaseClock];
-
 		if(this.MainCanvas.width != tmp) {
 			//this.MainCanvas.style.width = (tmp * 2) + 'px';//<--
 			this.MainCanvas.width = tmp;
@@ -2805,6 +2839,7 @@ class PCE {
 				DrawBGLine: 0,
 
 				VDCBurst: false,
+				LineProcessing: false,
 
 				VScreenWidth: 0,
 				VScreenHeight: 0,
@@ -2843,9 +2878,12 @@ class PCE {
 	SetVDCLow(data, vdcno) {
 		let vdcc = this.VDC[vdcno];
 
-		if(vdcc.VDCRegisterSelect == 0x02)
+		if(vdcc.VDCRegisterSelect == 0x02) {
+			if(vdcc.LineProcessing)
+				this.ProgressClock += this.CPUBaseClock;
+
 			vdcc.WriteVRAMData = data;
-		else
+		} else
 			vdcc.VDCRegister[vdcc.VDCRegisterSelect] = (vdcc.VDCRegister[vdcc.VDCRegisterSelect] & 0xFF00) | data;
 
 		if(vdcc.VDCRegisterSelect == 0x01) {
@@ -2867,6 +2905,9 @@ class PCE {
 		let vdcc = this.VDC[vdcno];
 
 		if(vdcc.VDCRegisterSelect == 0x02) {
+			if(vdcc.LineProcessing)
+				this.ProgressClock += this.CPUBaseClock;
+
 			vdcc.VRAM[vdcc.VDCRegister[0x00]] = vdcc.WriteVRAMData | (data << 8);
 			vdcc.VDCRegister[0x00] = (vdcc.VDCRegister[0x00] + this.GetVRAMIncrement(vdcno)) & 0xFFFF;
 			return;
@@ -2939,6 +2980,7 @@ class PCE {
 
 	GetVDCHigh(vdcno) {
 		let vdcc = this.VDC[vdcno];
+
 		if(vdcc.VDCRegisterSelect == 0x02 || vdcc.VDCRegisterSelect == 0x03) {
 			let tmp = (vdcc.VDCRegister[0x02] & 0xFF00) >> 8;
 			vdcc.VDCRegister[0x02] = vdcc.VRAM[vdcc.VDCRegister[0x01]];
