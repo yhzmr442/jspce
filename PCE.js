@@ -302,22 +302,19 @@ class PCE {
 		this.KeyUpFunction = null;
 		this.KeyDownFunction = null;
 
-		this.CountryTypePCE = 1;
-		this.CountryTypeTG16 = 0;
+		this.CountryTypePCE = 0x40;
+		this.CountryTypeTG16 = 0x00;
 		this.CountryType = this.CountryTypePCE;
 
-		this.Keybord = [[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA]];
-		this.GamePad = [[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA],
-				[0xBF, 0xBF, 0xBF, 0xBA]];
-		this.GamePadSelect = 0;
-		this.GamePadButtonSelect = 1;
+		this.Keybord = new Array(5).fill([]);
+		this.Keybord = this.Keybord.map((d) => { return new Array(4); });
+
+		this.GamePad = new Array(5).fill([]);
+		this.GamePad = this.Keybord.map((d) => { return new Array(4); });
+
+		this.GamePadSelect = 0x00;
+		this.GamePadButtonSelect = 0x00;
+		this.GamePadBuffer = 0x00;
 		this.GamePadButton6 = false;
 		this.MultiTap = false;
 
@@ -2518,13 +2515,11 @@ class PCE {
 
 		let sp = vdcc.SPLine;
 		let bg = vdcc.BGLine;
-		let right = 0;
 		let sw = vdcc.ScreenWidth;
 
 		bg.fill(0x100);
 
-		if((vdcc.HSW + vdcc.HDS) > this.ScreenHDS[this.VCEBaseClock])
-			right = ((vdcc.HSW + vdcc.HDS) - this.ScreenHDS[this.VCEBaseClock]) << 3;
+		let leftblank = vdcc.LeftBlank;
 
 		if((vdcc.VDCRegister[0x05] & 0x0080) == 0x0080) {
 			let WidthMask = vdcc.VScreenWidth - 1;
@@ -2548,15 +2543,15 @@ class PCE {
 
 				let data0 = vram[address];
 				let data1 = vram[address + 8];
-				let data = (revbit[ data0 & 0x00FF ]          ) |
+				let data = (revbit[ data0 & 0x00FF      ]     ) |
 					   (revbit[(data0 & 0xFF00) >> 8] << 1) |
-					   (revbit[ data1 & 0x00FF ]      << 2) |
+					   (revbit[ data1 & 0x00FF      ] << 2) |
 					   (revbit[(data1 & 0xFF00) >> 8] << 3);
 
 				for(; x<32 && bgx<sw; x+=4, bgx++) {
 					let dot = (data >>> x) & 0x0F;
 					let spbgx = sp[bgx];
-					bg[bgx + right] = spbgx.data != 0x00 && (dot == 0x00 || spbgx.priority == 0x0080) ?
+					bg[bgx + leftblank] = spbgx.data != 0x00 && (dot == 0x00 || spbgx.priority == 0x0080) ?
 								spbgx.data | spbgx.palette : dot | (dot == 0x00 ? 0x00 : palette);
 				}
 
@@ -2565,7 +2560,7 @@ class PCE {
 			}
 		} else {
 			for(let i=0; i<sw; i++)
-				bg[i + right] = sp[i].data | sp[i].palette;
+				bg[i + leftblank] = sp[i].data | sp[i].palette;
 		}
 	}
 
@@ -2711,12 +2706,11 @@ class PCE {
 						if(bgx <= window2)
 							wflag |= 0x02;
 
-						let pri = priority[wflag];
 						let bg0 = bgl0[bgx];
 						let bg1 = bgl1[bgx];
 
 						let color;
-						switch(pri) {
+						switch(priority[wflag]) {
 							case 0x04 | 0x03:
 								if(bg0 > 0x100 || bg1 > 0x100)
 									color = palettes[bg0 > 0x100 ? bg0 : bg1];
@@ -2791,7 +2785,7 @@ class PCE {
 		vdcc.HDS = (r[0x0A] & 0x7F00) >> 8;
 		vdcc.HSW = r[0x0A] & 0x001F;
 
-		vdcc.HDE = (r[0xBA] & 0x7F00) >> 8;
+		vdcc.HDE = (r[0x0B] & 0x7F00) >> 8;
 		vdcc.HDW = r[0x0B] & 0x007F;
 
 		vdcc.VDS = ((r[0x0C] & 0xFF00) >> 8) - 1;
@@ -2806,6 +2800,13 @@ class PCE {
 			//this.MainCanvas.style.width = (tmp * 2) + 'px';//<--
 			this.MainCanvas.width = tmp;
 		}
+
+		vdcc.LeftBlank = 0;
+		if(vdcc.ScreenWidth < tmp) {
+			if((vdcc.HSW + vdcc.HDS) > this.ScreenHDS[this.VCEBaseClock])
+				vdcc.LeftBlank = ((vdcc.HSW + vdcc.HDS) - this.ScreenHDS[this.VCEBaseClock]) << 3;
+		}
+
 		vdcc.VDCBurst = (r[0x05] & 0x00C0) == 0x0000 ? true : false;
 	}
 
@@ -2845,6 +2846,7 @@ class PCE {
 				VScreenHeight: 0,
 				VScreenHeightMask: 0,
 				ScreenWidth: 0,
+				LeftBlank: 0,
 
 				HDS: 0,
 				HSW: 0,
@@ -3303,18 +3305,12 @@ class PCE {
 			this.Keybord[i][0] = 0xBF;
 			this.Keybord[i][1] = 0xBF;
 			this.Keybord[i][2] = 0xBF;
-			this.Keybord[i][3] = 0xBA;
-		}
-
-		for(let i=0; i<this.GamePad.length; i++) {
-			this.GamePad[i][0] = 0xBF;
-			this.GamePad[i][1] = 0xBF;
-			this.GamePad[i][2] = 0xBF;
-			this.GamePad[i][3] = 0xBA;
+			this.Keybord[i][3] = 0xB0;
 		}
 
 		this.GamePadSelect = 0;
-		this.GamePadButtonSelect = 1;
+		this.GamePadButtonSelect = 0x00;
+		this.GamePadBuffer = 0x00;
 	}
 
 
@@ -3323,8 +3319,13 @@ class PCE {
 		let clr = (data & 0x02) >> 1;
 
 		if((this.JoystickSEL == 1 && this.JoystickCLR == 0) && (sel == 1 && clr == 1)) {
+			this.JoystickSEL = 0;
+			this.JoystickCLR = 0;
 			this.GamePadSelect = 0;
-			this.GamePadButtonSelect = (this.GamePadButtonSelect + 1) & 0x01;
+			if(this.GamePadButton6)
+				this.GamePadButtonSelect = this.GamePadButtonSelect ^ 0x02;
+			this.GamePadBuffer = 0xB0 | this.CountryType;
+			return;
 		}
 
 		if((this.JoystickSEL == 0 && this.JoystickCLR == 0) && (sel == 1 && clr == 0))
@@ -3332,16 +3333,18 @@ class PCE {
 
 		this.JoystickSEL = sel;
 		this.JoystickCLR = clr;
+
+		let no = this.MultiTap ? this.GamePadSelect - 1 : 0;
+		if(no < 5) {
+			let tmp =  this.GamePadButtonSelect | this.JoystickSEL;
+			this.GamePadBuffer = (this.Keybord[no][tmp] & this.GamePad[no][tmp]) | this.CountryType;
+		} else
+			this.GamePadBuffer = 0xB0 | this.CountryType;
 	}
 
 
 	GetJoystick() {
-		let sel = this.MultiTap ? this.GamePadSelect : 0;
-		if(sel < 5) {
-			let tmp = this.GamePadButton6 ? (this.GamePadButtonSelect << 1) | this.JoystickSEL : this.JoystickSEL;
-			return (this.Keybord[sel][tmp] & this.GamePad[sel][tmp]) | (this.CountryType << 6);
-		} else
-			return 0xBF | (this.CountryType << 6);
+		return this.GamePadBuffer;
 	}
 
 
@@ -3467,7 +3470,7 @@ class PCE {
 			this.GamePad[i][0] = 0xBF;
 			this.GamePad[i][1] = 0xBF;
 			this.GamePad[i][2] = 0xBF;
-			this.GamePad[i][3] = 0xBA;
+			this.GamePad[i][3] = 0xB0;
 		}
 
 		if(typeof navigator.getGamepads === "undefined")
