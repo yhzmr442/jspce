@@ -2636,8 +2636,11 @@ class PCE {
 			vdcc.LineProcessing = false;
 		} else if(vdcc.DrawBGYLine <= (vdcc.VDS + vdcc.VSW + vdcc.VDW)) {//ACTIVE DISPLAY
 			vdcc.DrawBGLine = (vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW) ? vdcc.VDCRegister[0x08] : (vdcc.DrawBGLine + 1)) & vdcc.VScreenHeightMask;
-			this.MakeSpriteLine(vdcno);
-			this.MakeBGLine(vdcno);
+			if(!vdcc.VDCBurst) {
+				this.MakeSpriteLine(vdcno);
+				this.MakeBGLine(vdcno);
+			} else
+				this.MakeBGColorLineVDC(vdcno);
 			vdcc.LineProcessing = true;
 		} else {//OVER SCAN
 			this.MakeBGColorLineVDC(vdcno);
