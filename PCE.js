@@ -82,6 +82,7 @@ class PCE {
 		this.BaseClock5 = 4;
 		this.BaseClock7 = 3;
 		this.BaseClock10 = 2;
+		this.BaseClock20 = 1;
 
 		this.TransferSrc = 0;
 		this.TransferDist = 0;
@@ -205,12 +206,17 @@ class PCE {
 		/* ************* */
 		/* **** VDC **** */
 		/* ************* */
+		this.VDCPutLineProgressClock = 0;
+		this.VDCPutLine = 0;
+		this.DrawFlag = false;
+
 		this.VDC = new Array(2);
 
 		this.ScreenSize = [];
 		this.ScreenSize[this.BaseClock5] = 256;
 		this.ScreenSize[this.BaseClock7] = 352;
 		this.ScreenSize[this.BaseClock10] = 512;
+		this.ScreenSize[this.BaseClock20] = 512;
 
 		this.ScreenSizeMAX = 512;
 
@@ -218,6 +224,7 @@ class PCE {
 		this.ScreenHDS[this.BaseClock5] = 0x02 + 0x02;
 		this.ScreenHDS[this.BaseClock7] = 0x03 + 0x03;
 		this.ScreenHDS[this.BaseClock10] = 0x02 + 0x0B;
+		this.ScreenHDS[this.BaseClock20] = 0x02 + 0x0B;
 
 		this.VScreenWidthArray = [];
 		this.VScreenWidthArray[0x00] = 32;
@@ -430,15 +437,13 @@ class PCE {
 
 	Run() {
 		this.CheckGamePad();
-		let vdcc = this.VDC[0];
-		vdcc.DrawFlag = false;
-		while(!vdcc.DrawFlag) {
+		this.DrawFlag = false;
+		while(!this.DrawFlag) {
 			this.CPURun();
 			this.VDCRun();
 			this.TimerRun();
 			this.PSGRun();
 		}
-		this.Ctx.putImageData(this.ImageData, 0, 0);
 	}
 
 
@@ -2288,8 +2293,11 @@ class PCE {
 				this.VCEBaseClock = this.BaseClock7;
 				break;
 			case 0x02:
-			case 0x03:
 				this.VCEBaseClock = this.BaseClock10;
+				break;
+			case 0x03:
+				this.VCEBaseClock = this.BaseClock20;
+				this.VDCPutLineInit();
 				break;
 		}
 	}
@@ -2571,7 +2579,7 @@ class PCE {
 
 	MakeBGColorLine(vdcno) {
 		let data = this.ImageData.data;
-		let imageIndex = this.VDC[vdcno].VLineCount * this.ScreenSizeMAX * 4;
+		let imageIndex = this.VDCPutLine * this.ScreenSizeMAX * 4;
 		let black = (this.VCEControl & 0x80) == 0x00 ? this.PaletteData[0x100] : this.MonoPaletteData[0x100];
 
 		let cnt = this.ScreenSize[this.VCEBaseClock];
@@ -2586,7 +2594,7 @@ class PCE {
 
 	MakeBlankColorLine(vdcno) {
 		let data = this.ImageData.data;
-		let imageIndex = this.VDC[vdcno].VLineCount * this.ScreenSizeMAX * 4;
+		let imageIndex = this.VDCPutLine * this.ScreenSizeMAX * 4;
 		let cnt = this.ScreenSize[this.VCEBaseClock];
 		for(let i=0; i<cnt; i++) {
 			data[imageIndex]     = 0;
@@ -2619,18 +2627,12 @@ class PCE {
 
 		vdcc.VDCProgressClock -= 1368;
 
-		vdcc.VLineCount++;
 		vdcc.DrawBGYLine++;
 
-		if(vdcc.VLineCount == 262) {
-			vdcc.DrawFlag = true;
-			vdcc.VLineCount = 0;
+		if(vdcc.DrawBGYLine == 262) {
 			vdcc.DrawBGYLine = 0;
 			this.GetScreenSize(vdcno);
 		}
-
-		if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW + vdcc.VDW + vdcc.VCR + 3))
-			vdcc.DrawBGYLine = 0;
 
 		if(vdcc.DrawBGYLine < (vdcc.VDS + vdcc.VSW)) {//OVER SCAN
 			this.MakeBGColorLineVDC(vdcno);
@@ -2645,7 +2647,7 @@ class PCE {
 			this.MakeBGColorLineVDC(vdcno);
 		}
 
-		if(vdcc.VLineCount == 14 + 242) {
+		if(vdcc.DrawBGYLine == 14 + 242) {
 			vdcc.VDCStatus |= (vdcc.VDCRegister[0x05] & 0x0008) << 2;//SetVSync INT
 			if(vdcc.VRAMtoSATBStartFlag) {//VRAMtoSATB
 				for(let i=0, addr=vdcc.VDCRegister[0x13]; i<256; i++, addr++)
@@ -2669,26 +2671,39 @@ class PCE {
 
 
 	VDCRun() {
+		let clock = this.VCEBaseClock != this.BaseClock20 ? this.ProgressClock : this.ProgressClock * 2;
+
 		this.VDCProcessDMA(0);
-		this.VDC[0].VDCProgressClock += this.ProgressClock;
+		this.VDC[0].VDCProgressClock += clock;
 
 		if(this.SuperGrafx) {
 			this.VDCProcessDMA(1);
-			this.VDC[1].VDCProgressClock += this.ProgressClock;
+			this.VDC[1].VDCProgressClock += clock;
 		}
 
 		while(this.VDC[0].VDCProgressClock >= 1368) {
 			this.VDCProcess(0);
 			if(this.SuperGrafx)
 				this.VDCProcess(1);
+		}
 
-			if(this.VDC[0].VLineCount < 14) {//OVER SCAN
+		this.VDCPutLineProgressClock += this.ProgressClock;
+		if(this.VDCPutLineProgressClock >= 1368) {
+			this.VDCPutLineProgressClock -= 1368;
+			this.VDCPutLine++;
+			if(this.VDCPutLine == 262) {
+				this.VDCPutLine = 0;
+				this.DrawFlag = true;
+				this.Ctx.putImageData(this.ImageData, 0, 0);
+			}
+
+			if(this.VDCPutLine < 14) {//OVER SCAN
 				this.MakeBlankColorLine(0);
-			} else if(this.VDC[0].VLineCount < 14 + 242) {//ACTIVE DISPLAY
+			} else if(this.VDCPutLine < 14 + 242) {//ACTIVE DISPLAY
 				let palettes = (this.VCEControl & 0x80) == 0x00 ? this.PaletteData : this.MonoPaletteData;
 
 				let data = this.ImageData.data;
-				let imageIndex = this.VDC[0].VLineCount * this.ScreenSizeMAX * 4;
+				let imageIndex = this.VDCPutLine * this.ScreenSizeMAX * 4;
 				let black = palettes[0x100];
 
 				let sw = this.ScreenSize[this.VCEBaseClock];
@@ -2757,7 +2772,7 @@ class PCE {
 						data[imageIndex + 2] = color.b;
 					}
 				}
-			} else if(this.VDC[0].VLineCount < 14 + 242 + 4) {//OVER SCAN
+			} else if(this.VDCPutLine < 14 + 242 + 4) {//OVER SCAN
 				this.MakeBGColorLine(0);
 			} else {//BLANK SYNC
 				this.MakeBlankColorLine(0);
@@ -2808,13 +2823,29 @@ class PCE {
 	}
 
 
+	VDCPutLineInit() {
+		this.VDCPutLineProgressClock = 0;
+		this.VDCPutLine = 0;
+		for(let i=0;i<2; i++) {
+			this.VDC[i].RasterCount = 64;
+			this.VDC[i].VDCProgressClock = 0;
+			this.VDC[i].DrawBGYLine = 0;
+			this.VDC[i].DrawBGLine = 0;
+		}
+	}
+
+
 	VDCInit() {
+		this.VDCPutLineProgressClock = 0;
+		this.VDCPutLine = 0;
+		this.DrawFlag = false;
+
 		for(let vdcno=0; vdcno<2; vdcno++) {
 			this.VDC[vdcno] = {
 				VDCRegister: new Array(20).fill(0x0000),
 				VRAM: new Array(0x10000).fill(0x0000),
 				SATB: new Array(256).fill(0x0000),
-				DrawFlag: false,
+				VDCBurst: false,
 				SpriteLimit: false,
 
 				SPLine: new Array(this.ScreenSizeMAX),
@@ -2829,12 +2860,9 @@ class PCE {
 				VRAMtoVRAMCount: 0,
 
 				RasterCount: 64,
-				VLineCount: 0,
 				VDCProgressClock: 0,
 				DrawBGYLine: 0,
 				DrawBGLine: 0,
-
-				VDCBurst: false,
 
 				VScreenWidth: 0,
 				VScreenHeight: 0,
