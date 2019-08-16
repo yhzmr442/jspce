@@ -9,8 +9,7 @@ class PCE {
 		this.MainCanvas = null;
 		this.Ctx = null;
 		this.ImageData = null;
-		this.SuperGrafx = true;
-		//this.SuperGrafx = false;
+		this.SuperGrafx = false;
 
 		/* ************* */
 		/* **** CPU **** */
