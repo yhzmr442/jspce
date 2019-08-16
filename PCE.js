@@ -9,7 +9,8 @@ class PCE {
 		this.MainCanvas = null;
 		this.Ctx = null;
 		this.ImageData = null;
-		this.SuperGrafx = false;
+		this.SuperGrafx = true;
+		//this.SuperGrafx = false;
 
 		/* ************* */
 		/* **** CPU **** */
@@ -82,7 +83,6 @@ class PCE {
 		this.BaseClock5 = 4;
 		this.BaseClock7 = 3;
 		this.BaseClock10 = 2;
-		this.BaseClock20 = 1;
 
 		this.TransferSrc = 0;
 		this.TransferDist = 0;
@@ -213,18 +213,12 @@ class PCE {
 		this.VDC = new Array(2);
 
 		this.ScreenSize = [];
-		this.ScreenSize[this.BaseClock5] = 256;
-		this.ScreenSize[this.BaseClock7] = 352;
-		this.ScreenSize[this.BaseClock10] = 512;
-		this.ScreenSize[this.BaseClock20] = 512;
+		this.ScreenSize[this.BaseClock5] = 342;
+		this.ScreenSize[this.BaseClock7] = 456;
+		this.ScreenSize[this.BaseClock10] = 684;
 
-		this.ScreenSizeMAX = 512;
-
-		this.ScreenHDS = [];
-		this.ScreenHDS[this.BaseClock5] = 0x02 + 0x02;
-		this.ScreenHDS[this.BaseClock7] = 0x03 + 0x03;
-		this.ScreenHDS[this.BaseClock10] = 0x02 + 0x0B;
-		this.ScreenHDS[this.BaseClock20] = 0x02 + 0x0B;
+		this.ScreenHeightMAX = 262;
+		this.ScreenWidthMAX = 684;
 
 		this.VScreenWidthArray = [];
 		this.VScreenWidthArray[0x00] = 32;
@@ -479,8 +473,8 @@ class PCE {
 			return false;
 
 		this.Ctx = this.MainCanvas.getContext("2d");
-		this.ImageData = this.Ctx.createImageData(this.ScreenSizeMAX, 263);
-		for(let i=0; i<this.ScreenSizeMAX*263*4; i+=4) {
+		this.ImageData = this.Ctx.createImageData(this.ScreenWidthMAX, this.ScreenHeightMAX);
+		for(let i=0; i<this.ScreenWidthMAX*this.ScreenHeightMAX*4; i+=4) {
 			this.ImageData.data[i] = 0;
 			this.ImageData.data[i + 1] = 0;
 			this.ImageData.data[i + 2] = 0;
@@ -2293,11 +2287,8 @@ class PCE {
 				this.VCEBaseClock = this.BaseClock7;
 				break;
 			case 0x02:
-				this.VCEBaseClock = this.BaseClock10;
-				break;
 			case 0x03:
-				this.VCEBaseClock = this.BaseClock20;
-				this.VDCPutLineInit();
+				this.VCEBaseClock = this.BaseClock10;
 				break;
 		}
 	}
@@ -2415,7 +2406,7 @@ class PCE {
 		for(let i=0; i<vdcc.ScreenWidth; i++) {
 			let spi = sp[i];
 			spi.data = 0x00;
-			spi.palette = 0x100;
+			spi.palette = 0x000;
 			spi.no = 255;
 			spi.priority = 0x00;
 		}
@@ -2523,10 +2514,7 @@ class PCE {
 		let sp = vdcc.SPLine;
 		let bg = vdcc.BGLine;
 		let sw = vdcc.ScreenWidth;
-
-		bg.fill(0x100);
-
-		let leftblank = vdcc.LeftBlank;
+		let leftblank = vdcc.LeftBlank + vdcc.DrawBGIndex;
 
 		if((vdcc.VDCRegister[0x05] & 0x0080) == 0x0080) {
 			let WidthMask = vdcc.VScreenWidth - 1;
@@ -2579,7 +2567,7 @@ class PCE {
 
 	MakeBGColorLine(vdcno) {
 		let data = this.ImageData.data;
-		let imageIndex = this.VDCPutLine * this.ScreenSizeMAX * 4;
+		let imageIndex = this.VDCPutLine * this.ScreenWidthMAX * 4;
 		let black = (this.VCEControl & 0x80) == 0x00 ? this.PaletteData[0x100] : this.MonoPaletteData[0x100];
 
 		let cnt = this.ScreenSize[this.VCEBaseClock];
@@ -2594,7 +2582,7 @@ class PCE {
 
 	MakeBlankColorLine(vdcno) {
 		let data = this.ImageData.data;
-		let imageIndex = this.VDCPutLine * this.ScreenSizeMAX * 4;
+		let imageIndex = this.VDCPutLine * this.ScreenWidthMAX * 4;
 		let cnt = this.ScreenSize[this.VCEBaseClock];
 		for(let i=0; i<cnt; i++) {
 			data[imageIndex]     = 0;
@@ -2627,58 +2615,59 @@ class PCE {
 
 		vdcc.VDCProgressClock -= 1368;
 
-		vdcc.DrawBGYLine++;
+		vdcc.DrawBGIndex = 0;
+		vdcc.BGLine.fill(0x100);
 
-		if(vdcc.DrawBGYLine == 262) {
-			vdcc.DrawBGYLine = 0;
-			this.GetScreenSize(vdcno);
-		}
+		for(let i=0; i<vdcc.ScreenSize; i+=vdcc.DrawLineWidth) {
+			vdcc.DrawBGYLine++;
 
-		if(vdcc.DrawBGYLine < (vdcc.VDS + vdcc.VSW)) {//OVER SCAN
-			this.MakeBGColorLineVDC(vdcno);
-		} else if(vdcc.DrawBGYLine <= (vdcc.VDS + vdcc.VSW + vdcc.VDW)) {//ACTIVE DISPLAY
-			vdcc.DrawBGLine = (vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW) ? vdcc.VDCRegister[0x08] : (vdcc.DrawBGLine + 1)) & vdcc.VScreenHeightMask;
-			if(!vdcc.VDCBurst) {
-				this.MakeSpriteLine(vdcno);
-				this.MakeBGLine(vdcno);
-			} else
+			if(vdcc.DrawBGYLine == this.ScreenHeightMAX)
+				vdcc.DrawBGYLine = 0;
+
+			if(vdcc.DrawBGYLine < (vdcc.VDS + vdcc.VSW)) {//OVER SCAN
 				this.MakeBGColorLineVDC(vdcno);
-		} else {//OVER SCAN
-			this.MakeBGColorLineVDC(vdcno);
-		}
-
-		if(vdcc.DrawBGYLine == 14 + 242) {
-			vdcc.VDCStatus |= (vdcc.VDCRegister[0x05] & 0x0008) << 2;//SetVSync INT
-			if(vdcc.VRAMtoSATBStartFlag) {//VRAMtoSATB
-				for(let i=0, addr=vdcc.VDCRegister[0x13]; i<256; i++, addr++)
-					vdcc.SATB[i] = vdcc.VRAM[addr];
-				vdcc.VRAMtoSATBCount = 256 * this.VCEBaseClock;
-				vdcc.VDCStatus |= 0x40;
-				vdcc.VRAMtoSATBStartFlag = (vdcc.VDCRegister[0x0F] & 0x0010) == 0x0010;
+			} else if(vdcc.DrawBGYLine <= (vdcc.VDS + vdcc.VSW + vdcc.VDW)) {//ACTIVE DISPLAY
+				vdcc.DrawBGLine = (vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW) ? vdcc.VDCRegister[0x08] : (vdcc.DrawBGLine + 1)) & vdcc.VScreenHeightMask;
+				if(!vdcc.VDCBurst) {
+					this.MakeSpriteLine(vdcno);
+					this.MakeBGLine(vdcno);
+				} else
+					this.MakeBGColorLineVDC(vdcno);
+			} else {//OVER SCAN
+				this.MakeBGColorLineVDC(vdcno);
 			}
+
+			if(vdcc.DrawBGYLine == 14 + 242) {
+				vdcc.VDCStatus |= (vdcc.VDCRegister[0x05] & 0x0008) << 2;//SetVSync INT
+				if(vdcc.VRAMtoSATBStartFlag) {//VRAMtoSATB
+					for(let i=0, addr=vdcc.VDCRegister[0x13]; i<256; i++, addr++)
+						vdcc.SATB[i] = vdcc.VRAM[addr];
+					vdcc.VRAMtoSATBCount = 256 * this.VCEBaseClock;
+					vdcc.VDCStatus |= 0x40;
+					vdcc.VRAMtoSATBStartFlag = (vdcc.VDCRegister[0x0F] & 0x0010) == 0x0010;
+				}
+			}
+
+			if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW))
+				vdcc.RasterCount = 64;
+			else
+				vdcc.RasterCount++;
+
+			if(vdcc.RasterCount == vdcc.VDCRegister[0x06] && (vdcc.VDCStatus & 0x20) == 0x00)
+				vdcc.VDCStatus |= vdcc.VDCRegister[0x05] & 0x0004;//SetRaster INT
+
+			vdcc.DrawBGIndex += vdcc.DrawLineWidth;
 		}
-
-		if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW - 1))
-			vdcc.RasterCount = 64;
-		else if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW))
-			vdcc.RasterCount = (vdcc.VDCRegister[0x05] & 0x0040) == 0x0000 ? 64 : 65;
-		else
-			vdcc.RasterCount++;
-
-		if(vdcc.RasterCount == vdcc.VDCRegister[0x06] && (vdcc.VDCStatus & 0x20) == 0x00)
-			vdcc.VDCStatus |= vdcc.VDCRegister[0x05] & 0x0004;//SetRaster INT
 	}
 
 
 	VDCRun() {
-		let clock = this.VCEBaseClock != this.BaseClock20 ? this.ProgressClock : this.ProgressClock * 2;
-
 		this.VDCProcessDMA(0);
-		this.VDC[0].VDCProgressClock += clock;
+		this.VDC[0].VDCProgressClock += this.ProgressClock;
 
 		if(this.SuperGrafx) {
 			this.VDCProcessDMA(1);
-			this.VDC[1].VDCProgressClock += clock;
+			this.VDC[1].VDCProgressClock += this.ProgressClock;
 		}
 
 		while(this.VDC[0].VDCProgressClock >= 1368) {
@@ -2691,8 +2680,13 @@ class PCE {
 		if(this.VDCPutLineProgressClock >= 1368) {
 			this.VDCPutLineProgressClock -= 1368;
 			this.VDCPutLine++;
-			if(this.VDCPutLine == 262) {
+
+			if(this.VDCPutLine == this.ScreenHeightMAX) {
 				this.VDCPutLine = 0;
+				this.GetScreenSize(0);
+				this.VDC[0].DrawBGYLine = 0;
+				this.GetScreenSize(1);
+				this.VDC[1].DrawBGYLine = 0;
 				this.DrawFlag = true;
 				this.Ctx.putImageData(this.ImageData, 0, 0);
 			}
@@ -2703,7 +2697,7 @@ class PCE {
 				let palettes = (this.VCEControl & 0x80) == 0x00 ? this.PaletteData : this.MonoPaletteData;
 
 				let data = this.ImageData.data;
-				let imageIndex = this.VDCPutLine * this.ScreenSizeMAX * 4;
+				let imageIndex = this.VDCPutLine * this.ScreenWidthMAX * 4;
 				let black = palettes[0x100];
 
 				let sw = this.ScreenSize[this.VCEBaseClock];
@@ -2791,8 +2785,8 @@ class PCE {
 		vdcc.VScreenHeightMask = vdcc.VScreenHeight * 8 - 1;
 		vdcc.ScreenWidth = ((r[0x0B] & 0x007F) + 1) * 8;
 
-		if(vdcc.ScreenWidth > this.ScreenSizeMAX)
-			vdcc.ScreenWidth = this.ScreenSizeMAX;
+		if(vdcc.ScreenWidth > this.ScreenWidthMAX)
+			vdcc.ScreenWidth = this.ScreenWidthMAX;
 
 		vdcc.HDS = (r[0x0A] & 0x7F00) >> 8;
 		vdcc.HSW = r[0x0A] & 0x001F;
@@ -2807,31 +2801,21 @@ class PCE {
 
 		vdcc.VCR = r[0x0E] & 0x00FF;
 
-		let tmp = this.ScreenSize[this.VCEBaseClock];
-		if(this.MainCanvas.width != tmp) {
-			//this.MainCanvas.style.width = (tmp * 2) + 'px';//<--
-			this.MainCanvas.width = tmp;
+		vdcc.ScreenSize = this.ScreenSize[this.VCEBaseClock];
+		if(this.MainCanvas.width != vdcc.ScreenSize) {
+			//this.MainCanvas.style.width = (vdcc.ScreenSize * 2) + 'px';//<--
+			this.MainCanvas.width = vdcc.ScreenSize;
 		}
 
-		vdcc.LeftBlank = 0;
-		if(vdcc.ScreenWidth < tmp) {
-			if((vdcc.HSW + vdcc.HDS) > this.ScreenHDS[this.VCEBaseClock])
-				vdcc.LeftBlank = ((vdcc.HSW + vdcc.HDS) - this.ScreenHDS[this.VCEBaseClock]) << 3;
-		}
+		vdcc.DrawLineWidth = (vdcc.HDS + vdcc.HSW + vdcc.HDE + vdcc.HDW + 1) << 3;
+		if(vdcc.DrawLineWidth <= this.ScreenSize[this.BaseClock5])
+			vdcc.DrawLineWidth = this.ScreenSize[this.BaseClock5];
+		else if(vdcc.DrawLineWidth <= this.ScreenSize[this.BaseClock7])
+			vdcc.DrawLineWidth = this.ScreenSize[this.BaseClock7];
+		else vdcc.DrawLineWidth = this.ScreenSize[this.BaseClock10];
 
+		vdcc.LeftBlank = (vdcc.HDS + vdcc.HSW) << 3;
 		vdcc.VDCBurst = (r[0x05] & 0x00C0) == 0x0000 ? true : false;
-	}
-
-
-	VDCPutLineInit() {
-		this.VDCPutLineProgressClock = 0;
-		this.VDCPutLine = 0;
-		for(let i=0;i<2; i++) {
-			this.VDC[i].RasterCount = 64;
-			this.VDC[i].VDCProgressClock = 0;
-			this.VDC[i].DrawBGYLine = 0;
-			this.VDC[i].DrawBGLine = 0;
-		}
 	}
 
 
@@ -2848,8 +2832,8 @@ class PCE {
 				VDCBurst: false,
 				SpriteLimit: false,
 
-				SPLine: new Array(this.ScreenSizeMAX),
-				BGLine: new Array(this.ScreenSizeMAX).fill(0x00),
+				SPLine: new Array(this.ScreenWidthMAX),
+				BGLine: new Array(this.ScreenWidthMAX).fill(0x00),
 
 				VDCStatus: 0x00,
 				VDCRegisterSelect: 0x00,
@@ -2868,6 +2852,9 @@ class PCE {
 				VScreenHeight: 0,
 				VScreenHeightMask: 0,
 				ScreenWidth: 0,
+				ScreenSize: 0,
+				DrawLineWidth: 0,
+				DrawBGIndex: 0,
 				LeftBlank: 0,
 
 				HDS: 0,
@@ -2891,6 +2878,7 @@ class PCE {
 		}
 
 		this.GetScreenSize(0);
+		this.GetScreenSize(1);
 	}
 
 
