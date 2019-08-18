@@ -205,16 +205,22 @@ class PCE {
 		/* ************* */
 		/* **** VDC **** */
 		/* ************* */
+		this.DrawFlag = false;
 		this.VDCPutLineProgressClock = 0;
 		this.VDCPutLine = 0;
-		this.DrawFlag = false;
-
 		this.VDC = new Array(2);
+
+		this.VDCLineClock = 1368;
 
 		this.ScreenSize = [];
 		this.ScreenSize[this.BaseClock5] = 342;
 		this.ScreenSize[this.BaseClock7] = 456;
 		this.ScreenSize[this.BaseClock10] = 684;
+
+		this.PutScreenSize = [];
+		this.PutScreenSize[this.BaseClock5] = 320;
+		this.PutScreenSize[this.BaseClock7] = 428;
+		this.PutScreenSize[this.BaseClock10] = 640;
 
 		this.ScreenHeightMAX = 262;
 		this.ScreenWidthMAX = 684;
@@ -2612,7 +2618,7 @@ class PCE {
 	VDCProcess(vdcno) {
 		let vdcc = this.VDC[vdcno];
 
-		vdcc.VDCProgressClock -= 1368;
+		vdcc.VDCProgressClock -= this.VDCLineClock;
 
 		vdcc.DrawBGIndex = 0;
 		vdcc.BGLine.fill(0x100);
@@ -2647,7 +2653,7 @@ class PCE {
 				}
 			}
 
-			if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW))
+			if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW - ((vdcc.VDCRegister[0x05] & 0x0040) >> 6)))
 				vdcc.RasterCount = 64;
 			else
 				vdcc.RasterCount++;
@@ -2669,15 +2675,15 @@ class PCE {
 			this.VDC[1].VDCProgressClock += this.ProgressClock;
 		}
 
-		while(this.VDC[0].VDCProgressClock >= 1368) {
+		while(this.VDC[0].VDCProgressClock >= this.VDCLineClock) {
 			this.VDCProcess(0);
 			if(this.SuperGrafx)
 				this.VDCProcess(1);
 		}
 
 		this.VDCPutLineProgressClock += this.ProgressClock;
-		if(this.VDCPutLineProgressClock >= 1368) {
-			this.VDCPutLineProgressClock -= 1368;
+		if(this.VDCPutLineProgressClock >= this.VDCLineClock) {
+			this.VDCPutLineProgressClock -= this.VDCLineClock;
 			this.VDCPutLine++;
 
 			if(this.VDCPutLine == this.ScreenHeightMAX) {
@@ -2687,7 +2693,7 @@ class PCE {
 				this.GetScreenSize(1);
 				this.VDC[1].DrawBGYLine = 0;
 				this.DrawFlag = true;
-				this.Ctx.putImageData(this.ImageData, 0, 0);
+				this.Ctx.putImageData(this.ImageData, 0, -14, 0, 14, this.PutScreenSize[this.VCEBaseClock], 241);
 			}
 
 			if(this.VDCPutLine < 14) {//OVER SCAN
@@ -2802,8 +2808,8 @@ class PCE {
 
 		vdcc.ScreenSize = this.ScreenSize[this.VCEBaseClock];
 		if(this.MainCanvas.width != vdcc.ScreenSize) {
-			//this.MainCanvas.style.width = (vdcc.ScreenSize * 2) + 'px';//<--
-			this.MainCanvas.width = vdcc.ScreenSize;
+			//this.MainCanvas.style.width = (this.PutScreenSize[this.VCEBaseClock] * 2) + 'px';
+			this.MainCanvas.width = this.PutScreenSize[this.VCEBaseClock];
 		}
 
 		vdcc.DrawLineWidth = (vdcc.HDS + vdcc.HSW + vdcc.HDE + vdcc.HDW + 1) << 3;
