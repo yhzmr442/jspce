@@ -348,25 +348,6 @@ class PCE {
 			 [{type:"B", index:2}],// SHOT5
 			 [{type:"B", index:3}]]];// SHOT6
 
-		this.GamePadData["UNKNOWN PAD"] = [
-			[[{type:"B", index:1}],// SHOT1
-			 [{type:"B", index:0}],// SHOT2
-			 [{type:"B", index:2}],// SELECT
-			 [{type:"B", index:3}],// RUN
-			 [{type:"A-", index:1}],// UP
-			 [{type:"A+", index:1}],// DOWN
-			 [{type:"A-", index:0}],// LEFT
-			 [{type:"A+", index:0}]],// RIGHT
-
-			[[{type:"B", index:1}],// SHOT1
-			 [{type:"B", index:0}],// SHOT2
-			 [{type:"B", index:2}],// SELECT
-			 [{type:"B", index:3}],// RUN
-			 [{type:"A-", index:1}],// UP
-			 [{type:"A+", index:1}],// DOWN
-			 [{type:"A-", index:0}],// LEFT
-			 [{type:"A+", index:0}]]];// RIGHT
-
 		this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"] = [// Chrome
 			[[{type:"B", index:2}],// SHOT1
 			 [{type:"B", index:1}],// SHOT2
@@ -391,6 +372,7 @@ class PCE {
 			 [{type:"B", index:3}]]];// SHOT6
 
 		this.GamePadData["0f0d-0009-HORI PAD 3 TURBO"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];// Firefox
+		this.GamePadData["UNKNOWN PAD"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];
 
 		this.GamePadKeyData = [{index:0, data:0x01}, {index:0, data:0x02},
 				       {index:0, data:0x04}, {index:0, data:0x08},
