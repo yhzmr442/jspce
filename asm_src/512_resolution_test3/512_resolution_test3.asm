@@ -1,6 +1,367 @@
-;//// Use pceas.exe ////
+VDC_0			.equ	$0000
+VDC_1			.equ	$0001
+VDC_2			.equ	$0002
+VDC_3			.equ	$0003
+
+VDC2_0			.equ	$0010
+VDC2_1			.equ	$0011
+VDC2_2			.equ	$0012
+VDC2_3			.equ	$0013
+
+VPC_0			.equ	$0008
+VPC_1			.equ	$0009
+VPC_2			.equ	$000A
+VPC_3			.equ	$000B
+VPC_4			.equ	$000C
+VPC_5			.equ	$000D
+VPC_6			.equ	$000E
+VPC_7			.equ	$000F
+
+VCE_0			.equ	$0400
+VCE_1			.equ	$0401
+VCE_2			.equ	$0402
+VCE_3			.equ	$0403
+VCE_4			.equ	$0404
+VCE_5			.equ	$0405
+VCE_6			.equ	$0406
+VCE_7			.equ	$0407
+
+INT_DIS_REG		.equ	$1402
+
+IO_PAD			.equ	$1000
+
+x_y_sin_cosBank			.equ	$02
+charBank			.equ	$12
+shipBank			.equ	$13
+course1Bank			.equ	$14
+course1angleBank		.equ	$1C
+course2Bank			.equ	$20
+course2angleBank		.equ	$28
+
+
+;----------------------------
+add		.macro
+;\1 = \2 + \3
+;\1 = \1 + \2
+		.if	(\# = 3)
+
+		clc
+		lda	\2
+		adc	\3
+		sta	\1
+
+		.else
+
+		clc
+		lda	\1
+		adc	\2
+		sta	\1
+
+		.endif
+		.endm
+
+
+;----------------------------
+sub		.macro
+;\1 = \2 - \3
+;\1 = \1 - \2
+		.if	(\# = 3)
+
+		sec
+		lda	\2
+		sbc	\3
+		sta	\1
+
+		.else
+
+		sec
+		lda	\1
+		sbc	\2
+		sta	\1
+
+		.endif
+		.endm
+
+
+;----------------------------
+addw		.macro
+;\1 = \2 + \3
+;\1 = \1 + \2
+		.if	(\# = 3)
+
+		clc
+		lda	\2
+		adc	\3
+		sta	\1
+
+		lda	\2+1
+		adc	\3+1
+		sta	\1+1
+
+		.else
+
+		clc
+		lda	\1
+		adc	\2
+		sta	\1
+
+		lda	\1+1
+		adc	\2+1
+		sta	\1+1
+
+		.endif
+		.endm
+
+
+;----------------------------
+subw		.macro
+;\1 = \2 - \3
+;\1 = \1 - \2
+		.if	(\# = 3)
+
+		sec
+		lda	\2
+		sbc	\3
+		sta	\1
+
+		lda	\2+1
+		sbc	\3+1
+		sta	\1+1
+
+		.else
+
+		sec
+		lda	\1
+		sbc	\2
+		sta	\1
+
+		lda	\1+1
+		sbc	\2+1
+		sta	\1+1
+
+		.endif
+		.endm
+
+
+;----------------------------
+addq		.macro
+;\1 = \2 + \3
+;\1 = \1 + \2
+		.if	(\# = 3)
+
+		clc
+		lda	\2
+		adc	\3
+		sta	\1
+
+		lda	\2+1
+		adc	\3+1
+		sta	\1+1
+
+		lda	\2+2
+		adc	\3+2
+		sta	\1+2
+
+		lda	\2+3
+		adc	\3+3
+		sta	\1+3
+
+		.else
+
+		clc
+		lda	\1
+		adc	\2
+		sta	\1
+
+		lda	\1+1
+		adc	\2+1
+		sta	\1+1
+
+		lda	\1+2
+		adc	\2+2
+		sta	\1+2
+
+		lda	\1+3
+		adc	\2+3
+		sta	\1+3
+
+		.endif
+		.endm
+
+
+;----------------------------
+subq		.macro
+;\1 = \2 - \3
+;\1 = \1 - \2
+		.if	(\# = 3)
+
+		sec
+		lda	\2
+		sbc	\3
+		sta	\1
+
+		lda	\2+1
+		sbc	\3+1
+		sta	\1+1
+
+		lda	\2+2
+		sbc	\3+2
+		sta	\1+2
+
+		lda	\2+3
+		sbc	\3+3
+		sta	\1+3
+
+		.else
+
+		sec
+		lda	\1
+		sbc	\2
+		sta	\1
+
+		lda	\1+1
+		sbc	\2+1
+		sta	\1+1
+
+		lda	\1+2
+		sbc	\2+2
+		sta	\1+2
+
+		lda	\1+3
+		sbc	\2+3
+		sta	\1+3
+
+		.endif
+		.endm
+
+
+;----------------------------
+mov		.macro
+;\1 = \2
+		lda	\2
+		sta	\1
+
+		.endm
+
+
+;----------------------------
+movw		.macro
+;\1 = \2
+		lda	\2
+		sta	\1
+		lda	\2+1
+		sta	\1+1
+
+		.endm
+
+
+;----------------------------
+movq		.macro
+;\1 = \2
+		lda	\2
+		sta	\1
+		lda	\2+1
+		sta	\1+1
+		lda	\2+2
+		sta	\1+2
+		lda	\2+3
+		sta	\1+3
+
+		.endm
+
+
+;----------------------------
+aslw		.macro
+;\1 = \1 << 1
+		asl	\1
+		rol	\1+1
+
+		.endm
+
+
+;----------------------------
+aslq		.macro
+;\1 = \1 << 1
+		asl	\1
+		rol	\1+1
+		rol	\1+2
+		rol	\1+3
+
+		.endm
+
+
+;----------------------------
+lsrw		.macro
+;\1 = \1 << 1
+		lsr	\1+1
+		ror	\1
+
+		.endm
+
+
+;----------------------------
+lsrq		.macro
+;\1 = \1 << 1
+		lsr	\1+3
+		ror	\1+2
+		ror	\1+1
+		ror	\1
+
+		.endm
+
+
+;----------------------------
+negq		.macro
+;\1 = ~\1 + 1
+		clc
+		lda	\1
+		eor	#$FF
+		adc	#1
+		sta	\1
+
+		lda	\1+1
+		eor	#$FF
+		adc	#0
+		sta	\1+1
+
+		lda	\1+2
+		eor	#$FF
+		adc	#0
+		sta	\1+2
+
+		lda	\1+3
+		eor	#$FF
+		adc	#0
+		sta	\1+3
+
+		.endm
+
+
+;----------------------------
+jcs		.macro
+		bcc	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+jeq		.macro
+		bne	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+jne		.macro
+		beq	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
 		.zp
-		.bss
 		.org	$2000
 ;------- do not move for loopxfunc -------------
 ;+++++++++++++++++++++++++++++++++++++++++++++++
@@ -39,7 +400,6 @@ puthexaddr	.ds	2
 puthexdata	.ds	1
 ;---------------------
 psgchno		.ds	1
-;;psgstate	.ds	1
 psgfreqwork	.ds	2
 psgdataaddrwork	.ds	2
 
@@ -61,8 +421,10 @@ spriteworkaddress	.ds	2
 
 ;///////////////////////////////////////////////
 		.org	$2080
-loopxfunc	.ds	$80
+loopxfunc	.ds	1
 
+
+		.bss
 ;///////////////////////////////////////////////
 		.org 	$2100
 ;stack area
@@ -179,64 +541,21 @@ main:
 
 ;enemy rotation
 ;enemyxwork = enemyxtmp - centerxtmp
-		sec
-		lda	enemyxtmp
-		sbc	centerxtmp
-		sta	enemyxwork
-
-		lda	enemyxtmp+1
-		sbc	centerxtmp+1
-		sta	enemyxwork+1
-
-		lda	enemyxtmp+2
-		sbc	centerxtmp+2
-		sta	enemyxwork+2
-
-		lda	enemyxtmp+3
-		sbc	centerxtmp+3
-		sta	enemyxwork+3
+		subq	enemyxwork, enemyxtmp, centerxtmp
 
 ;enemyywork = enemyytmp - centerytmp
-		sec
-		lda	enemyytmp
-		sbc	centerytmp
-		sta	enemyywork
-
-		lda	enemyytmp+1
-		sbc	centerytmp+1
-		sta	enemyywork+1
-
-		lda	enemyytmp+2
-		sbc	centerytmp+2
-		sta	enemyywork+2
-
-		lda	enemyytmp+3
-		sbc	centerytmp+3
-		sta	enemyywork+3
+		subq	enemyywork, enemyytmp, centerytmp
 
 ;x scale
-		lsr	enemyxwork+3
-		ror	enemyxwork+2
-		ror	enemyxwork+1
-
-		lsr	enemyxwork+3
-		ror	enemyxwork+2
-		ror	enemyxwork+1
+		lsrq	enemyxwork
+		lsrq	enemyxwork
 
 ;y scale
-		lsr	enemyywork+3
-		ror	enemyywork+2
-		ror	enemyywork+1
-
-		lsr	enemyywork+3
-		ror	enemyywork+2
-		ror	enemyywork+1
+		lsrq	enemyywork
+		lsrq	enemyywork
 
 ;X=xcosA-ysinA process
-		lda	enemyxwork+1
-		sta	<mul16an
-		lda	enemyxwork+2
-		sta	<mul16an+1
+		movw	<mul16an, enemyxwork+1
 
 		lda	centerangletmp
 		eor	#$FF
@@ -249,19 +568,9 @@ main:
 
 		jsr	smul16n
 
-		lda	<mul16cn
-		sta	enemycalcxwork
-		lda	<mul16cn+1
-		sta	enemycalcxwork+1
-		lda	<mul16dn
-		sta	enemycalcxwork+2
-		lda	<mul16dn+1
-		sta	enemycalcxwork+3
+		movq	enemycalcxwork, <mul16cn
 
-		lda	enemyywork+1
-		sta	<mul16an
-		lda	enemyywork+2
-		sta	<mul16an+1
+		movw	<mul16an, enemyywork+1
 
 		lda	centerangletmp
 		eor	#$FF
@@ -274,38 +583,13 @@ main:
 
 		jsr	smul16n
 
-		sec
-		lda	enemycalcxwork
-		sbc	<mul16cn
-		sta	enemycalcxwork
+		subq	enemycalcxwork, <mul16cn
 
-		lda	enemycalcxwork+1
-		sbc	<mul16cn+1
-		sta	enemycalcxwork+1
-
-		lda	enemycalcxwork+2
-		sbc	<mul16dn
-		sta	enemycalcxwork+2
-
-		lda	enemycalcxwork+3
-		sbc	<mul16dn+1
-		sta	enemycalcxwork+3
-
-		asl	enemycalcxwork
-		rol	enemycalcxwork+1
-		rol	enemycalcxwork+2
-		rol	enemycalcxwork+3
-
-		asl	enemycalcxwork
-		rol	enemycalcxwork+1
-		rol	enemycalcxwork+2
-		rol	enemycalcxwork+3
+		aslq	enemycalcxwork
+		aslq	enemycalcxwork
 
 ;Y=xsinA+ycosA process
-		lda	enemyxwork+1
-		sta	<mul16an
-		lda	enemyxwork+2
-		sta	<mul16an+1
+		movw	<mul16an, enemyxwork+1
 
 		lda	centerangletmp
 		eor	#$FF
@@ -318,19 +602,9 @@ main:
 
 		jsr	smul16n
 
-		lda	<mul16cn
-		sta	enemycalcywork
-		lda	<mul16cn+1
-		sta	enemycalcywork+1
-		lda	<mul16dn
-		sta	enemycalcywork+2
-		lda	<mul16dn+1
-		sta	enemycalcywork+3
+		movq	enemycalcywork, <mul16cn
 
-		lda	enemyywork+1
-		sta	<mul16an
-		lda	enemyywork+2
-		sta	<mul16an+1
+		movw	<mul16an, enemyywork+1
 
 		lda	centerangletmp
 		eor	#$FF
@@ -343,76 +617,20 @@ main:
 
 		jsr	smul16n
 
-		clc
-		lda	enemycalcywork
-		adc	<mul16cn
-		sta	enemycalcywork
+		addq	enemycalcywork, <mul16cn
 
-		lda	enemycalcywork+1
-		adc	<mul16cn+1
-		sta	enemycalcywork+1
-
-		lda	enemycalcywork+2
-		adc	<mul16dn
-		sta	enemycalcywork+2
-
-		lda	enemycalcywork+3
-		adc	<mul16dn+1
-		sta	enemycalcywork+3
-
-		asl	enemycalcywork
-		rol	enemycalcywork+1
-		rol	enemycalcywork+2
-		rol	enemycalcywork+3
-
-		asl	enemycalcywork
-		rol	enemycalcywork+1
-		rol	enemycalcywork+2
-		rol	enemycalcywork+3
+		aslq	enemycalcywork
+		aslq	enemycalcywork
 
 ;move to enemy_work
-		lda	enemycalcxwork
-		sta	enemyxwork
-		lda	enemycalcxwork+1
-		sta	enemyxwork+1
-		lda	enemycalcxwork+2
-		sta	enemyxwork+2
-		lda	enemycalcxwork+3
-		sta	enemyxwork+3
-
-		lda	enemycalcywork
-		sta	enemyywork
-		lda	enemycalcywork+1
-		sta	enemyywork+1
-		lda	enemycalcywork+2
-		sta	enemyywork+2
-		lda	enemycalcywork+3
-		sta	enemyywork+3
+		movq	enemyxwork, enemycalcxwork
+		movq	enemyywork, enemycalcywork
 
 ;enemy screen locate
 		stz	enemyyindex
 
 ;negative enemyywork
-		clc
-		lda	enemyywork
-		eor	#$FF
-		adc	#1
-		sta	enemyywork
-
-		lda	enemyywork+1
-		eor	#$FF
-		adc	#0
-		sta	enemyywork+1
-
-		lda	enemyywork+2
-		eor	#$FF
-		adc	#0
-		sta	enemyywork+2
-
-		lda	enemyywork+3
-		eor	#$FF
-		adc	#0
-		sta	enemyywork+3
+		negq	enemyywork
 
 ;enemyywork = enemyywork + 1
 		clc
@@ -439,11 +657,7 @@ main:
 		rol	enemyyindex
 
 ;x scale
-		lda	enemyxwork+1
-		sta	<mul16an
-
-		lda	enemyxwork+2
-		sta	<mul16an+1
+		movw	<mul16an, enemyxwork+1
 
 		lda	enemyxwork+3
 		lsr	a
@@ -477,8 +691,7 @@ main:
 		rol	<mul16dn
 		rol	<mul16dn+1
 
-		asl	<mul16dn
-		rol	<mul16dn+1
+		aslw	<mul16dn
 
 		lda	<mul16dn
 		sta	enemylocatex
@@ -547,10 +760,7 @@ main:
 		lda	#$00
 		sta	<spriteywork+1
 
-		lda	enemylocatex
-		sta	<spritexwork
-		lda	enemylocatex+1
-		sta	<spritexwork+1
+		movw	<spritexwork, enemylocatex
 
 		lda	enemynoconv, x
 		sta	<spritenowork
@@ -566,7 +776,7 @@ main:
 		st2	#$30
 
 		st0	#$02
-		tia	spritework, $0002, 8 * 16
+		tia	spritework, VDC_2, 8 * 16
 		cli
 
 ;SATB DMA set
@@ -761,13 +971,13 @@ getpaddata:
 		sta	<padlast
 
 		lda	#$01
-		sta	$1000
+		sta	IO_PAD
 		lda	#$03
-		sta	$1000
+		sta	IO_PAD
 
 		lda	#$01
-		sta	$1000
-		lda	$1000
+		sta	IO_PAD
+		lda	IO_PAD
 		asl	a
 		asl	a
 		asl	a
@@ -775,8 +985,8 @@ getpaddata:
 		sta	<padnow
 
 		lda	#$00
-		sta	$1000
-		lda	$1000
+		sta	IO_PAD
+		lda	IO_PAD
 		and	#$0F
 		ora	<padnow
 		eor	#$FF
@@ -827,12 +1037,6 @@ checkpadmove:
 		sta	shipspeed
 		bra	.shipspeed01
 .shipspeed00:
-;;---------------------------------------
-;		;lda	shipspeed
-;		;cmp	#192
-;		;beq	.shipspeed01
-;		;inc	shipspeed
-
 		inc	shipspeed
 		bne	.shipspeed01
 		lda	#$FF
@@ -849,8 +1053,6 @@ checkpadmove:
 .shipspeed02:
 		sta	shipspeed
 .shipspeed03:
-
-
 ;;---------------------------------------
 ;		;stz	<hitspeed
 ;		lda	<centerlastangle
@@ -878,7 +1080,6 @@ checkpadmove:
 ;		sta	<hitspeed
 ;.shipspeed04:
 
-
 ;add movement centerx centery
 		ldy	centerangle
 ;add movement centerx
@@ -888,29 +1089,11 @@ checkpadmove:
 		lda	sindatahigh, y
 		sta	<mul16a+1
 
-		lda	shipspeed
-		sta	<mul16b
-		lda	shipspeed+1
-		sta	<mul16b+1
+		movw	<mul16b, shipspeed
 
 		jsr	smul16
 
-		clc
-		lda	centerx
-		adc	<mul16c
-		sta	centerxwork
-
-		lda	centerx+1
-		adc	<mul16c+1
-		sta	centerxwork+1
-
-		lda	centerx+2
-		adc	<mul16d
-		sta	centerxwork+2
-
-		lda	centerx+3
-		adc	<mul16d+1
-		sta	centerxwork+3
+		addq	centerxwork, centerx, <mul16c
 
 ;add movement centery
 ;centery - cos
@@ -919,29 +1102,11 @@ checkpadmove:
 		lda	cosdatahigh, y
 		sta	<mul16a+1
 
-		lda	shipspeed
-		sta	<mul16b
-		lda	shipspeed+1
-		sta	<mul16b+1
+		movw	<mul16b, shipspeed
 
 		jsr	smul16
 
-		sec
-		lda	centery
-		sbc	<mul16c
-		sta	centerywork
-
-		lda	centery+1
-		sbc	<mul16c+1
-		sta	centerywork+1
-
-		lda	centery+2
-		sbc	<mul16d
-		sta	centerywork+2
-
-		lda	centery+3
-		sbc	<mul16d+1
-		sta	centerywork+3
+		subq	centerywork, centery, <mul16c
 
 ;sub hit spped
 		lda	hitspeed
@@ -962,29 +1127,11 @@ checkpadmove:
 		lda	sindatahigh, y
 		sta	<mul16a+1
 
-		lda	hitspeed
-		sta	<mul16b
-		lda	hitspeed+1
-		sta	<mul16b+1
+		mov	<mul16b, hitspeed
 
 		jsr	smul16
 
-		clc
-		lda	centerxwork
-		adc	<mul16c
-		sta	centerxwork
-
-		lda	centerxwork+1
-		adc	<mul16c+1
-		sta	centerxwork+1
-
-		lda	centerxwork+2
-		adc	<mul16d
-		sta	centerxwork+2
-
-		lda	centerxwork+3
-		adc	<mul16d+1
-		sta	centerxwork+3
+		addq	centerxwork, <mul16c
 
 ;add movement centery
 ;centery - cos
@@ -993,29 +1140,11 @@ checkpadmove:
 		lda	cosdatahigh, y
 		sta	<mul16a+1
 
-		lda	hitspeed
-		sta	<mul16b
-		lda	hitspeed+1
-		sta	<mul16b+1
+		mov	<mul16b, hitspeed
 
 		jsr	smul16
 
-		sec
-		lda	centerywork
-		sbc	<mul16c
-		sta	centerywork
-
-		lda	centerywork+1
-		sbc	<mul16c+1
-		sta	centerywork+1
-
-		lda	centerywork+2
-		sbc	<mul16d
-		sta	centerywork+2
-
-		lda	centerywork+3
-		sbc	<mul16d+1
-		sta	centerywork+3
+		subq	centerywork, <mul16c
 
 ;map hit number
 		lda	hitnumber
@@ -1142,23 +1271,8 @@ checkpadmove:
 		;cmp	#$0F		;white
 		;beq	.maphitjump000
 
-		lda	centerxwork
-		sta	centerx
-		lda	centerxwork+1
-		sta	centerx+1
-		lda	centerxwork+2
-		sta	centerx+2
-		lda	centerxwork+3
-		sta	centerx+3
-
-		lda	centerywork
-		sta	centery
-		lda	centerywork+1
-		sta	centery+1
-		lda	centerywork+2
-		sta	centery+2
-		lda	centerywork+3
-		sta	centery+3
+		movq	centerx, centerxwork
+		movq	centery, centerywork
 
 		jmp	.maphitjump006
 
@@ -1261,6 +1375,78 @@ checkpadmove:
 
 
 ;----------------------------
+enemymove:
+;enemy speed
+		lda	enemyspeed
+		cmp	#$E0
+		bcs	.enemyspeedend	;enemyspeed >= $E0
+		inc	a
+		sta	enemyspeed
+.enemyspeedend:
+
+;move enemy
+		lda	enemyy+2
+		lsr	a
+		tay
+		clc
+		lda	mapconv, y
+		adc	#8		;add $10000(64K)
+		tam	#$04
+
+		tya
+		and	#$1F
+		ora	#$80
+
+		stz	<hitwork
+		sta	<hitwork+1
+
+		lda	enemyx+3
+		lsr	a
+		lda	enemyx+2
+		ror	a
+
+		tay
+		lda	[hitwork], y
+
+		sta	enemyangle
+
+;add movement enemyx enemyy
+		ldy	enemyangle
+
+;add movement enemyx
+;enemyx + sin
+		lda	sindatalow, y
+		sta	<mul16a
+		lda	sindatahigh, y
+		sta	<mul16a+1
+
+		movw	<mul16b, enemyspeed
+
+		jsr	smul16
+
+		addq	enemyx, <mul16c
+		lda	enemyx+3
+		and	#$01
+		sta	enemyx+3
+
+;add movement enemyy
+;enemyy - cos
+		lda	cosdatalow, y
+		sta	<mul16a
+		lda	cosdatahigh, y
+		sta	<mul16a+1
+
+		movw	<mul16b, enemyspeed
+
+		jsr	smul16
+
+		subq	enemyy, <mul16c
+		stz	enemyy+3
+
+		rts
+
+
+;----------------------------
 stageinit:
 		lda	stageno
 		asl	a
@@ -1297,11 +1483,11 @@ stageinit:
 		clx
 .setbatloop0:
 		lda	bgdata00, x
-		sta	$0002
+		sta	VDC_2
 		st2	#$02
 
 		inc	a
-		sta	$0002
+		sta	VDC_2
 		st2	#$02
 
 		inx
@@ -1913,14 +2099,14 @@ makechar:
 		beq	.makecharjp02
 		ldy	#$FF
 .makecharjp02:
-		stx	$0002
-		sty	$0003
-		stx	$0002
-		sty	$0003
-		stx	$0002
-		sty	$0003
-		stx	$0002
-		sty	$0003
+		stx	VDC_2
+		sty	VDC_3
+		stx	VDC_2
+		sty	VDC_3
+		stx	VDC_2
+		sty	VDC_3
+		stx	VDC_2
+		sty	VDC_3
 
 		ply
 		plx
@@ -1945,9 +2131,9 @@ setvramaddress:
 
 		st0	#$00
 		lda	<puthexaddr
-		sta	$0002
+		sta	VDC_2
 		lda	<puthexaddr+1
-		sta	$0003
+		sta	VDC_3
 
 		cli
 
@@ -1959,7 +2145,7 @@ putchar2:
 		sei
 
 		st0	#$02
-		sta	$0002
+		sta	VDC_2
 		st2	#$02
 
 		cli
@@ -1991,13 +2177,13 @@ putchar:
 
 		st0	#$00
 		ldy	<puthexaddr
-		sty	$0002
+		sty	VDC_2
 		ldy	<puthexaddr+1
-		sty	$0003
+		sty	VDC_3
 
 		st0	#$02
 		lda	<puthexdata
-		sta	$0002
+		sta	VDC_2
 		st2	#$02
 
 		cli
@@ -2029,10 +2215,10 @@ puthex2:
 		sei
 
 		st0	#$02
-		stx	$0002
+		stx	VDC_2
 		st2	#$02
 
-		sta	$0002
+		sta	VDC_2
 		st2	#$02
 
 		cli
@@ -2077,15 +2263,15 @@ puthex:
 
 		st0	#$00
 		ldy	<puthexaddr
-		sty	$0002
+		sty	VDC_2
 		ldy	<puthexaddr+1
-		sty	$0003
+		sty	VDC_3
 
 		st0	#$02
-		stx	$0002
+		stx	VDC_2
 		st2	#$02
 
-		sta	$0002
+		sta	VDC_2
 		st2	#$02
 
 		cli
@@ -2197,37 +2383,37 @@ init:
 vdpdataloop:	lda	vdpdata, y
 		cmp	#$FF
 		beq	vdpdataend
-		sta	$0000
+		sta	VDC_0
 		iny
 
 		lda	vdpdata, y
-		sta	$0002
+		sta	VDC_2
 		iny
 
 		lda	vdpdata, y
-		sta	$0003
+		sta	VDC_3
 		iny
 		bra	vdpdataloop
 vdpdataend:
 
 ;disable interrupts TIQD       IRQ2D
 		lda	#$05
-		sta	$1402
+		sta	INT_DIS_REG
 
 ;262Line  VCE Clock 10MHz
 		lda	#$06
-		sta	$0400
-		stz	$0401
+		sta	VCE_0
+		stz	VCE_1
 
 ;palette
-		stz	$0402
-		stz	$0403
-		tia	bgpalettedata, $0404, $60
+		stz	VCE_2
+		stz	VCE_3
+		tia	bgpalettedata, VCE_4, $60
 
-		stz	$0402
+		stz	VCE_2
 		lda	#$01
-		sta	$0403
-		tia	sppalettedata, $0404, $20
+		sta	VCE_3
+		tia	sppalettedata, VCE_4, $20
 
 ;clear BAT
 		st0	#$00
@@ -2246,7 +2432,7 @@ vdpdataend:
 		bne	.clearbatloop0
 
 ;CHAR set to vram
-		lda	#$12
+		lda	#charBank
 		tam	#$02
 
 ;vram address $2000
@@ -2255,10 +2441,10 @@ vdpdataend:
 		st2	#$20
 
 		st0	#$02
-		tia	$4000, $0002, $2000
+		tia	$4000, VDC_2, $2000
 
 ;Sprite CHAR set to vram
-		lda	#$13
+		lda	#shipBank
 		tam	#$02
 
 ;vram address $4000
@@ -2267,7 +2453,7 @@ vdpdataend:
 		st2	#$40
 
 		st0	#$02
-		tia	$4000, $0002, $2000
+		tia	$4000, VDC_2, $2000
 
 ;make char
 ;vram address $1000
@@ -2320,7 +2506,7 @@ vdpdataend:
 		st2	#$30
 
 		st0	#$02
-		tia	$2200, $0002, 512
+		tia	$2200, VDC_2, 512
 
 ;clear	sprite work
 		stz	spritework
@@ -2370,7 +2556,7 @@ _irq1:
 		phx
 		phy
 ;ACK interrupt
-		lda	$0000
+		lda	VDC_0
 		sta	<vdpstatus
 		bbs5	<vdpstatus, .vsyncproc
 
@@ -2425,10 +2611,10 @@ _irq1:
 		rol	<scrollxwork
 
 		st0	#$07
-		sta	$0002
+		sta	VDC_2
 		lda	<scrollxwork
 		and	#$01
-		sta	$0003
+		sta	VDC_3
 
 ;frame count
 		lda	framecount
@@ -2447,107 +2633,7 @@ _irq1:
 .framecountend:
 		jsr	getpaddata
 		jsr	checkpadmove
-
-;enemy speed
-		lda	enemyspeed
-		cmp	#$E0
-		bcs	.enemyspeedend	;enemyspeed >= $E0
-		inc	a
-		sta	enemyspeed
-.enemyspeedend:
-
-;move enemy
-		lda	enemyy+2
-		lsr	a
-		tay
-		clc
-		lda	mapconv, y
-		adc	#8		;add $10000(64K)
-		tam	#$04
-
-		tya
-		and	#$1F
-		ora	#$80
-
-		stz	<hitwork
-		sta	<hitwork+1
-
-		lda	enemyx+3
-		lsr	a
-		lda	enemyx+2
-		ror	a
-
-		tay
-		lda	[hitwork], y
-
-		sta	enemyangle
-
-;add movement enemyx enemyy
-		ldy	enemyangle
-
-;add movement enemyx
-;enemyx + sin
-		lda	sindatalow, y
-		sta	<mul16a
-		lda	sindatahigh, y
-		sta	<mul16a+1
-
-		lda	enemyspeed
-		sta	<mul16b
-		lda	enemyspeed+1
-		sta	<mul16b+1
-
-		jsr	smul16
-
-		clc
-		lda	enemyx
-		adc	<mul16c
-		sta	enemyx
-
-		lda	enemyx+1
-		adc	<mul16c+1
-		sta	enemyx+1
-
-		lda	enemyx+2
-		adc	<mul16d
-		sta	enemyx+2
-
-		lda	enemyx+3
-		adc	<mul16d+1
-		and	#$01
-		sta	enemyx+3
-
-;add movement enemyy
-;enemyy - cos
-		lda	cosdatalow, y
-		sta	<mul16a
-		lda	cosdatahigh, y
-		sta	<mul16a+1
-
-		lda	enemyspeed
-		sta	<mul16b
-		lda	enemyspeed+1
-		sta	<mul16b+1
-
-		jsr	smul16
-
-		sec
-		lda	enemyy
-		sbc	<mul16c
-		sta	enemyy
-
-		lda	enemyy+1
-		sbc	<mul16c+1
-		sta	enemyy+1
-
-		lda	enemyy+2
-		sbc	<mul16d
-		sta	enemyy+2
-
-		lda	enemyy+3
-		sbc	<mul16d+1
-		and	#$00
-		sta	enemyy+3
+		jsr	enemymove
 
 .irq1end:
 		st0	#$02
@@ -3048,9 +3134,9 @@ putline:
 		sei
 		st0	#$00
 		lda	vramaddrconv, x
-		sta	$0002
+		sta	VDC_2
 		lda	vramaddrconv+1, x
-		sta	$0003
+		sta	VDC_3
 		st0	#$02
 		cli
 
@@ -3238,9 +3324,8 @@ putline:
 ;increment calclinecounter
 		inx
 		cpx	#32
-		beq	.calcloopend
-		jmp	.calcloop
-.calcloopend:
+		jne	.calcloop
+
 		rts
 
 ;----------------------------
@@ -3249,9 +3334,6 @@ psgrun:
 		clx
 
 .psgrunloop:
-		;dec	psg0count, x
-		;bne	.psgrunjump07
-
 		lda	psg0count, x
 		beq	.psgrunjump00
 		dec	a
