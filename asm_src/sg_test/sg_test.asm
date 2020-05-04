@@ -551,7 +551,6 @@ main:
 .checkPadRight:
 		dec	<screenAngle
 		dec	<screenAngle
-		;bra	.checkPadEnd
 
 .checkPadEnd:
 		lda	<screenAngle
@@ -619,20 +618,16 @@ main:
 		sta	<rotationAngle
 
 		stz	<rotationX
-		lda	<bgCenterSpX
-		sta	<rotationX+1
+		mov	<rotationX+1 ,<bgCenterSpX
 
 		stz	<rotationY
-		lda	<bgCenterSpY
-		sta	<rotationY+1
+		mov	<rotationY+1, <bgCenterSpY
 
 		jsr	rotationProc
 
-		lda	<rotationAnsX+2
-		sta	<bgCenterSpXAdjust
+		mov	<bgCenterSpXAdjust, <rotationAnsX+2
 
-		lda	<rotationAnsY+2
-		sta	<bgCenterSpYAdjust
+		mov	<bgCenterSpYAdjust, <rotationAnsY+2
 
 ;++++++++++++++++++++++++++++
 ;set sp char data
