@@ -1608,9 +1608,6 @@ maphit2:
 ;----------------------------
 smul16:
 ;mul16d:mul16c = mul16a * mul16b
-;push x
-		phx
-
 ;a eor b sign
 		lda	<mul16a+1
 		eor	<mul16b+1
@@ -1620,34 +1617,32 @@ smul16:
 		bbr7	<mul16a+1, .smul16jp00
 
 ;a neg
-		ldx	#LOW(mul16a)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16a
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
 
 .smul16jp00:
 ;b sign
 		bbr7	<mul16b+1, .smul16jp01
 
 ;b neg
-		ldx	#LOW(mul16b)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16b
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
 
 .smul16jp01:
 		jsr	umul16
@@ -1658,31 +1653,28 @@ smul16:
 		beq	.smul16jp02
 
 ;anser neg
-		ldx	#LOW(mul16c)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16c
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c
+
+		lda	<mul16c+1
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c+1
+
+		lda	<mul16d
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16d
+
+		lda	<mul16d+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16d+1
 
 .smul16jp02:
-;pull x
-		plx
 		rts
 
 
@@ -1852,34 +1844,32 @@ smul16n:
 		bbr7	<mul16an+1, .smul16njp00
 
 ;a neg
-		ldx	#LOW(mul16an)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16an
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16an
+
+		lda	<mul16an+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16an+1
 
 .smul16njp00:
 ;b sign
 		bbr7	<mul16bn+1, .smul16njp01
 
 ;b neg
-		ldx	#LOW(mul16bn)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16bn
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16bn
+
+		lda	<mul16bn+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16bn+1
 
 .smul16njp01:
 		jsr	umul16n
@@ -1890,27 +1880,26 @@ smul16n:
 		beq	.smul16njp02
 
 ;anser neg
-		ldx	#LOW(mul16cn)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16cn
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16cn
+
+		lda	<mul16cn+1
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16cn+1
+
+		lda	<mul16dn
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16dn
+
+		lda	<mul16dn+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16dn+1
 
 .smul16njp02:
 ;pull x
@@ -2379,6 +2368,16 @@ setsprite3:
 
 ;----------------------------
 init:
+;reset wait
+		cly
+.resetWaitloop0:
+		clx
+.resetWaitloop1:
+		dex
+		bne	.resetWaitloop1
+		dey
+		bne	.resetWaitloop0
+
 		cly
 vdpdataloop:	lda	vdpdata, y
 		cmp	#$FF
