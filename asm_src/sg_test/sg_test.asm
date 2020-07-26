@@ -72,10 +72,19 @@ add		.macro
 
 		.else
 
-		clc
-		lda	\1
-		adc	\2
-		sta	\1
+			.if	(\# = 2)
+
+				clc
+				lda	\1
+				adc	\2
+				sta	\1
+
+			.else
+
+				clc
+				adc	\1
+
+			.endif
 
 		.endif
 		.endm
@@ -94,10 +103,19 @@ sub		.macro
 
 		.else
 
-		sec
-		lda	\1
-		sbc	\2
-		sta	\1
+			.if	(\# = 2)
+
+				sec
+				lda	\1
+				sbc	\2
+				sta	\1
+
+			else
+
+				sec
+				sbc	\1
+
+			.endif
 
 		.endif
 		.endm
@@ -305,7 +323,6 @@ spDataWorkAttr		.ds	2
 spDataAddr		.ds	2
 spDataAddrWork		.ds	2
 spDataCount		.ds	1
-spDataCountWork		.ds	1
 
 spCharWorkAddr		.ds	2
 
@@ -671,8 +688,7 @@ main:
 		cmp	#$FF
 		beq	.setSpCharEnd
 
-		clc
-		adc	#spDataBank
+		add	#spDataBank
 		tam	#$03		;Set $6000
 		iny
 
@@ -713,8 +729,7 @@ main:
 		lsr	a
 		lsr	a
 		lsr	a
-		clc
-		adc	#spXYDataBank
+		add	#spXYDataBank
 		tam	#$02		;Set $4000
 
 		lda	<screenAngle2
@@ -783,7 +798,7 @@ main:
 		lda	#63
 		sta	<spDataCount
 
-;SpData 256(angles) * 128(datas) * 4(bytes) * 2(left and right) = 256K
+;SpData 256(angles) * 128(data) * 4(bytes)[spx,spy,bgx,bgy] * 2(left and right) = 256K
 		cly
 .spLDataLoop0:
 		lda	[spDataAddr], y
@@ -801,14 +816,12 @@ main:
 		iny
 
 		lda	[spDataAddr], y
-		clc
-		adc	<bgCenterX
+		add	<bgCenterX
 		sta	<spDataWorkBGX
 		iny
 
 		lda	[spDataAddr], y
-		clc
-		adc	<bgCenterY
+		add	<bgCenterY
 		sta	<spDataWorkBGY
 		iny
 
@@ -828,36 +841,32 @@ main:
 		tax
 
 ;sp x
-		sec
 		lda	<spDataWorkX
-		sbc	bgCenterSpXAdjust
+		sub	bgCenterSpXAdjust
 
 		cmp	#8*8+1
 		bcc	.spLDataLoop0
 
 		sta	<spDataWorkX
 
-		clc
 		lda	<spDataWorkX
-		adc	#32
+		add	#32
 		sta	<spDataWorkX
 		bcc	.spLDataJump1
 		inc	<spDataWorkX+1
 
 .spLDataJump1:
 ;sp y
-		sec
 		lda	<spDataWorkY
-		sbc	bgCenterSpYAdjust
+		sub	bgCenterSpYAdjust
 
 		cmp	#8*26
 		bcs	.spLDataLoop0
 
 		sta	<spDataWorkY
 
-		clc
 		lda	<spDataWorkY
-		adc	#64
+		add	#64
 		sta	<spDataWorkY
 		bcc	.spLDataJump2
 		inc	<spDataWorkY+1
@@ -887,31 +896,11 @@ main:
 		jmp	.spLDataLoop0
 
 .spLDataJump3:
-		lda	<spDataCount
-		sta	<spDataCountWork
-
-.spLDataJump3B:
-		st1	#$00		;Y
-		st2	#$00
-		st1	#$00		;X
-		st2	#$00
-		st1	#$00		;No
-		st2	#$00
-		st1	#$00		;ATTR
-		st2	#$00
-
-		dec	<spDataCount
-		bne	.spLDataJump3B
-		bra	.spLDataJump4B
-
 .spLDataJump4:
-		stz	<spDataCountWork
-
-.spLDataJump4B:
 ;put left sp count
 		ldx	#0
 		ldy	#5
-		lda	<spDataCountWork
+		lda	<spDataCount
 		jsr	puthex
 
 ;++++++++++++++++++++++++++++
@@ -951,14 +940,12 @@ main:
 		iny
 
 		lda	[spDataAddr], y
-		clc
-		adc	<bgCenterX
+		add	<bgCenterX
 		sta	<spDataWorkBGX
 		iny
 
 		lda	[spDataAddr], y
-		clc
-		adc	<bgCenterY
+		add	<bgCenterY
 		sta	<spDataWorkBGY
 		iny
 
@@ -978,36 +965,32 @@ main:
 		tax
 
 ;sp x
-		sec
 		lda	<spDataWorkX
-		sbc	bgCenterSpXAdjust
+		sub	bgCenterSpXAdjust
 
 		cmp	#8*22
 		bcs	.spRDataLoop0
 
 		sta	<spDataWorkX
 
-		clc
 		lda	<spDataWorkX
-		adc	#32
+		add	#32
 		sta	<spDataWorkX
 		bcc	.spRDataJump1
 		inc	<spDataWorkX+1
 
 .spRDataJump1:
 ;sp y
-		sec
 		lda	<spDataWorkY
-		sbc	bgCenterSpYAdjust
+		sub	bgCenterSpYAdjust
 
 		cmp	#8*26
 		bcs	.spRDataLoop0
 
 		sta	<spDataWorkY
 
-		clc
 		lda	<spDataWorkY
-		adc	#64
+		add	#64
 		sta	<spDataWorkY
 		bcc	.spRDataJump2
 		inc	<spDataWorkY+1
@@ -1038,31 +1021,11 @@ main:
 		jmp	.spRDataLoop0
 
 .spRDataJump3:
-		lda	<spDataCount
-		sta	<spDataCountWork
-
-.spRDataJump3B:
-		st1	#$00		;Y
-		st2	#$00
-		st1	#$00		;X
-		st2	#$00
-		st1	#$00		;No
-		st2	#$00
-		st1	#$00		;ATTR
-		st2	#$00
-
-		dec	<spDataCount
-		bne	.spRDataJump3B
-		bra	.spRDataJump4B
-
 .spRDataJump4:
-		stz	<spDataCountWork
-
-.spRDataJump4B:
 ;put right sp count
 		ldx	#4
 		ldy	#5
-		lda	<spDataCountWork
+		lda	<spDataCount
 		jsr	puthex
 
 ;++++++++++++++++++++++++++++
@@ -1104,7 +1067,6 @@ main:
 ;----------------------------
 setCharData:
 ;CHAR set to vram
-		;lda	#$01
 		lda	#charDataBank
 		tam	#$02
 
@@ -1133,6 +1095,16 @@ setCharData:
 
 ;----------------------------
 initializeVdp:
+;reset wait
+		cly
+.resetWaitloop0:
+		clx
+.resetWaitloop1:
+		dex
+		bne	.resetWaitloop1
+		dey
+		bne	.resetWaitloop0
+
 ;set vdp
 		lda	VDC1_0
 		lda	VDC2_0
@@ -1390,27 +1362,21 @@ angleCheck2C2:
 ;reg A:angle
 ;reg X:base angle
 		stx	<angleCheckWork
-		sec
-		sbc	<angleCheckWork
-		clc
-		adc	#128
+		sub	<angleCheckWork
+		add	#128
 		cmp	#128
 		php
 		bcc	.angleCheck2C2Jump0
 
 		txa
-		sec
-		sbc	#224
-		clc
-		adc	#64
+		sub	#224
+		add	#64
 		bra	.angleCheck2C2Jump1
 
 .angleCheck2C2Jump0:
 		txa
-		sec
-		sbc	#224
-		clc
-		adc	#128
+		sub	#224
+		add	#128
 
 .angleCheck2C2Jump1:
 		plp
@@ -1422,23 +1388,19 @@ angleCheck2C:
 ;reg A:angle
 ;reg X:base angle
 		stx	<angleCheckWork
-		sec
-		sbc	<angleCheckWork
-		clc
-		adc	#128
+		sub	<angleCheckWork
+		add	#128
 		cmp	#128
 		php
 		bcc	.angleCheck2CJump0
 
 		txa
-		clc
-		adc	#64
+		add	#64
 		bra	.angleCheck2CJump1
 
 .angleCheck2CJump0:
 		txa
-		clc
-		adc	#192
+		add	#192
 
 .angleCheck2CJump1:
 		plp
@@ -1601,8 +1563,7 @@ getBgData:
 		lsr	a
 		lsr	a
 		lsr	a
-		clc
-		adc	<bgBank
+		add	<bgBank
 		tam	#$03		;Set $6000
 
 		lda	<bgCalcCenterY
@@ -1688,41 +1649,35 @@ calcCenterSp:
 ;out	bgCalcCenterX:bgCalcCenterSpX + regX(-11 ~ 11)
 ;	bgCalcCenterY:bgCalcCenterSpY + regY(-11 ~ 11)
 
-		clc
 		txa
-		adc	<bgCalcCenterSpX
+		add	<bgCalcCenterSpX
 		sta	<bgCalcCenterSpX
 		bpl	.calcCenterSpJump0
 
-		clc
-		adc	#12
+		add	#12
 		sta	<bgCalcCenterSpX
 		dec	<bgCalcCenterX
 		bra	.calcCenterSpJump1
 
 .calcCenterSpJump0:
-		sec
-		sbc	#12
+		sub	#12
 		bmi	.calcCenterSpJump1
 		sta	<bgCalcCenterSpX
 		inc	<bgCalcCenterX
 
 .calcCenterSpJump1:
-		clc
 		tya
-		adc	<bgCalcCenterSpY
+		add	<bgCalcCenterSpY
 		sta	<bgCalcCenterSpY
 		bpl	.calcCenterSpJump2
 
-		clc
-		adc	#12
+		add	#12
 		sta	<bgCalcCenterSpY
 		dec	<bgCalcCenterY
 		bra	.calcCenterSpJump3
 
 .calcCenterSpJump2:
-		sec
-		sbc	#12
+		sub	#12
 		bmi	.calcCenterSpJump3
 		sta	<bgCalcCenterSpY
 		inc	<bgCalcCenterY
@@ -1798,9 +1753,6 @@ rotationProc:
 ;----------------------------
 smul16:
 ;mul16d:mul16c = mul16a * mul16b
-;push x
-		phx
-
 ;a eor b sign
 		lda	<mul16a+1
 		eor	<mul16b+1
@@ -1810,34 +1762,32 @@ smul16:
 		bbr7	<mul16a+1, .smul16jp00
 
 ;a neg
-		ldx	#LOW(mul16a)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16a
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
 
 .smul16jp00:
 ;b sign
 		bbr7	<mul16b+1, .smul16jp01
 
 ;b neg
-		ldx	#LOW(mul16b)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16b
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
 
 .smul16jp01:
 		jsr	umul16
@@ -1848,31 +1798,28 @@ smul16:
 		beq	.smul16jp02
 
 ;anser neg
-		ldx	#LOW(mul16c)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16c
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c
+
+		lda	<mul16c+1
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c+1
+
+		lda	<mul16d
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16d
+
+		lda	<mul16d+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16d+1
 
 .smul16jp02:
-;pull x
-		plx
 		rts
 
 
@@ -1926,6 +1873,7 @@ umul16:
 		inx
 		set
 		adc	<mul16a+1
+
 		bcc	.umul16jp01
 
 ;inc d
@@ -2131,6 +2079,7 @@ _irq1:
 
 		bbr7	<vsyncFlag, .irq1End
 
+;VDC#1 section
 		stz	VPC_6		;reg6 select VDC#1
 
 		st0	#$07		;scrollx
@@ -2141,6 +2090,28 @@ _irq1:
 		st1	#$00
 		st2	#$00
 
+;clear SATB
+		st0	#$00		;set SATB addr
+		st1	#$00
+		st2	#$04
+
+		st0	#$02		;VRAM clear
+		st1	#$00
+		st2	#$00
+
+		st0	#$10		;set DMA src
+		st1	#$00
+		st2	#$04
+
+		st0	#$11		;set DMA dist
+		st1	#$01
+		st2	#$04
+
+		st0	#$12		;set DMA count 255WORD
+		st1	#$FF
+		st2	#$00
+
+;VDC#2 section
 		lda	#$01
 		sta	VPC_6		;reg6 select VDC#2
 
@@ -2151,6 +2122,27 @@ _irq1:
 
 		st0	#$08		;scrolly
 		sta	VDC2_2
+		st2	#$00
+
+;clear SATB
+		st0	#$00		;set SATB addr
+		st1	#$00
+		st2	#$04
+
+		st0	#$02		;VRAM clear
+		st1	#$00
+		st2	#$00
+
+		st0	#$10		;set DMA src
+		st1	#$00
+		st2	#$04
+
+		st0	#$11		;set DMA dist
+		st1	#$01
+		st2	#$04
+
+		st0	#$12		;set DMA count 255WORD
+		st1	#$FF
 		st2	#$00
 
 		inc	<scrollWork
@@ -2408,12 +2400,12 @@ cosdatahigh:
 ;////////////////////////////
 		.bank	1
 		INCBIN	"char.dat"		;  8K  1    $01
-		INCBIN	"spxy.dat"		;256K  2~33 $02~$21
-		INCBIN	"spbank.dat"		;  8K 34    $22
-		INCBIN	"spno.dat"		;  8K 35    $23
-		INCBIN	"sp00_00_3F.dat"	;  8K 36    $24
-		INCBIN	"sp01_00_3F.dat"	;  8K 37    $25
-		INCBIN	"sp02_00_3F.dat"	;  8K 38    $26
-		INCBIN	"sp03_00_3F.dat"	;  8K 39    $27
-		INCBIN	"sp03_00_3F.dat"	;  8K 40    $28
-		INCBIN	"stage0.dat"		; 64K 41~48 $29~$30
+		INCBIN	"spxy.dat"		;256K  2~33 $02~$21	SPXY and BGXY ([spx:1byte, spy:1byte, bgx:1byte, bgy:1byte] * 128data * 256angle * 2left and right)
+		INCBIN	"spbank.dat"		;  8K 34    $22		SP number bank and address ([bank:2byte, address:2byte] * 8pattern * 256angle)
+		INCBIN	"spno.dat"		;  8K 35    $23		BG number convert to SP number and attribute ([SP number:1byte, attribute:1byte] * 16pattern * 256angle)
+		INCBIN	"sp00_00_3F.dat"	;  8K 36    $24		normal block 0-63 angle
+		INCBIN	"sp01_00_3F.dat"	;  8K 37    $25		cross block 0-63 angle
+		INCBIN	"sp02_00_3F.dat"	;  8K 38    $26		up arrow block 0-63 angle
+		INCBIN	"sp03_00_3F.dat"	;  8K 39    $27		right arrow block 0-63 angle
+		INCBIN	"sp03_00_3F.dat"	;  8K 40    $28		padding
+		INCBIN	"stage0.dat"		; 64K 41~48 $29~$30	stage0 data
