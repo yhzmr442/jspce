@@ -1193,44 +1193,42 @@ sdiv32:
 		bbr7	<div16d+1, .sdiv16jp00
 
 ;d neg
-		ldx	#LOW(div16c)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16c
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c
+
+		lda	<mul16c+1
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c+1
+
+		lda	<mul16d
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16d
+
+		lda	<mul16d+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16d+1
 
 .sdiv16jp00:
 ;a sign
 		bbr7	<div16a+1, .sdiv16jp01
 
 ;a neg
-		ldx	#LOW(div16a)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16a
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
 
 .sdiv16jp01:
 		jsr	udiv32
@@ -1240,17 +1238,16 @@ sdiv32:
 		bpl	.sdiv16jp02
 
 ;anser neg
-		ldx	#LOW(div16a)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16a
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
 
 .sdiv16jp02:
 ;remainder sign
@@ -1258,17 +1255,16 @@ sdiv32:
 		bpl	.sdiv16jp03
 
 ;remainder neg
-		ldx	#LOW(div16b)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16b
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
 
 .sdiv16jp03:
 ;pull x
@@ -1377,9 +1373,6 @@ udiv32:
 ;----------------------------
 smul16:
 ;mul16d:mul16c = mul16a * mul16b
-;push x
-		phx
-
 ;a eor b sign
 		lda	<mul16a+1
 		eor	<mul16b+1
@@ -1389,34 +1382,32 @@ smul16:
 		bbr7	<mul16a+1, .smul16jp00
 
 ;a neg
-		ldx	#LOW(mul16a)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16a
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
 
 .smul16jp00:
 ;b sign
 		bbr7	<mul16b+1, .smul16jp01
 
 ;b neg
-		ldx	#LOW(mul16b)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16b
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
 
 .smul16jp01:
 		jsr	umul16
@@ -1426,31 +1417,28 @@ smul16:
 		bpl	.smul16jp02
 
 ;anser neg
-		ldx	#LOW(mul16c)
-		set
-		eor	#$FF
 		sec
-		set
-		adc	#$00
-		inx
-		set
+		lda	<mul16c
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c
+
+		lda	<mul16c+1
 		eor	#$FF
-		set
-		adc	#$00
-		inx
-		set
+		adc	#0
+		sta	<mul16c+1
+
+		lda	<mul16d
 		eor	#$FF
-		set
-		adc	#$00
+		adc	#0
+		sta	<mul16d
+
+		lda	<mul16d+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16d+1
 
 .smul16jp02:
-;pull x
-		plx
 		rts
 
 
@@ -1953,7 +1941,7 @@ initWireLineColorNoIndex:
 initWire:
 ;
 		stz	clearMemory
-		tii	clearMemory, clearMemory, 1023
+		tii	clearMemory, clearMemory+1, 1023
 
 		stz	<drawFlag
 		lda	#$20
