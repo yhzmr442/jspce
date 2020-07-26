@@ -1696,46 +1696,6 @@ umul16:
 		phx
 		phy
 
-;------------------------------
-;		lda	<mul16a+1
-;		bne	.umul16jp05
-;
-;;a to d
-;		stz	<mul16d
-;		lda	<mul16a
-;		sta	<mul16d+1
-;
-;;b to a
-;		lda	<mul16b
-;		sta	<mul16a
-;		lda	<mul16b+1
-;		sta	<mul16a+1
-;
-;;set counter
-;		ldy	#8
-;		bra	.umul16jp04
-;
-;.umul16jp05:
-;		lda	<mul16b+1
-;		bne	.umul16jp03
-;
-;;b to d
-;		stz	<mul16d
-;		lda	<mul16b
-;		sta	<mul16d+1
-;
-;;set counter
-;		ldy	#8
-;		bra	.umul16jp04
-;
-;.umul16jp03:
-;b to d
-;		;;lda	<mul16b+1
-;		sta	<mul16d+1
-;		lda	<mul16b
-;		sta	<mul16d
-;------------------------------
-
 ;b to d
 		lda	<mul16b
 		sta	<mul16d
@@ -1924,46 +1884,6 @@ umul16n:
 ;push x y
 		phx
 		phy
-
-;------------------------------
-;		lda	<mul16an+1
-;		bne	.umul16njp05
-;
-;;a to d
-;		stz	<mul16dn
-;		lda	<mul16an
-;		sta	<mul16dn+1
-;
-;;b to a
-;		lda	<mul16bn
-;		sta	<mul16an
-;		lda	<mul16bn+1
-;		sta	<mul16an+1
-;
-;;set counter
-;		ldy	#8
-;		bra	.umul16njp04
-;
-;.umul16njp05:
-;		lda	<mul16bn+1
-;		bne	.umul16njp03
-;
-;;b to d
-;		stz	<mul16dn
-;		lda	<mul16bn
-;		sta	<mul16dn+1
-;
-;;set counter
-;		ldy	#8
-;		bra	.umul16njp04
-;
-;.umul16njp03:
-;b to d
-;		;;lda	<mul16bn+1
-;		sta	<mul16dn+1
-;		lda	<mul16bn
-;		sta	<mul16dn
-;------------------------------
 
 ;b to d
 		lda	<mul16bn
@@ -4054,10 +3974,10 @@ psgfreqdata:
 
 ;////////////////////////////
 		.bank	2
-		INCBIN	"x_y_sin_cos.dat"	;128K	 2~17	$02~$11
+		INCBIN	"x_y_sin_cos.dat"	;128K	 2~17	$02~$11		left BGXY and additional value XY[left BGX:4byte, left BGY:4byte, additional value X:4byte, additional value Y:4byte] * 32line * 256angle
 		INCBIN	"char.dat"		;8K	18	$12
 		INCBIN	"ship.dat"		;8K	19	$13
-		INCBIN	"course1.dat"		;64K	20~27	$14~$1B
-		INCBIN	"course1angle.dat"	;32K	28~31	$1C~$1F
+		INCBIN	"course1.dat"		;64K	20~27	$14~$1B		dot(high nibble:low nibble) * 256column * 256row
+		INCBIN	"course1angle.dat"	;32K	28~31	$1C~$1F		block angle * 256column * 128row
 		INCBIN	"course2.dat"		;64K	32~39	$20~$27
 		INCBIN	"course2angle.dat"	;32K	40~43	$28~$2B
