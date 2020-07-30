@@ -16,7 +16,6 @@
 ;E000	main irq
 
 
-
 VDC_0			.equ	$0000
 VDC_1			.equ	$0001
 VDC_2			.equ	$0002
@@ -81,10 +80,6 @@ muladdr			.ds	2
 
 udiv32_2Work		.ds	2
 
-;;;testx			.ds	1
-;;;testy			.ds	1
-;;;testres			.ds	1
-
 ;---------------------
 vertexCount		.ds	1
 vertexCountWork		.ds	1
@@ -92,19 +87,10 @@ vertex0Addr		.ds	2
 vertex1Addr		.ds	2
 vertexWork		.ds	4
 
-translationX		.ds	2
-translationY		.ds	2
-translationZ		.ds	2
-
-centerX			.ds	2
-centerY			.ds	2
-
-
 ;---------------------
 clip2D0Count		.ds	1
 clip2D1Count		.ds	1
 clip2DFlag		.ds	1
-
 
 ;---------------------
 edgeX0			.ds	1
@@ -113,14 +99,9 @@ edgeX1			.ds	1
 edgeY1			.ds	1
 
 edgeSlopeX		.ds	2
-;;;edgeSlopeXNeg		.ds	2
 edgeSlopeY		.ds	2
-;;;edgeSlopeYNeg		.ds	2
-
 edgeSigneX		.ds	1
-
 edgeSlopeTemp		.ds	2
-
 
 ;---------------------
 polyLineX0		.ds	1
@@ -143,11 +124,9 @@ polyLineColorDataWork1	.ds	1
 polyLineColorDataWork2	.ds	1
 polyLineColorDataWork3	.ds	1
 
-;;;clearRamAddr
 setBatWork
 polyLineYAddr		.ds	2
 polyLineCount		.ds	1
-
 
 ;---------------------
 polyBufferAddr		.ds	2
@@ -155,11 +134,9 @@ polyBufferAddrWork0	.ds	1
 polyBufferAddrWork1	.ds	1
 polyBufferAddrWork2	.ds	1
 polyBufferZ0Work0	.ds	2
-;;;polyBufferZ0Work1	.ds	2
 
 polyBufferNow		.ds	2
 polyBufferNext		.ds	2
-
 
 ;---------------------
 modelAddr		.ds	2
@@ -170,23 +147,38 @@ setModelCountWork	.ds	1
 setModelColor		.ds	1
 setModelAttr		.ds	1
 
+;---------------------
+centerX			.ds	2
+centerY			.ds	2
+
+;---------------------
+translationX		.ds	2
+translationY		.ds	2
+translationZ		.ds	2
 
 ;---------------------
 rotationX		.ds	1
 rotationY		.ds	1
 rotationZ		.ds	1
 
-rotationNo0		.ds	1
-rotationNo1		.ds	1
-rotationNo2		.ds	1
+rotationSelect		.ds	1
 
+;---------------------
+eyeTranslationX		.ds	2
+eyeTranslationY		.ds	2
+eyeTranslationZ		.ds	2
+
+eyeRotationX		.ds	1
+eyeRotationY		.ds	1
+eyeRotationZ		.ds	1
+
+eyeRotationSelect	.ds	1
 
 ;---------------------
 ;LDRU SsBA
 padlast			.ds	1
 padnow			.ds	1
 padstate		.ds	1
-
 
 ;---------------------
 puthexaddr		.ds	2
@@ -199,20 +191,36 @@ puthexdata		.ds	1
 ;**********************************
 		.org 	$2200
 ;---------------------
-matrix0	.ds	2*3*3
-matrix1	.ds	2*3*3
-matrix2	.ds	2*3*3
+shipX			.ds	2
+shipY			.ds	2
+shipZ			.ds	2
+shipRX			.ds	1
+shipRY			.ds	1
+shipRZ			.ds	1
 
+;---------------------
+ringX			.ds	2
+ringY			.ds	2
+ringZ			.ds	2
+ringRX			.ds	1
+ringRY			.ds	1
+ringRZ			.ds	1
+
+;---------------------
+matrix0			.ds	2*3*3
+matrix1			.ds	2*3*3
+matrix2			.ds	2*3*3
+
+;---------------------
+eyeMatrix		.ds	2*3*3
 
 ;---------------------
 transform2DWork0	.ds	256
 transform2DWork1	.ds	256
 
-
 ;---------------------
 clip2D0		.ds	(8+1)*4
 clip2D1		.ds	(8+1)*4
-
 
 ;---------------------
 edgeLeft	.ds	192
@@ -240,7 +248,6 @@ polyBuffer	.ds	2048
 ;X7 Y7 2Byte
 
 
-
 ;//////////////////////////////////
 		.code
 		.bank	0
@@ -249,8 +256,11 @@ polyBuffer	.ds	2048
 
 main:
 
-;Initialize VDP
+;initialize VDP
 		jsr	initializeVdp
+
+;initialize pad
+		jsr	initializepad
 
 ;set poly proc bank
 		lda	#$01
@@ -258,180 +268,234 @@ main:
 
 		jsr	setBAT
 
+;initialize datas
 		lda	#128
 		sta	<centerX
 		lda	#96
-		;;;lda	#64	;<---
 		sta	<centerY
 
-		lda	#32
-		sta	<rotationX
-		lda	#192
-		sta	<rotationY
-		stz	<rotationZ
+		stz	shipRX
+		stz	shipRY
+		stz	shipRZ
 
+		lda	#0
+		sta	shipX
+		lda	#0
+		sta	shipX+1
+		lda	#0
+		sta	shipY
+		lda	#0
+		sta	shipY+1
+		lda	#$C0
+		sta	shipZ
+		lda	#$00
+		sta	shipZ+1
+
+		lda	#0
+		sta	ringX
+		lda	#0
+		sta	ringX+1
+		lda	#0
+		sta	ringY
+		lda	#0
+		sta	ringY+1
+		lda	#$00
+		sta	ringZ
+		lda	#$10
+		sta	ringZ+1
+
+		lda	#0
+		sta	ringRX
+		lda	#0
+		sta	ringRY
+		lda	#0
+		sta	ringRZ
 
 ;vsyncinterrupt start
 		cli
 
-.mainloop0:
+;main loop
+.mainLoop:
 
-
-;check pad rotation
-		bbs0	<padnow, .checkPadA
-		bbs1	<padnow, .checkPadB
-		bbs4	<padnow, .checkPadUp
-		bbs5	<padnow, .checkPadLeft
-		bbs6	<padnow, .checkPadDown
-		bbs7	<padnow, .checkPadRight
-		bra	.checkPadEnd
-
-.checkPadA:
-		inc	<rotationZ
-		bra	.checkPadEnd
-
-.checkPadB:
-		dec	<rotationZ
-		bra	.checkPadEnd
-
-.checkPadUp:
-		inc	<rotationX
-		bra	.checkPadEnd
+;check pad
+;pad up
+		bbr4	<padnow, .checkPadDown
+		sec
+		lda	shipY
+		sbc	#$04
+		sta	shipY
+		lda	shipY+1
+		sbc	#$00
+		sta	shipY+1
 
 .checkPadDown:
-		dec	<rotationX
-		bra	.checkPadEnd
+;pad down
+		bbr6	<padnow, .checkPadLeft
+		clc
+		lda	shipY
+		adc	#$04
+		sta	shipY
+		lda	shipY+1
+		adc	#$00
+		sta	shipY+1
 
 .checkPadLeft:
-		inc	<rotationY
-		bra	.checkPadEnd
+;pad left
+		bbr7	<padnow, .checkPadRight
+		sec
+		lda	shipX
+		sbc	#$04
+		sta	shipX
+		lda	shipX+1
+		sbc	#$00
+		sta	shipX+1
 
 .checkPadRight:
-		dec	<rotationY
+;pad right
+		bbr5	<padnow, .checkPadEnd
+		clc
+		lda	shipX
+		adc	#$04
+		sta	shipX
+		lda	shipX+1
+		adc	#$00
+		sta	shipX+1
 
 .checkPadEnd:
 
-		ldx	#0
-		ldy	#24
-		lda	<rotationX
-		sei
-		jsr	puthex
-		cli
-
-		ldx	#4
-		ldy	#24
-		lda	<rotationY
-		sei
-		jsr	puthex
-		cli
-
-		ldx	#8
-		ldy	#24
-		lda	<rotationZ
-		sei
-		jsr	puthex
-		cli
-
-
-
-;----------------
-;		;ldx	<rotationX
-;		;jsr	setMatrix1RotationX
-;		;jsr	moveMatrix1ToMatrix0
-;		;;jsr	moveMatrix1ToMatrix2
-;
-;		;ldx	<rotationY
-;		;jsr	setMatrix1RotationY
-;		;jsr	matrixMultiply
-;		;jsr	moveMatrix2ToMatrix0
-;
-;		;ldx	<rotationZ
-;		;jsr	setMatrix1RotationZ
-;		;jsr	matrixMultiply
-;
-;
-;		;ldx	<rotationX
-;		;jsr	setMatrix1RotationX
-;		;jsr	moveMatrix1ToMatrix2
-;
-;
-;		ldx	<rotationY
-;		jsr	setMatrix1RotationY
-;		jsr	moveMatrix1ToMatrix2
-
-
-		ldx	<rotationZ
-		;;;ldx	#$00	;front clip test
-		jsr	setMatrix1RotationZ
-		jsr	moveMatrix1ToMatrix0
-
-		;;;ldx	#32
-		ldx	<rotationX
-		;;;ldx	#$C3	;front clip test
-		jsr	setMatrix1RotationX
-		jsr	matrixMultiply
-		jsr	moveMatrix2ToMatrix0
-
-		;;;ldx	#192
-		ldx	<rotationY
-		;;;ldx	#$64	;front clip test
-		jsr	setMatrix1RotationY
-		jsr	matrixMultiply
-
-
-
-;----------------
+;set datas
 		lda	#0
+		sta	<eyeTranslationX
+		lda	#0
+		sta	<eyeTranslationX+1
+
+		lda	#0
+		sta	<eyeTranslationY
+		lda	#0
+		sta	<eyeTranslationY+1
+
+		lda	#$00
+		sta	<eyeTranslationZ
+		lda	#$00
+		sta	<eyeTranslationZ+1
+
+		lda	#0
+		sta	<eyeRotationX
+
+		lda	#0
+		sta	<eyeRotationY
+
+		lda	#0
+		sta	<eyeRotationZ
+
+		lda	#$12
+		sta	<eyeRotationSelect
+
+;initialize buffer
+		jsr	initializePolyBuffer
+
+;set ship model
+		lda	shipX
 		sta	<translationX
-		lda	#0
+		lda	shipX+1
 		sta	<translationX+1
 
-		lda	#0
+		lda	shipY
 		sta	<translationY
-		lda	#0
+		lda	shipY+1
 		sta	<translationY+1
 
-		;lda	#0
-		;sta	<translationZ
-		;lda	#1
-		;sta	<translationZ+1
-		lda	#230
+		lda	shipZ
 		sta	<translationZ
-		lda	#0
+		lda	shipZ+1
 		sta	<translationZ+1
-		;;;lda	#180	;front clip test
-		;;;sta	<translationZ
-		;;;lda	#0	;front clip test
-		;;;sta	<translationZ+1
 
-;----------------
-		jsr	initializePolyBuffer
+		lda	shipRX
+		sta	<rotationX
+
+		lda	shipRY
+		sta	<rotationY
+
+		lda	shipRZ
+		sta	<rotationZ
+
+		lda	#$12
+		sta	<rotationSelect
 
 		lda	#LOW(modelData0)
 		sta	<modelAddr
 		lda	#HIGH(modelData0)
 		sta	<modelAddr+1
 
-		jsr	setModel
-		;jsr	setModel2
+		jsr	setModel2
 
-		;jsr	setRam
+;set ring model
+		lda	ringX
+		sta	<translationX
+		lda	ringX+1
+		sta	<translationX+1
 
+		lda	ringY
+		sta	<translationY
+		lda	ringY+1
+		sta	<translationY+1
+
+		lda	ringZ
+		sta	<translationZ
+		lda	ringZ+1
+		sta	<translationZ+1
+
+		lda	ringRX
+		sta	<rotationX
+
+		lda	ringRY
+		sta	<rotationY
+
+		lda	ringRZ
+		sta	<rotationZ
+
+		lda	#$12
+		sta	<rotationSelect
+
+		lda	#LOW(modelData1)
+		sta	<modelAddr
+		lda	#HIGH(modelData1)
+		sta	<modelAddr+1
+
+		jsr	setModel2
+
+		sec
+		lda	ringZ
+		sbc	#$10
+		sta	ringZ
+		lda	ringZ+1
+		sbc	#$00
+		sta	ringZ+1
+		bpl	.ringJump
+
+		lda	#$00
+		sta	ringZ
+		lda	#$10
+		sta	ringZ+1
+
+.ringJump:
+		inc	ringRZ
+		inc	ringRZ
+
+;put polygon
 		jsr	clearRam
 
 		jsr	putPolyBuffer
 
-		;jsr	setRam
-
 		jsr	ramToChar
 
 ;jump mainloop
-		jmp	.mainloop0
-
+		jmp	.mainLoop
 
 
 ;----------------------------
 initializeVdp:
+;
 ;reset wait
 		cly
 .resetWaitloop0:
@@ -494,7 +558,6 @@ vdpdataend:
 .clearbatloop0:
 		ldx	#32
 .clearbatloop1:
-		;;;st1	#$30
 		st1	#$20
 		st2	#$01
 		dex
@@ -534,28 +597,6 @@ sdiv32:
 		bbr7	<div16d+1, .sdiv16jp00
 
 ;d neg
-;;		ldx	#LOW(div16c)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16c
 		eor	#$FF
@@ -582,18 +623,6 @@ sdiv32:
 		bbr7	<div16a+1, .sdiv16jp01
 
 ;a neg
-;;		ldx	#LOW(div16a)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16a
 		eor	#$FF
@@ -613,18 +642,6 @@ sdiv32:
 		bpl	.sdiv16jp02
 
 ;anser neg
-;;		ldx	#LOW(div16a)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16a
 		eor	#$FF
@@ -642,18 +659,6 @@ sdiv32:
 		bpl	.sdiv16jp03
 
 ;remainder neg
-;;		ldx	#LOW(div16b)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16b
 		eor	#$FF
@@ -787,18 +792,6 @@ smul16:
 		bbr7	<mul16a+1, .smul16jp00
 
 ;a neg
-;;		ldx	#LOW(mul16a)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16a
 		eor	#$FF
@@ -815,18 +808,6 @@ smul16:
 		bbr7	<mul16b+1, .smul16jp01
 
 ;b neg
-;;		ldx	#LOW(mul16b)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16b
 		eor	#$FF
@@ -846,28 +827,6 @@ smul16:
 		bpl	.smul16jp02
 
 ;anser neg
-;;		ldx	#LOW(mul16c)
-;;		set
-;;		eor	#$FF
-;;		sec
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-;;		inx
-;;		set
-;;		eor	#$FF
-;;		set
-;;		adc	#$00
-
 		sec
 		lda	<mul16c
 		eor	#$FF
@@ -902,24 +861,6 @@ umul16:
 		phx
 		phy
 
-;		lda	<mul16b
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;
-;		clc
-;		adc	#muldatBank
-;		sta	<mulbank
-;		tam	#$02
-
-;		lda	<mul16b
-;		and	#$1F
-;		ora	#$40
-;		stz	<muladdr
-;		sta	<muladdr+1
-
 		ldx	<mul16b
 		lda	mulbankdata, x
 		sta	<mulbank
@@ -937,7 +878,6 @@ umul16:
 		lda	[muladdr],y
 		sta	<mul16c+1
 
-
 		lda	<mulbank
 		clc
 		adc	#8
@@ -953,24 +893,6 @@ umul16:
 		lda	[muladdr],y
 		adc	#0
 		sta	<mul16d
-
-;		lda	<mul16b+1
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;
-;		clc
-;		adc	#muldatBank
-;		sta	<mulbank
-;		tam	#$02
-;
-;		lda	<mul16b+1
-;		and	#$1F
-;		ora	#$40
-;		stz	<muladdr
-;		sta	<muladdr+1
 
 		ldx	<mul16b+1
 		lda	mulbankdata, x
@@ -996,7 +918,6 @@ umul16:
 		adc	#0
 		sta	<mul16d+1
 
-
 		lda	<mulbank
 		clc
 		adc	#8
@@ -1014,14 +935,23 @@ umul16:
 		sta	<mul16d+1
 
 ;pull y x
-.end000:
 		ply
 		plx
 		rts
 
 
 ;----------------------------
+initializepad:
+;
+		stz	<padlast
+		stz	<padnow
+		stz	<padstate
+		rts
+
+
+;----------------------------
 getpaddata:
+;
 		lda	<padnow
 		sta	<padlast
 
@@ -1071,6 +1001,7 @@ numtochar:
 
 ;----------------------------
 puthex:
+;
 		pha
 		phx
 		phy
@@ -1128,7 +1059,6 @@ puthex:
 ;----------------------------
 _irq1:
 ;IRQ1 interrupt process
-
 ;ACK interrupt
 		pha
 		phx
@@ -1176,223 +1106,130 @@ _nmi:
 
 
 ;----------------------------
-;modelData0
-;	.dw	modelData0Polygon
-;	.db	13	;polygon count
-;	.dw	modelData0Vertex
-;	.db	11	;vertex count
-;modelData0Polygon
-;	.db	0*6, 1*6, 2*6, 1+$00;$80 Draw the back side
-;
-;	.db	0*6, 3*6, 1*6, 3+$00
-;	.db	3*6, 4*6, 1*6, 4+$00
-;
-;	.db	0*6, 2*6, 3*6, 5+$00
-;	.db	3*6, 2*6, 5*6, 6+$00
-;
-;	.db	1*6, 4*6, 5*6, 7+$00
-;	.db	2*6, 1*6, 5*6, 8+$00
-;
-;	.db	3*6, 6*6, 4*6, 9+$00
-;	.db	3*6, 5*6, 6*6,10+$00
-;	.db	6*6, 5*6, 4*6,11+$00
-;
-;	.db	4*6, 7*6, 1*6,12+$80
-;
-;	.db	5*6, 2*6, 8*6,13+$80
-;
-;	.db	0*6, 9*6,10*6,15+$80
-;
-;modelData0Vertex
-;	.dw	   0,-16,-32
-;	.dw	  16, 16,-32
-;	.dw	 -16, 16,-32
-;
-;	.dw	   0,-16,  0
-;	.dw	  16, 16,  0
-;	.dw	 -16, 16,  0
-;
-;	.dw	   0, 16, 32
-;
-;	.dw	  32, 16,-32
-;
-;	.dw	 -32, 16,-32
-;
-;	.dw	   0,-32,-32
-;	.dw	   0,-16,-16
-
-;Star Fox
-;modelData0
-;	.dw	modelData0Polygon
-;	.db	18	;polygon count
-;	.dw	modelData0Vertex
-;	.db	16	;vertex count
-;modelData0Polygon
-;	;.db	0*6, 2*6, 1*6, 1+$00;0 Front Bottom
-;	;.db	0*6, 1*6, 3*6, 2+$00;1 Front Right
-;	;.db	0*6, 3*6, 2*6, 3+$00;2 Front Left
-;
-;	;.db	3*6, 1*6, 4*6, 4+$00;3 Middle Outer Right
-;	;.db	3*6, 4*6, 2*6, 5+$00;4 Middle Outer Left
-;
-;	;.db	5*6, 1*6, 2*6, 6+$00;5 Middle Inner
-;
-;	;.db	1*6, 5*6, 4*6, 7+$00;6 Middle Inner Right
-;	;.db	4*6, 5*6, 2*6, 8+$00;7 Middle Inner Left
-;
-;	;.db	7*6, 6*6, 1*6, 9+$00;8 Right Wing Front
-;	;.db	6*6, 7*6, 8*6,10+$00;9 Right Wing Right
-;	;.db	1*6, 8*6, 7*6,11+$00;10 Right Wing Left
-;	;.db	1*6, 6*6, 8*6,12+$00;11 Right Wing Top
-;
-;	;.db	2*6, 9*6,10*6,13+$00;12 Left Wing Front
-;	;.db	2*6,10*6,11*6,14+$00;13 Left Wing Right
-;	;.db	9*6,11*6,10*6,15+$00;14 Left Wing Left
-;	;.db	9*6, 2*6,11*6, 1+$00;15 Left Wing Top
-;
-;	;.db	1*6,13*6,12*6, 3+$80;16 Right Wing
-;
-;	;.db	2*6,14*6,15*6, 4+$80;17 Left Wing
-;;-----------------------------------------------------------
-;
-;
-;	.db	0*6, 2*6, 1*6, 8+$00;0 Front Bottom
-;	.db	0*6, 1*6, 3*6,14+$00;1 Front Right
-;	.db	0*6, 3*6, 2*6,13+$00;2 Front Left
-;
-;	.db	3*6, 1*6, 4*6,12+$00;3 Middle Outer Right
-;	.db	3*6, 4*6, 2*6,11+$00;4 Middle Outer Left
-;
-;	.db	5*6, 1*6, 2*6, 1+$00;5 Middle Inner
-;
-;	.db	1*6, 5*6, 4*6,10+$00;6 Middle Inner Right
-;	.db	4*6, 5*6, 2*6, 9+$00;7 Middle Inner Left
-;
-;	.db	7*6, 6*6, 1*6, 1+$00;8 Right Wing Front
-;	.db	6*6, 7*6, 8*6, 9+$00;9 Right Wing Right
-;	.db	1*6, 8*6, 7*6,10+$00;10 Right Wing Left
-;	.db	1*6, 6*6, 8*6,11+$00;11 Right Wing Top
-;
-;	.db	2*6, 9*6,10*6, 1+$00;12 Left Wing Front
-;	.db	2*6,10*6,11*6, 9+$00;13 Left Wing Right
-;	.db	9*6,11*6,10*6,10+$00;14 Left Wing Left
-;	.db	9*6, 2*6,11*6,11+$00;15 Left Wing Top
-;
-;	.db	1*6,13*6,12*6, 4+$80;16 Right Wing
-;
-;	.db	2*6,14*6,15*6, 4+$80;17 Left Wing
-;
-;
-;modelData0Vertex
-;	.dw	   0,  10, 100;0 Front
-;	.dw	  20,  10,   0;1 Front Bottom Right
-;	.dw	 -20,  10,   0;2 Front Bottom Left
-;
-;	.dw	   0, -10,   0;3 Front Middle Top
-;
-;	.dw	   0,   0, -20;4 Front Middle Back
-;
-;	.dw	   0,   0,   0;5 Front Middle Inner
-;
-;	.dw	  40,  10,   0;6 Right Wing Right
-;	.dw	  30,  20,   0;7 Right Wing Bottom
-;	.dw	  70,  30, -50;8 Right Wing Back
-;
-;	.dw	 -40,  10,   0;9 Left Wing Left
-;	.dw	 -30,  20,   0;10 Left Wing Bottom
-;	.dw	 -70,  30, -50;11 Left Wing Back
-;
-;	.dw	  30,  20,  30;12 Right Wing Front
-;	.dw	  40, -40, -30;13 Right Wing Top
-;
-;	.dw	 -30,  20,  30;14 Left Wing Front
-;	.dw	 -40, -40, -30;15 Left Wing Top
-
-
-
-
-
 ;Star Fox Arwing
 modelData0
-	.dw	modelData0Polygon
-	.db	18	;polygon count
-	.dw	modelData0Vertex
-	.db	16	;vertex count
+		.dw	modelData0Polygon
+		.db	18	;polygon count
+		.dw	modelData0Vertex
+		.db	16	;vertex count
 modelData0Polygon
-	.db	3+$80, $08, 0*6, 2*6, 1*6, 0*0;0 Front Bottom
-	.db	3+$80, $0E, 0*6, 1*6, 3*6, 0*0;1 Front Right
-	.db	3+$80, $0D, 0*6, 3*6, 2*6, 0*0;2 Front Left
+		.db	3+$80, $08, 0*6, 2*6, 1*6, 0*0;0 Front Bottom
+		.db	3+$80, $0E, 0*6, 1*6, 3*6, 0*0;1 Front Right
+		.db	3+$80, $0D, 0*6, 3*6, 2*6, 0*0;2 Front Left
 
-	.db	3+$80, $0C, 3*6, 1*6, 4*6, 0*0;3 Middle Outer Right
-	.db	3+$80, $0B, 3*6, 4*6, 2*6, 0*0;4 Middle Outer Left
+		.db	3+$80, $0C, 3*6, 1*6, 4*6, 0*0;3 Middle Outer Right
+		.db	3+$80, $0B, 3*6, 4*6, 2*6, 0*0;4 Middle Outer Left
 
-	.db	3+$80, $01, 5*6, 1*6, 2*6, 0*0;5 Middle Inner
+		.db	3+$80, $01, 5*6, 1*6, 2*6, 0*0;5 Middle Inner
 
-	.db	3+$80, $0A, 1*6, 5*6, 4*6, 0*0;6 Middle Inner Right
-	.db	3+$80, $09, 4*6, 5*6, 2*6, 0*0;7 Middle Inner Left
+		.db	3+$80, $0A, 1*6, 5*6, 4*6, 0*0;6 Middle Inner Right
+		.db	3+$80, $09, 4*6, 5*6, 2*6, 0*0;7 Middle Inner Left
 
-	.db	3+$80, $01, 7*6, 6*6, 1*6, 0*0;8 Right Wing Front
-	.db	3+$80, $09, 6*6, 7*6, 8*6, 0*0;9 Right Wing Right
-	.db	3+$80, $0A, 1*6, 8*6, 7*6, 0*0;10 Right Wing Left
-	.db	3+$80, $0B, 1*6, 6*6, 8*6, 0*0;11 Right Wing Top
+		.db	3+$80, $01, 7*6, 6*6, 1*6, 0*0;8 Right Wing Front
+		.db	3+$80, $09, 6*6, 7*6, 8*6, 0*0;9 Right Wing Right
+		.db	3+$80, $0A, 1*6, 8*6, 7*6, 0*0;10 Right Wing Left
+		.db	3+$80, $0B, 1*6, 6*6, 8*6, 0*0;11 Right Wing Top
 
-	.db	3+$80, $01, 2*6, 9*6,10*6, 0*0;12 Left Wing Front
-	.db	3+$80, $09, 2*6,10*6,11*6, 0*0;13 Left Wing Right
-	.db	3+$80, $0A, 9*6,11*6,10*6, 0*0;14 Left Wing Left
-	.db	3+$80, $0B, 9*6, 2*6,11*6, 0*0;15 Left Wing Top
+		.db	3+$80, $01, 2*6, 9*6,10*6, 0*0;12 Left Wing Front
+		.db	3+$80, $09, 2*6,10*6,11*6, 0*0;13 Left Wing Right
+		.db	3+$80, $0A, 9*6,11*6,10*6, 0*0;14 Left Wing Left
+		.db	3+$80, $0B, 9*6, 2*6,11*6, 0*0;15 Left Wing Top
 
-	.db	3+$00, $44, 1*6,13*6,12*6, 0*0;16 Right Wing
+		.db	3+$00, $44, 1*6,13*6,12*6, 0*0;16 Right Wing
 
-	.db	3+$00, $44, 2*6,14*6,15*6, 0*0;17 Left Wing
+		.db	3+$00, $44, 2*6,14*6,15*6, 0*0;17 Left Wing
 
 modelData0Vertex
-	.dw	   0,  10, 100;0 Front
-	.dw	  20,  10,   0;1 Front Bottom Right
-	.dw	 -20,  10,   0;2 Front Bottom Left
+		.dw	   0,  10, 100;0 Front
+		.dw	  20,  10,   0;1 Front Bottom Right
+		.dw	 -20,  10,   0;2 Front Bottom Left
 
-	.dw	   0, -10,   0;3 Front Middle Top
+		.dw	   0, -10,   0;3 Front Middle Top
 
-	.dw	   0,   0, -20;4 Front Middle Back
+		.dw	   0,   0, -20;4 Front Middle Back
 
-	.dw	   0,   0,   0;5 Front Middle Inner
+		.dw	   0,   0,   0;5 Front Middle Inner
 
-	.dw	  40,  10,   0;6 Right Wing Right
-	.dw	  30,  20,   0;7 Right Wing Bottom
-	.dw	  70,  30, -50;8 Right Wing Back
+		.dw	  40,  10,   0;6 Right Wing Right
+		.dw	  30,  20,   0;7 Right Wing Bottom
+		.dw	  70,  30, -50;8 Right Wing Back
 
-	.dw	 -40,  10,   0;9 Left Wing Left
-	.dw	 -30,  20,   0;10 Left Wing Bottom
-	.dw	 -70,  30, -50;11 Left Wing Back
+		.dw	 -40,  10,   0;9 Left Wing Left
+		.dw	 -30,  20,   0;10 Left Wing Bottom
+		.dw	 -70,  30, -50;11 Left Wing Back
 
-	.dw	  30,  20,  30;12 Right Wing Front
-	.dw	  40, -40, -30;13 Right Wing Top
+		.dw	  30,  20,  30;12 Right Wing Front
+		.dw	  40, -40, -30;13 Right Wing Top
 
-	.dw	 -30,  20,  30;14 Left Wing Front
-	.dw	 -40, -40, -30;15 Left Wing Top
-
-
-
-;modelData0
-;	.dw	modelData0Polygon
-;	.db	2	;polygon count
-;	.dw	modelData0Vertex
-;	.db	8	;vertex count
-;modelData0Polygon
-;	.db	4+$00, $21, 0*6, 1*6, 2*6, 3*6
-;	.db	3+$00, $43, 4*6, 5*6, 6*6, 7*6
-;modelData0Vertex
-;	.dw	 -50, -50,  0;0
-;	.dw	  50, -50,  0;1
-;	.dw	  50,  50,  0;2
-;	.dw	 -50,  50,  0;3
-;
-;	.dw	 -50, -50, 50;4
-;	.dw	  50, -50, 50;5
-;	.dw	  50,  50, 50;6
-;	.dw	 -50,  50, 50;7
+		.dw	 -30,  20,  30;14 Left Wing Front
+		.dw	 -40, -40, -30;15 Left Wing Top
 
 
+;----------------------------
+;Ring
+modelData1
+		.dw	modelData1Polygon
+		.db	16	;polygon count
+		.dw	modelData1Vertex
+		.db	24	;vertex count
 
+modelData1Polygon
+		.db	4+$80, $EE, 0*6, 3*6, 4*6, 1*6; 0
+		.db	4+$80, $DD, 1*6, 4*6, 5*6, 2*6; 1
+
+		.db	4+$80, $CC, 3*6, 6*6, 7*6, 4*6; 2
+		.db	4+$80, $BB, 4*6, 7*6, 8*6, 5*6; 3
+
+		.db	4+$80, $77, 6*6, 9*6,10*6, 7*6; 4
+		.db	4+$80, $AA, 7*6,10*6,11*6, 8*6; 5
+
+		.db	4+$80, $99, 9*6,12*6,13*6,10*6; 6
+		.db	4+$80, $88,10*6,13*6,14*6,11*6; 7
+
+		.db	4+$80, $99,12*6,15*6,16*6,13*6; 8
+		.db	4+$80, $88,13*6,16*6,17*6,14*6; 9
+
+		.db	4+$80, $77,15*6,18*6,19*6,16*6;10
+		.db	4+$80, $AA,16*6,19*6,20*6,17*6;11
+
+		.db	4+$80, $CC,18*6,21*6,22*6,19*6;12
+		.db	4+$80, $BB,19*6,22*6,23*6,20*6;13
+
+		.db	4+$80, $EE,21*6, 0*6, 1*6,22*6;14
+		.db	4+$80, $DD,22*6, 1*6, 2*6,23*6;15
+
+modelData1Vertex
+		.dw	   0,-159,   0; 0
+		.dw	   0,-143, -15; 1
+		.dw	   0,-127,   0; 2
+
+		.dw	 112,-112,   0; 3
+		.dw	 101,-101, -15; 4
+		.dw	  90, -90,   0; 5
+
+		.dw	 159,   0,   0; 6
+		.dw	 143,   0, -15; 7
+		.dw	 127,   0,   0; 8
+
+		.dw	 112, 112,   0; 9
+		.dw	 101, 101, -15;10
+		.dw	  90,  90,   0;11
+
+		.dw	   0, 159,   0;12
+		.dw	   0, 143, -15;13
+		.dw	   0, 127,   0;14
+
+		.dw	-112, 112,   0;15
+		.dw	-101, 101, -15;16
+		.dw	 -90,  90,   0;17
+
+		.dw	-159,   0,   0;18
+		.dw	-143,   0, -15;19
+		.dw	-127,   0,   0;20
+
+		.dw	-112,-112,   0;21
+		.dw	-101,-101, -15;22
+		.dw	 -90, -90,   0;23
 
 
 ;----------------------------
@@ -1411,11 +1248,8 @@ vdpdata:
 
 ;----------------------------
 palettedata:
-		;.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
-		;	$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
 		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
 			$0049, $0092, $00DB, $0124, $016D, $01B6, $01FF, $01FF
-
 
 
 ;----------------------------
@@ -1469,10 +1303,38 @@ muladdrdata:
 		.dw	_reset
 
 
-;//////////////////////////// <<<<<
+;////////////////////////////
 		.bank	1
 
 		.org	$C000
+
+;----------------------------
+vertexRotationSelect:
+;
+		and	#3
+		cmp	#3
+		beq	.rotationSelectJump2
+		cmp	#1
+		beq	.rotationSelectJump11
+		bcs	.rotationSelectJump12
+
+.rotationSelectJump10:
+		ldx	<rotationX
+		jsr	vertexRotationX
+		jmp	.rotationSelectJump2
+
+.rotationSelectJump11:
+		ldx	<rotationY
+		jsr	vertexRotationY
+		jmp	.rotationSelectJump2
+
+.rotationSelectJump12:
+		ldx	<rotationZ
+		jsr	vertexRotationZ
+
+.rotationSelectJump2:
+		rts
+
 
 ;----------------------------
 vertexRotationZ:
@@ -1480,7 +1342,6 @@ vertexRotationZ:
 ;transform2DWork0 => transform2DWork0
 ;vertexCount = count
 ;x = angle
-
 		cpx	#0
 		bne	.vertexRotationZJump0
 		jmp	.vertexRotationZEnd
@@ -1637,7 +1498,6 @@ vertexRotationY:
 ;transform2DWork0 => transform2DWork0
 ;vertexCount = count
 ;x = angle
-
 		cpx	#0
 		bne	.vertexRotationYJump0
 		jmp	.vertexRotationYEnd
@@ -1946,7 +1806,7 @@ vertexRotationX:
 
 ;----------------------------
 vertexTranslation2:
-
+;
 		lda	<vertexCount
 		beq	.vertexTranslation2End
 		sta	<vertexCountWork
@@ -1992,7 +1852,7 @@ vertexTranslation2:
 
 ;----------------------------
 transform2D2:
-
+;
 		ldx	<vertexCount
 		cly
 
@@ -2008,38 +1868,24 @@ transform2D2:
 		jmp	.transform2D2Jump00
 
 .transform2D2Jump05:
-;X0*128 to mul16d:mul16c
-		stz	<mul16c
-		lda	transform2DWork0,y	;X0
-		sta	<mul16c+1
+;X0 to mul16c
+		lda	transform2DWork0,y
+		sta	<mul16c
 		lda	transform2DWork0+1,y
-		sta	<mul16d
-		stz	<mul16d+1
+		sta	<mul16c+1
 
-		lsr	<mul16d
-		ror	<mul16c+1
-		ror	<mul16c
-		bbr6	<mul16d,.transform2D2Jump06
-
-		lda	#$80
-		ora	<mul16d
-		sta	<mul16d
-		lda	#$FF
-		sta	<mul16d+1
-
-.transform2D2Jump06:
 ;Z0 to mul16a
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4,y
 		sta	<mul16a
 		lda	transform2DWork0+5,y
 		sta	<mul16a+1
 
 ;X0*128/Z0
-		jsr	sdiv32
+		jsr	transform2DProc
+
 
 ;X0*128/Z0+centerX
 ;mul16a+centerX to X0
-
 		clc
 		lda	<mul16a
 		adc	<centerX
@@ -2048,38 +1894,23 @@ transform2D2:
 		adc	<centerX+1
 		sta	transform2DWork0+1,y
 
-;Y0*128 to mul16d:mul16c
-		stz	<mul16c
-		lda	transform2DWork0+2,y	;Y0
-		sta	<mul16c+1
+;Y0 to mul16c
+		lda	transform2DWork0+2,y
+		sta	<mul16c
 		lda	transform2DWork0+3,y
-		sta	<mul16d
-		stz	<mul16d+1
+		sta	<mul16c+1
 
-		lsr	<mul16d
-		ror	<mul16c+1
-		ror	<mul16c
-		bbr6	<mul16d,.transform2D2Jump07
-
-		lda	#$80
-		ora	<mul16d
-		sta	<mul16d
-		lda	#$FF
-		sta	<mul16d+1
-
-.transform2D2Jump07:
 ;Z0 to mul16a
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4,y
 		sta	<mul16a
 		lda	transform2DWork0+5,y
 		sta	<mul16a+1
 
 ;Y0*128/Z0
-		jsr	sdiv32
+		jsr	transform2DProc
 
 ;Y0*128/Z0+centerY
 ;mul16a+centerY to Y0
-
 		clc
 		lda	<mul16a
 		adc	<centerY
@@ -2114,7 +1945,6 @@ transform2D2:
 ;----------------------------
 moveToTransform2DWork0:
 ;vertex0Addr to Transform2DWork0
-
 		lda	<vertexCount
 		beq	.moveToTransform2DWork0End
 		sta	<vertexCountWork
@@ -2152,6 +1982,7 @@ moveToTransform2DWork0:
 
 ;----------------------------
 putPolyBuffer:
+;
 		lda	polyBufferStart
 		sta	<polyBufferAddr
 		lda	polyBufferStart+1
@@ -2210,6 +2041,8 @@ putPolyBuffer:
 
 ;----------------------------
 setModel2:
+;
+;rotation
 		ldy	#$05
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
@@ -2222,13 +2055,79 @@ setModel2:
 		sta	<vertex0Addr+1
 
 		jsr	moveToTransform2DWork0
-		ldx	<rotationX
-		jsr	vertexRotationX
-		ldx	<rotationY
-		jsr	vertexRotationY
-		ldx	<rotationZ
-		jsr	vertexRotationZ
+
+		lda	<rotationSelect
+		and	#3
+		jsr	vertexRotationSelect
+
+		lda	<rotationSelect
+		lsr	a
+		lsr	a
+		and	#3
+		jsr	vertexRotationSelect
+
+		lda	<rotationSelect
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		and	#3
+		jsr	vertexRotationSelect
+
+;translation
+		sec
+		lda	<translationX
+		sbc	<eyeTranslationX
+		sta	<translationX
+		lda	<translationX+1
+		sbc	<eyeTranslationX+1
+		sta	<translationX+1
+
+		sec
+		lda	<translationY
+		sbc	<eyeTranslationY
+		sta	<translationY
+		lda	<translationY+1
+		sbc	<eyeTranslationY+1
+		sta	<translationY+1
+
+		sec
+		lda	<translationZ
+		sbc	<eyeTranslationZ
+		sta	<translationZ
+		lda	<translationZ+1
+		sbc	<eyeTranslationZ+1
+		sta	<translationZ+1
+
 		jsr	vertexTranslation2
+
+;eye rotation
+		lda	<eyeRotationX
+		sta	<rotationX
+		lda	<eyeRotationY
+		sta	<rotationY
+		lda	<eyeRotationZ
+		sta	<rotationZ
+
+		lda	<eyeRotationSelect
+		and	#3
+		jsr	vertexRotationSelect
+
+		lda	<eyeRotationSelect
+		lsr	a
+		lsr	a
+		and	#3
+		jsr	vertexRotationSelect
+
+		lda	<eyeRotationSelect
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		and	#3
+		jsr	vertexRotationSelect
+
+;transform2D
 		jsr	transform2D2
 
 		jsr	setModelProc
@@ -2238,6 +2137,7 @@ setModel2:
 
 ;----------------------------
 setModel:
+;
 ;Rotation
 		ldy	#$05
 		lda	[modelAddr],y		;vertex count
@@ -2298,6 +2198,7 @@ setModel:
 
 ;----------------------------
 setModelProc:
+;
 		ldy	#$00
 		lda	[modelAddr],y
 		sta	<modelAddrWork		;ModelData Polygon Addr
@@ -2594,6 +2495,7 @@ setModelProc:
 
 ;----------------------------
 initializePolyBuffer:
+;
 ;initialize polyBufferAddr = polyBuffer
 		lda	#LOW(polyBuffer)
 		sta	<polyBufferAddr
@@ -2937,7 +2839,7 @@ vertexMultiply:
 
 ;----------------------------
 matrixMultiply:
-
+;
 		stz	vertex1Addr
 
 		cly
@@ -3063,6 +2965,7 @@ matrixMultiply:
 
 ;----------------------------
 transform2D:
+;
 .transform2DLoop0:
 ;Z0 < 128 check
 		ldy	#$04
@@ -3077,40 +2980,6 @@ transform2D:
 		jmp	.transform2DJump00
 
 .transform2DJump05:
-;;X0*128 to mul16d:mul16c
-;		stz	<mul16c
-;		ldy	#$00
-;		lda	[vertex0Addr],y
-;		sta	<mul16c+1
-;		iny
-;		lda	[vertex0Addr],y
-;		sta	<mul16d
-;		stz	<mul16d+1
-;
-;		lsr	<mul16d
-;		ror	<mul16c+1
-;		ror	<mul16c
-;		bbr6	<mul16d,.transform2DJump06
-;
-;		lda	#$80
-;		ora	<mul16d
-;		sta	<mul16d
-;		lda	#$FF
-;		sta	<mul16d+1
-;
-;.transform2DJump06:
-;;Z0 to mul16a
-;		ldy	#$04
-;		lda	[vertex0Addr],y
-;		sta	<mul16a
-;		iny
-;		lda	[vertex0Addr],y
-;		sta	<mul16a+1
-;
-;;X0*128/Z0
-;		jsr	sdiv32
-
-
 ;X0 to mul16c
 		ldy	#$00
 		lda	[vertex0Addr],y
@@ -3130,7 +2999,6 @@ transform2D:
 ;X0*128/Z0
 		jsr	transform2DProc
 
-
 ;X0*128/Z0+centerX
 ;mul16a+centerX to vertex1Addr X0
 
@@ -3143,40 +3011,6 @@ transform2D:
 		lda	<mul16a+1
 		adc	<centerX+1
 		sta	[vertex1Addr],y
-
-;;Y0*128 to mul16d:mul16c
-;		stz	<mul16c
-;		ldy	#$02
-;		lda	[vertex0Addr],y
-;		sta	<mul16c+1
-;		iny
-;		lda	[vertex0Addr],y
-;		sta	<mul16d
-;		stz	<mul16d+1
-;
-;		lsr	<mul16d
-;		ror	<mul16c+1
-;		ror	<mul16c
-;		bbr6	<mul16d,.transform2DJump07
-;
-;		lda	#$80
-;		ora	<mul16d
-;		sta	<mul16d
-;		lda	#$FF
-;		sta	<mul16d+1
-;
-;.transform2DJump07:
-;;Z0 to mul16a
-;		ldy	#$04
-;		lda	[vertex0Addr],y
-;		sta	<mul16a
-;		iny
-;		lda	[vertex0Addr],y
-;		sta	<mul16a+1
-;
-;;Y0*128/Z0
-;		jsr	sdiv32
-
 
 ;Y0 to mul16c
 		ldy	#$02
@@ -3196,7 +3030,6 @@ transform2D:
 
 ;Y0*128/Z0
 		jsr	transform2DProc
-
 
 ;Y0*128/Z0+centerY
 ;mul16a+centerY to vertex1Addr Y0
@@ -3259,7 +3092,6 @@ transform2D:
 ;----------------------------
 transform2DProc:
 ;mul16c(-32768-32767) * 128 / mul16a(1-32768) = mul16a(rough value)
-
 		phx
 		phy
 
@@ -3285,28 +3117,7 @@ transform2DProc:
 		sta	<div16a
 		lda	<div16a+1
 		sbc	#0
-		sta	<div16a+1
 
-;		lda	<div16a+1
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;
-;		clc
-;		adc	#divdatBank
-;		sta	<mulbank
-;		tam	#$02
-;
-;		lda	<div16a
-;		sta	<muladdr
-;		lda	<div16a+1
-;		and	#$1F
-;		ora	#$40
-;		sta	<muladdr+1
-
-		;ldx	<div16a+1
 		tax
 		lda	divbankdata, x
 		sta	<mulbank
@@ -3329,24 +3140,6 @@ transform2DProc:
 		sta	<udiv32_2Work+1
 
 ;mul udiv32_2Work low byte
-;		lda	<udiv32_2Work
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;
-;		clc
-;		adc	#muldatBank
-;		sta	<mulbank
-;		tam	#$02
-;
-;		lda	<udiv32_2Work
-;		and	#$1F
-;		ora	#$40
-;		stz	<muladdr
-;		sta	<muladdr+1
-
 		ldx	<udiv32_2Work
 		lda	mulbankdata, x
 		sta	<mulbank
@@ -3387,24 +3180,6 @@ transform2DProc:
 		sta	<div16work+1
 
 ;mul udiv32_2Work high byte
-;		lda	<udiv32_2Work+1
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;		lsr	a
-;
-;		clc
-;		adc	#muldatBank
-;		sta	<mulbank
-;		tam	#$02
-;
-;		lda	<udiv32_2Work+1
-;		and	#$1F
-;		ora	#$40
-;		stz	<muladdr
-;		sta	<muladdr+1
-
 		ldx	<udiv32_2Work+1
 		lda	mulbankdata, x
 		sta	<mulbank
@@ -3448,6 +3223,7 @@ transform2DProc:
 
 ;----------------------------
 clip2D:
+;
 		jsr	clip2DY0
 		lda	<clip2D1Count
 		beq	.clip2DEnd
@@ -3469,6 +3245,7 @@ clip2D:
 
 ;----------------------------
 clip2DX255:
+;
 		lda	<clip2D1Count
 		asl	a
 		asl	a
@@ -3651,6 +3428,7 @@ clip2DX255:
 
 ;----------------------------
 clip2DX0:
+;
 		lda	<clip2D0Count
 		asl	a
 		asl	a
@@ -3825,6 +3603,7 @@ clip2DX0:
 
 ;----------------------------
 clip2DY255:
+;
 		lda	<clip2D1Count
 		asl	a
 		asl	a
@@ -3850,7 +3629,6 @@ clip2DY255:
 		sec
 		lda	clip2D1+2,x	;Y0
 		sbc	#192
-		;;;sbc	#128	;<---
 		lda	clip2D1+3,x
 		sbc	#0
 		bmi	.clip2DY255Jump00
@@ -3860,7 +3638,6 @@ clip2DY255:
 		sec
 		lda	clip2D1+6,x	;Y1
 		sbc	#192
-		;;;sbc	#128	;<---
 		lda	clip2D1+7,x
 		sbc	#0
 		bmi	.clip2DY255Jump01
@@ -4009,6 +3786,7 @@ clip2DY255:
 
 ;----------------------------
 clip2DY0:
+;
 		lda	<clip2D0Count
 		asl	a
 		asl	a
@@ -4183,6 +3961,7 @@ clip2DY0:
 
 ;----------------------------
 calcEdge_putPoly:
+;
 		lda	<clip2D0Count
 		asl	a
 		asl	a
@@ -4239,8 +4018,8 @@ calcEdge_putPoly:
 
 
 ;----------------------------
-;calculation edge
 calcEdge:
+;calculation edge
 ;compare edgeY0 edgeY1
 		lda	<edgeY1
 		cmp	<edgeY0
@@ -4479,8 +4258,8 @@ calcEdge:
 
 
 ;----------------------------
-;set edge buffer
 setEdgeBuffer:
+;set edge buffer
 		lda	edgeCount,x
 
 		beq	.setEdgeBufferJump0	;count 1
@@ -4529,8 +4308,8 @@ setEdgeBuffer:
 
 
 ;----------------------------
-;initialize calculation edge
 initCalcEdge:
+;initialize calculation edge
 		lda	#$FF
 		sta	edgeCount
 		tii	edgeCount, edgeCount+1, 192
@@ -4539,8 +4318,8 @@ initCalcEdge:
 
 
 ;----------------------------
-;set poly color
 setPolyColor:
+;set poly color
 		ldy	<polyLineColorNo
 
 		lda	polyLineColorData0,y
@@ -4559,51 +4338,21 @@ setPolyColor:
 
 
 ;----------------------------
-;put poly line
 putPolyLine:
+;put poly line
 ;calation vram address
 ;left
-;;		ldx	edgeLeft,y
-;;		lda	polyLineAddrConvYLow0,y
-;;		ora	polyLineAddrConvXLow0,x
-;;		sta	<polyLineLeftAddr
-;;
-;;		lda	polyLineAddrConvYHigh0,y
-;;		ora	polyLineAddrConvXHigh0,x
-;;		sta	<polyLineLeftAddr+1
-;;
-;;
-;;		lda	<polyLineLeftAddr+1;<---
-;;		lsr	a
-;;		lsr	a
-;;		lsr	a
-;;		lsr	a
-;;		lsr	a
-;;
-;;		sec
-;;		sbc	#$02
-;;
-;;		clc
-;;		adc	#$F9
-;;		tam	#$02
-;;
-;;		lda	<polyLineLeftAddr+1;<---
-;;		and	#$1F
-;;		ora	#$40
-;;		sta	<polyLineLeftAddr+1
-
 		ldx	edgeLeft,y
 		lda	polyLineAddrConvYLow0,y
 		ora	polyLineAddrConvXLow0,x
 		sta	<polyLineLeftAddr
 
-		lda	polyLineAddrConvYHigh2,y
+		lda	polyLineAddrConvYHigh0,y
 		ora	polyLineAddrConvXHigh0,x
 		sta	<polyLineLeftAddr+1
 
 		lda	polyLineAddrConvYBank,y
 		tam	#$02
-
 
 		lda	polyLineAddrConvX,x
 		sta	<polyLineCount
@@ -4616,29 +4365,14 @@ putPolyLine:
 		sta	<polyLineLeftMask
 
 ;right
-;;		ldx	edgeRight,y
-;;		lda	polyLineAddrConvYLow0,y
-;;		ora	polyLineAddrConvXLow0,x
-;;		sta	<polyLineRightAddr
-;;
-;;		lda	polyLineAddrConvYHigh0,y
-;;		ora	polyLineAddrConvXHigh0,x
-;;		sta	<polyLineRightAddr+1
-;;
-;;		lda	<polyLineRightAddr+1;<---
-;;		and	#$1F
-;;		ora	#$40
-;;		sta	<polyLineRightAddr+1
-
 		ldx	edgeRight,y
 		lda	polyLineAddrConvYLow0,y
 		ora	polyLineAddrConvXLow0,x
 		sta	<polyLineRightAddr
 
-		lda	polyLineAddrConvYHigh2,y
+		lda	polyLineAddrConvYHigh0,y
 		ora	polyLineAddrConvXHigh0,x
 		sta	<polyLineRightAddr+1
-
 
 		sec
 		lda	polyLineAddrConvX,x
@@ -4675,8 +4409,8 @@ putPolyLine:
 
 
 ;----------------------------
-;put left poly line
 putPolyLine01Left:
+;put left poly line
 		lda	<polyLineColorDataWork0
 		and	<polyLineLeftData
 		sta	<polyLineColorDataWork
@@ -4711,7 +4445,7 @@ putPolyLine01Left:
 		ora	<polyLineColorDataWork
 		sta	[polyLineLeftAddr]
 
-		inc	<polyLineLeftAddr;<---
+		inc	<polyLineLeftAddr;
 
 		lda	<polyLineColorDataWork3
 		and	<polyLineLeftData
@@ -4726,8 +4460,8 @@ putPolyLine01Left:
 
 
 ;----------------------------
-;put right poly line
 putPolyLine01Right:
+;put right poly line
 		lda	<polyLineColorDataWork0
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
@@ -4762,7 +4496,7 @@ putPolyLine01Right:
 		ora	<polyLineColorDataWork
 		sta	[polyLineRightAddr]
 
-		inc	<polyLineRightAddr;<--
+		inc	<polyLineRightAddr
 
 		lda	<polyLineColorDataWork3
 		and	<polyLineRightData
@@ -4777,8 +4511,8 @@ putPolyLine01Right:
 
 
 ;----------------------------
-;put left to right poly line
 putPolyLine00:
+;put left to right poly line
 		clc
 		lda	<polyLineLeftAddr
 		adc	#$20
@@ -4809,7 +4543,7 @@ putPolyLine00:
 		sta	[polyLineYAddr]
 		inc	<polyLineYAddr
 
-		lda	<polyLineColorDataWork3;<---
+		lda	<polyLineColorDataWork3
 		sta	[polyLineYAddr]
 		clc
 		lda	<polyLineYAddr
@@ -4824,21 +4558,8 @@ putPolyLine00:
 
 
 ;----------------------------
-;setRam:
-;		lda	#$F9
-;		tam	#$02
-;
-;		lda	#$FA
-;		tam	#$03
-;
-;		lda	#$FB
-;		tam	#$04
-;
-;		rts
-
-
-;----------------------------
 clearRam:
+;
 		lda	#$F9
 		tam	#$02
 
@@ -4861,8 +4582,8 @@ clearRam:
 
 
 ;----------------------------
-;move ram to vram
 ramToChar:
+;move ram to vram
 		lda	#$F9
 		tam	#$02
 
@@ -4969,7 +4690,7 @@ polyLineAddrConvYBank:
 
 
 ;----------------------------
-polyLineAddrConvYHigh2:
+polyLineAddrConvYHigh0:
 		.db	$40, $40, $40, $40, $40, $40, $40, $40, $44, $44, $44, $44, $44, $44, $44, $44,\
 			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
 			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
@@ -4986,26 +4707,6 @@ polyLineAddrConvYHigh2:
 			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
 			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
 			$58, $58, $58, $58, $58, $58, $58, $58, $5C, $5C, $5C, $5C, $5C, $5C, $5C, $5C
-
-
-;;----------------------------
-;polyLineAddrConvYHigh0:
-;		.db	$40, $40, $40, $40, $40, $40, $40, $40, $44, $44, $44, $44, $44, $44, $44, $44,\
-;			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
-;			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
-;			$58, $58, $58, $58, $58, $58, $58, $58, $5C, $5C, $5C, $5C, $5C, $5C, $5C, $5C,\
-;			$60, $60, $60, $60, $60, $60, $60, $60, $64, $64, $64, $64, $64, $64, $64, $64,\
-;			$68, $68, $68, $68, $68, $68, $68, $68, $6C, $6C, $6C, $6C, $6C, $6C, $6C, $6C,\
-;			$70, $70, $70, $70, $70, $70, $70, $70, $74, $74, $74, $74, $74, $74, $74, $74,\
-;			$78, $78, $78, $78, $78, $78, $78, $78, $7C, $7C, $7C, $7C, $7C, $7C, $7C, $7C,\
-;			$80, $80, $80, $80, $80, $80, $80, $80, $84, $84, $84, $84, $84, $84, $84, $84,\
-;			$88, $88, $88, $88, $88, $88, $88, $88, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C,\
-;			$90, $90, $90, $90, $90, $90, $90, $90, $94, $94, $94, $94, $94, $94, $94, $94,\
-;			$98, $98, $98, $98, $98, $98, $98, $98, $9C, $9C, $9C, $9C, $9C, $9C, $9C, $9C,\
-;			$A0, $A0, $A0, $A0, $A0, $A0, $A0, $A0, $A4, $A4, $A4, $A4, $A4, $A4, $A4, $A4,\
-;			$A8, $A8, $A8, $A8, $A8, $A8, $A8, $A8, $AC, $AC, $AC, $AC, $AC, $AC, $AC, $AC,\
-;			$B0, $B0, $B0, $B0, $B0, $B0, $B0, $B0, $B4, $B4, $B4, $B4, $B4, $B4, $B4, $B4,\
-;			$B8, $B8, $B8, $B8, $B8, $B8, $B8, $B8, $BC, $BC, $BC, $BC, $BC, $BC, $BC, $BC
 
 
 ;----------------------------
