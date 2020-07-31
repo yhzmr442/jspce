@@ -1,3 +1,4 @@
+;VDC1
 ;VRAM
 ;0000-03FF	BG0	 1KWORD
 ;0400-0FFF
@@ -78,6 +79,17 @@ div16work		.ds	2
 mulbank			.ds	1
 muladdr			.ds	2
 
+;---------------------
+;LDRU SsBA
+padlast			.ds	1
+padnow			.ds	1
+padstate		.ds	1
+
+;---------------------
+puthexaddr		.ds	2
+puthexdata		.ds	1
+
+;---------------------
 udiv32_2Work		.ds	2
 
 ;---------------------
@@ -98,10 +110,10 @@ edgeY0			.ds	1
 edgeX1			.ds	1
 edgeY1			.ds	1
 
-edgeSlopeX		.ds	2
-edgeSlopeY		.ds	2
+edgeSlopeX		.ds	1
+edgeSlopeY		.ds	1
 edgeSigneX		.ds	1
-edgeSlopeTemp		.ds	2
+edgeSlopeTemp		.ds	1
 
 ;---------------------
 polyLineX0		.ds	1
@@ -174,22 +186,16 @@ eyeRotationZ		.ds	1
 
 eyeRotationSelect	.ds	1
 
-;---------------------
-;LDRU SsBA
-padlast			.ds	1
-padnow			.ds	1
-padstate		.ds	1
-
-;---------------------
-puthexaddr		.ds	2
-puthexdata		.ds	1
-
 
 		.bss
 ;**********************************
 		.org 	$2100
 ;**********************************
 		.org 	$2200
+;---------------------
+frameCount		.ds	1
+drawCount		.ds	1
+
 ;---------------------
 shipX			.ds	2
 shipY			.ds	2
@@ -219,20 +225,20 @@ transform2DWork0	.ds	256
 transform2DWork1	.ds	256
 
 ;---------------------
-clip2D0		.ds	(8+1)*4
-clip2D1		.ds	(8+1)*4
+clip2D0			.ds	(8+1)*4
+clip2D1			.ds	(8+1)*4
 
 ;---------------------
-edgeLeft	.ds	192
-edgeRight	.ds	192
-edgeCount	.ds	192
-		.ds	1
+edgeLeft		.ds	192
+edgeRight		.ds	192
+edgeCount		.ds	192
+			.ds	1
 
 ;---------------------
-polyBufferStart	.ds	6
-polyBufferEnd	.ds	6
+polyBufferStart		.ds	6
+polyBufferEnd		.ds	6
 
-polyBuffer	.ds	2048
+polyBuffer		.ds	2048
 
 ;NEXT ADDR 2Byte
 ;SAMPLE Z 2Byte
@@ -301,7 +307,7 @@ main:
 		sta	ringY+1
 		lda	#$00
 		sta	ringZ
-		lda	#$10
+		lda	#$08
 		sta	ringZ+1
 
 		lda	#0
@@ -311,7 +317,11 @@ main:
 		lda	#0
 		sta	ringRZ
 
-;vsyncinterrupt start
+		lda	#60
+		sta	frameCount
+		stz	drawCount
+
+;vsync interrupt start
 		cli
 
 ;main loop
@@ -475,7 +485,7 @@ main:
 
 		lda	#$00
 		sta	ringZ
-		lda	#$10
+		lda	#$08
 		sta	ringZ+1
 
 .ringJump:
@@ -489,6 +499,7 @@ main:
 
 		jsr	ramToChar
 
+		inc	drawCount
 ;jump mainloop
 		jmp	.mainLoop
 
@@ -1068,6 +1079,19 @@ _irq1:
 
 		jsr	getpaddata
 
+		dec	frameCount
+		bne	.irqEnd
+
+		ldx	#0
+		ldy	#24
+		lda	drawCount
+		jsr	puthex
+
+		lda	#60
+		sta	frameCount
+		stz	drawCount
+
+.irqEnd:
 		ply
 		plx
 		pla
@@ -1248,7 +1272,7 @@ vdpdata:
 
 ;----------------------------
 palettedata:
-		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+		.dw	$0107, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\;GRB
 			$0049, $0092, $00DB, $0124, $016D, $01B6, $01FF, $01FF
 
 
@@ -2213,19 +2237,19 @@ setModelProc:
 		stz	<polyBufferAddrWork0	;ModelData Polygon
 
 .setModelLoop0:
-		ldy	<polyBufferAddrWork0	;ModelData Polygon Attr
-		lda	[modelAddrWork],y
-		inc	<polyBufferAddrWork0
+		ldy	<polyBufferAddrWork0
+		lda	[modelAddrWork],y	;ModelData Polygon Attr
+		iny
 
 		sta	<setModelAttr
 		and	#$07
 		sta	<setModelCountWork
 		sta	<setModelCount
 
-		ldy	<polyBufferAddrWork0	;ModelData Polygon Color
-		lda	[modelAddrWork],y
-		inc	<polyBufferAddrWork0
+		lda	[modelAddrWork],y	;ModelData Polygon Color
 		sta	<setModelColor
+		iny
+		sty	<polyBufferAddrWork0
 
 		stz	<polyBufferAddrWork1	;clip2D
 
@@ -3044,7 +3068,7 @@ transform2D:
 		adc	<centerY+1
 		sta	[vertex1Addr],y
 
-;;Z0>=128 flag set
+;Z0>=128 flag set
 ;Z0 set
 		iny
 		lda	[vertex0Addr],y
@@ -4078,7 +4102,6 @@ calcEdge:
 		eor	#$FF
 		inc	a
 		sta	<edgeSlopeX
-		stz	<edgeSlopeX+1
 
 		lda	#$FF
 		sta	<edgeSigneX
@@ -4087,10 +4110,8 @@ calcEdge:
 
 .edgeJump0:
 		sta	<edgeSlopeX
-		stz	<edgeSlopeX+1
 
-		lda	#$01
-		sta	<edgeSigneX
+		stz	<edgeSigneX
 .edgeJump1:
 
 ;calculation edge Y sign
@@ -4099,7 +4120,6 @@ calcEdge:
 		sbc	<edgeY0
 
 		sta	<edgeSlopeY
-		stz	<edgeSlopeY+1
 
 .edgeJump3:
 ;edgeSlope compare
@@ -4140,9 +4160,6 @@ calcEdge:
 		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeX
 		sta	<edgeSlopeTemp
-		lda	<edgeSlopeTemp+1
-		sbc	<edgeSlopeX+1
-		sta	<edgeSlopeTemp+1
 
 		inx
 		bra	.edgeXLoop0
@@ -4170,9 +4187,6 @@ calcEdge:
 		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeX
 		sta	<edgeSlopeTemp
-		lda	<edgeSlopeTemp+1
-		sbc	<edgeSlopeX+1
-		sta	<edgeSlopeTemp+1
 
 		inx
 
@@ -4215,9 +4229,6 @@ calcEdge:
 		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeY
 		sta	<edgeSlopeTemp
-		lda	<edgeSlopeTemp+1
-		sbc	<edgeSlopeY+1
-		sta	<edgeSlopeTemp+1
 
 		iny
 
@@ -4245,9 +4256,6 @@ calcEdge:
 		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeY
 		sta	<edgeSlopeTemp
-		lda	<edgeSlopeTemp+1
-		sbc	<edgeSlopeY+1
-		sta	<edgeSlopeTemp+1
 
 		dey
 
