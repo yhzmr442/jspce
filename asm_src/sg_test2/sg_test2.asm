@@ -156,7 +156,9 @@ modelAddrWork		.ds	2
 modelPolygonCount	.ds	1
 setModelCount		.ds	1
 setModelCountWork	.ds	1
-setModelColor		.ds	1
+setModelFrontColor	.ds	1
+setModelBackColor	.ds	1
+setModelColorY		.ds	1
 setModelAttr		.ds	1
 
 ;---------------------
@@ -211,6 +213,22 @@ ringZ			.ds	2
 ringRX			.ds	1
 ringRY			.ds	1
 ringRZ			.ds	1
+
+;---------------------
+building1X		.ds	2
+building1Y		.ds	2
+building1Z		.ds	2
+building1RX		.ds	1
+building1RY		.ds	1
+building1RZ		.ds	1
+
+;---------------------
+building2X		.ds	2
+building2Y		.ds	2
+building2Z		.ds	2
+building2RX		.ds	1
+building2RY		.ds	1
+building2RZ		.ds	1
 
 ;---------------------
 matrix0			.ds	2*3*3
@@ -280,6 +298,7 @@ main:
 		lda	#96
 		sta	<centerY
 
+;--------
 		stz	shipRX
 		stz	shipRY
 		stz	shipRZ
@@ -297,6 +316,7 @@ main:
 		lda	#$00
 		sta	shipZ+1
 
+;--------
 		lda	#0
 		sta	ringX
 		lda	#0
@@ -317,6 +337,49 @@ main:
 		lda	#0
 		sta	ringRZ
 
+;--------
+		lda	#$80
+		sta	building1X
+		lda	#$00
+		sta	building1X+1
+		lda	#$80
+		sta	building1Y
+		lda	#$00
+		sta	building1Y+1
+		lda	#$00
+		sta	building1Z
+		lda	#$04
+		sta	building1Z+1
+
+		lda	#0
+		sta	building1RX
+		lda	#0
+		sta	building1RY
+		lda	#0
+		sta	building1RZ
+
+;--------
+		lda	#$00
+		sta	building2X
+		lda	#$FF
+		sta	building2X+1
+		lda	#$80
+		sta	building2Y
+		lda	#$00
+		sta	building2Y+1
+		lda	#$00
+		sta	building2Z
+		lda	#$06
+		sta	building2Z+1
+
+		lda	#0
+		sta	building2RX
+		lda	#0
+		sta	building2RY
+		lda	#0
+		sta	building2RZ
+
+;--------
 		lda	#60
 		sta	frameCount
 		stz	drawCount
@@ -491,6 +554,108 @@ main:
 .ringJump:
 		inc	ringRZ
 		inc	ringRZ
+
+;set building1 model
+		lda	building1X
+		sta	<translationX
+		lda	building1X+1
+		sta	<translationX+1
+
+		lda	building1Y
+		sta	<translationY
+		lda	building1Y+1
+		sta	<translationY+1
+
+		lda	building1Z
+		sta	<translationZ
+		lda	building1Z+1
+		sta	<translationZ+1
+
+		lda	building1RX
+		sta	<rotationX
+
+		lda	building1RY
+		sta	<rotationY
+
+		lda	building1RZ
+		sta	<rotationZ
+
+		lda	#$12
+		sta	<rotationSelect
+
+		lda	#LOW(modelData2)
+		sta	<modelAddr
+		lda	#HIGH(modelData2)
+		sta	<modelAddr+1
+
+		jsr	setModel2
+
+		sec
+		lda	building1Z
+		sbc	#$10
+		sta	building1Z
+		lda	building1Z+1
+		sbc	#$00
+		sta	building1Z+1
+		bpl	.building1Jump
+
+		lda	#$00
+		sta	building1Z
+		lda	#$08
+		sta	building1Z+1
+
+.building1Jump:
+
+;set building2 model
+		lda	building2X
+		sta	<translationX
+		lda	building2X+1
+		sta	<translationX+1
+
+		lda	building2Y
+		sta	<translationY
+		lda	building2Y+1
+		sta	<translationY+1
+
+		lda	building2Z
+		sta	<translationZ
+		lda	building2Z+1
+		sta	<translationZ+1
+
+		lda	building2RX
+		sta	<rotationX
+
+		lda	building2RY
+		sta	<rotationY
+
+		lda	building2RZ
+		sta	<rotationZ
+
+		lda	#$12
+		sta	<rotationSelect
+
+		lda	#LOW(modelData2)
+		sta	<modelAddr
+		lda	#HIGH(modelData2)
+		sta	<modelAddr+1
+
+		jsr	setModel2
+
+		sec
+		lda	building2Z
+		sbc	#$10
+		sta	building2Z
+		lda	building2Z+1
+		sbc	#$00
+		sta	building2Z+1
+		bpl	.building2Jump
+
+		lda	#$00
+		sta	building2Z
+		lda	#$08
+		sta	building2Z+1
+
+.building2Jump:
 
 ;put polygon
 		jsr	clearRam
@@ -1137,31 +1302,32 @@ modelData0
 		.dw	modelData0Vertex
 		.db	16	;vertex count
 modelData0Polygon
-		.db	3+$80, $08, 0*6, 2*6, 1*6, 0*0;0 Front Bottom
-		.db	3+$80, $0E, 0*6, 1*6, 3*6, 0*0;1 Front Right
-		.db	3+$80, $0D, 0*6, 3*6, 2*6, 0*0;2 Front Left
+		;	front color * 8 + vertex count(3 or 4), back color * 8 + back draw flag($01 = not draw : front side = clockwise)
+		.db	$19*8+3, $00*8+$01, 0*6, 2*6, 1*6, 0*0;0 Front Bottom
+		.db	$1C*8+3, $00*8+$01, 0*6, 1*6, 3*6, 0*0;1 Front Right
+		.db	$1E*8+3, $00*8+$01, 0*6, 3*6, 2*6, 0*0;2 Front Left
 
-		.db	3+$80, $0C, 3*6, 1*6, 4*6, 0*0;3 Middle Outer Right
-		.db	3+$80, $0B, 3*6, 4*6, 2*6, 0*0;4 Middle Outer Left
+		.db	$1A*8+3, $00*8+$01, 3*6, 1*6, 4*6, 0*0;3 Middle Outer Right
+		.db	$1C*8+3, $00*8+$01, 3*6, 4*6, 2*6, 0*0;4 Middle Outer Left
 
-		.db	3+$80, $01, 5*6, 1*6, 2*6, 0*0;5 Middle Inner
+		.db	$09*8+3, $00*8+$01, 5*6, 1*6, 2*6, 0*0;5 Middle Inner
 
-		.db	3+$80, $0A, 1*6, 5*6, 4*6, 0*0;6 Middle Inner Right
-		.db	3+$80, $09, 4*6, 5*6, 2*6, 0*0;7 Middle Inner Left
+		.db	$1A*8+3, $00*8+$01, 1*6, 5*6, 4*6, 0*0;6 Middle Inner Right
+		.db	$1A*8+3, $00*8+$01, 4*6, 5*6, 2*6, 0*0;7 Middle Inner Left
 
-		.db	3+$80, $01, 7*6, 6*6, 1*6, 0*0;8 Right Wing Front
-		.db	3+$80, $09, 6*6, 7*6, 8*6, 0*0;9 Right Wing Right
-		.db	3+$80, $0A, 1*6, 8*6, 7*6, 0*0;10 Right Wing Left
-		.db	3+$80, $0B, 1*6, 6*6, 8*6, 0*0;11 Right Wing Top
+		.db	$09*8+3, $00*8+$01, 7*6, 6*6, 1*6, 0*0;8 Right Wing Front
+		.db	$1B*8+3, $00*8+$01, 6*6, 7*6, 8*6, 0*0;9 Right Wing Right
+		.db	$1D*8+3, $00*8+$01, 1*6, 8*6, 7*6, 0*0;10 Right Wing Left
+		.db	$1C*8+3, $00*8+$01, 1*6, 6*6, 8*6, 0*0;11 Right Wing Top
 
-		.db	3+$80, $01, 2*6, 9*6,10*6, 0*0;12 Left Wing Front
-		.db	3+$80, $09, 2*6,10*6,11*6, 0*0;13 Left Wing Right
-		.db	3+$80, $0A, 9*6,11*6,10*6, 0*0;14 Left Wing Left
-		.db	3+$80, $0B, 9*6, 2*6,11*6, 0*0;15 Left Wing Top
+		.db	$09*8+3, $00*8+$01, 2*6, 9*6,10*6, 0*0;12 Left Wing Front
+		.db	$1B*8+3, $00*8+$01, 2*6,10*6,11*6, 0*0;13 Left Wing Right
+		.db	$1D*8+3, $00*8+$01, 9*6,11*6,10*6, 0*0;14 Left Wing Left
+		.db	$1C*8+3, $00*8+$01, 9*6, 2*6,11*6, 0*0;15 Left Wing Top
 
-		.db	3+$00, $44, 1*6,13*6,12*6, 0*0;16 Right Wing
+		.db	$04*8+3, $0C*8+$00, 1*6,13*6,12*6, 0*0;16 Right Wing
 
-		.db	3+$00, $44, 2*6,14*6,15*6, 0*0;17 Left Wing
+		.db	$04*8+3, $0C*8+$00, 2*6,14*6,15*6, 0*0;17 Left Wing
 
 modelData0Vertex
 		.dw	   0,  10, 100;0 Front
@@ -1198,29 +1364,29 @@ modelData1
 		.db	24	;vertex count
 
 modelData1Polygon
-		.db	4+$80, $EE, 0*6, 3*6, 4*6, 1*6; 0
-		.db	4+$80, $DD, 1*6, 4*6, 5*6, 2*6; 1
+		.db	$1A*8+4, $00*8+$01, 0*6, 3*6, 4*6, 1*6; 0
+		.db	$19*8+4, $00*8+$01, 1*6, 4*6, 5*6, 2*6; 1
 
-		.db	4+$80, $CC, 3*6, 6*6, 7*6, 4*6; 2
-		.db	4+$80, $BB, 4*6, 7*6, 8*6, 5*6; 3
+		.db	$1B*8+4, $00*8+$01, 3*6, 6*6, 7*6, 4*6; 2
+		.db	$1A*8+4, $00*8+$01, 4*6, 7*6, 8*6, 5*6; 3
 
-		.db	4+$80, $77, 6*6, 9*6,10*6, 7*6; 4
-		.db	4+$80, $AA, 7*6,10*6,11*6, 8*6; 5
+		.db	$1C*8+4, $00*8+$01, 6*6, 9*6,10*6, 7*6; 4
+		.db	$1B*8+4, $00*8+$01, 7*6,10*6,11*6, 8*6; 5
 
-		.db	4+$80, $99, 9*6,12*6,13*6,10*6; 6
-		.db	4+$80, $88,10*6,13*6,14*6,11*6; 7
+		.db	$1E*8+4, $00*8+$01, 9*6,12*6,13*6,10*6; 6
+		.db	$1D*8+4, $00*8+$01,10*6,13*6,14*6,11*6; 7
 
-		.db	4+$80, $99,12*6,15*6,16*6,13*6; 8
-		.db	4+$80, $88,13*6,16*6,17*6,14*6; 9
+		.db	$1E*8+4, $00*8+$01,12*6,15*6,16*6,13*6; 8
+		.db	$1D*8+4, $00*8+$01,13*6,16*6,17*6,14*6; 9
 
-		.db	4+$80, $77,15*6,18*6,19*6,16*6;10
-		.db	4+$80, $AA,16*6,19*6,20*6,17*6;11
+		.db	$1C*8+4, $00*8+$01,15*6,18*6,19*6,16*6;10
+		.db	$1B*8+4, $00*8+$01,16*6,19*6,20*6,17*6;11
 
-		.db	4+$80, $CC,18*6,21*6,22*6,19*6;12
-		.db	4+$80, $BB,19*6,22*6,23*6,20*6;13
+		.db	$1B*8+4, $00*8+$01,18*6,21*6,22*6,19*6;12
+		.db	$1A*8+4, $00*8+$01,19*6,22*6,23*6,20*6;13
 
-		.db	4+$80, $EE,21*6, 0*6, 1*6,22*6;14
-		.db	4+$80, $DD,22*6, 1*6, 2*6,23*6;15
+		.db	$1A*8+4, $00*8+$01,21*6, 0*6, 1*6,22*6;14
+		.db	$19*8+4, $00*8+$01,22*6, 1*6, 2*6,23*6;15
 
 modelData1Vertex
 		.dw	   0,-159,   0; 0
@@ -1257,6 +1423,32 @@ modelData1Vertex
 
 
 ;----------------------------
+;Building
+modelData2
+		.dw	modelData2Polygon
+		.db	4	;polygon count
+		.dw	modelData2Vertex
+		.db	8	;vertex count
+
+modelData2Polygon
+		.db	$1D*8+4, $00*8+$01, 0*6, 1*6, 2*6, 3*6; 0
+		.db	$1B*8+4, $00*8+$01, 3*6, 2*6, 6*6, 7*6; 1
+		.db	$19*8+4, $00*8+$01, 2*6, 1*6, 5*6, 6*6; 2
+		.db	$19*8+4, $00*8+$01, 0*6, 3*6, 7*6, 4*6; 3
+
+modelData2Vertex
+		.dw	 -50,-100,  50; 0
+		.dw	  50,-100,  50; 1
+		.dw	  50,-100, -50; 2
+		.dw	 -50,-100, -50; 3
+
+		.dw	 -50, 100,  50; 4
+		.dw	  50, 100,  50; 5
+		.dw	  50, 100, -50; 6
+		.dw	 -50, 100, -50; 7
+
+
+;----------------------------
 vdpdata:
 		.db	$05, $00, $00	;screen off +1
 		.db	$0A, $02, $02	;HSW $02 HDS $02
@@ -1272,8 +1464,8 @@ vdpdata:
 
 ;----------------------------
 palettedata:
-		.dw	$0107, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\;GRB
-			$0049, $0092, $00DB, $0124, $016D, $01B6, $01FF, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\;GRB
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
 
 
 ;----------------------------
@@ -2022,7 +2214,6 @@ putPolyBuffer:
 		ldy	#4
 		lda	[polyBufferAddr],y	;COLOR
 		sta	<polyLineColorNo
-		jsr	setPolyColor
 
 		clx
 		ldy	#6
@@ -2238,16 +2429,30 @@ setModelProc:
 
 .setModelLoop0:
 		ldy	<polyBufferAddrWork0
-		lda	[modelAddrWork],y	;ModelData Polygon Attr
-		iny
 
-		sta	<setModelAttr
+		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		and	#$F8
+		lsr	a
+		lsr	a
+		sta	<setModelFrontColor
+
+		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
 		and	#$07
 		sta	<setModelCountWork
 		sta	<setModelCount
 
-		lda	[modelAddrWork],y	;ModelData Polygon Color
-		sta	<setModelColor
+		iny
+
+		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
+		and	#$F8
+		lsr	a
+		lsr	a
+		sta	<setModelBackColor
+
+		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
+		;and	#$01
+		sta	<setModelAttr
+
 		iny
 		sty	<polyBufferAddrWork0
 
@@ -2386,27 +2591,21 @@ setModelProc:
 		bpl	.setModelJump2
 
 ;Back Side
-		bbr7	<setModelAttr, .setModelJump6
+		bbr0	<setModelAttr, .setModelJump6
 		jmp	.setModelJump0
 
 .setModelJump6:
-		lda	<setModelColor
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		ldy	#4
-		sta	[polyBufferAddr],y	;COLOR
+		lda	<setModelBackColor
 		bra	.setModelJump5
 
 .setModelJump2:
 ;Front Side
-		lda	<setModelColor
-		and	#$0F
+		lda	<setModelFrontColor
+
+.setModelJump5:
 		ldy	#4
 		sta	[polyBufferAddr],y	;COLOR
 
-.setModelJump5:
 		lda	<clip2D0Count
 		ldy	#5
 		sta	[polyBufferAddr],y	;COUNT
@@ -4326,28 +4525,27 @@ initCalcEdge:
 
 
 ;----------------------------
-setPolyColor:
-;set poly color
-		ldy	<polyLineColorNo
-
-		lda	polyLineColorData0,y
-		sta	<polyLineColorDataWork0
-
-		lda	polyLineColorData1,y
-		sta	<polyLineColorDataWork1
-
-		lda	polyLineColorData2,y
-		sta	<polyLineColorDataWork2
-
-		lda	polyLineColorData3,y
-		sta	<polyLineColorDataWork3
-
-		rts
-
-
-;----------------------------
 putPolyLine:
 ;put poly line
+
+;set poly color
+		tya
+		and	#$01
+		ora	<polyLineColorNo
+		tax
+
+		lda	polyLineColorData0,x
+		sta	<polyLineColorDataWork0
+
+		lda	polyLineColorData1,x
+		sta	<polyLineColorDataWork1
+
+		lda	polyLineColorData2,x
+		sta	<polyLineColorDataWork2
+
+		lda	polyLineColorData3,x
+		sta	<polyLineColorDataWork3
+
 ;calation vram address
 ;left
 		ldx	edgeLeft,y
@@ -4568,23 +4766,81 @@ putPolyLine00:
 ;----------------------------
 clearRam:
 ;
+;--------
 		lda	#$F9
 		tam	#$02
 
-		stz	$4000
-		tii	$4000, $4001, $2000-1
+		lda	#$00
+		sta	$4000
+		lda	#$FF
+		sta	$4001
 
+		tii	$4000, $4002, 14
+
+		lda	#$FF
+		sta	$4010
+		lda	#$FF
+		sta	$4011
+
+		tii	$4010, $4012, 14
+
+		tii	$4000, $4020, $2000-$20
+
+;--------
 		lda	#$FA
 		tam	#$02
 
-		stz	$4000
-		tii	$4000, $4001, $2000-1
+		lda	#$00
+		sta	$4000
+		lda	#$FF
+		sta	$4001
 
+		tii	$4000, $4002, 14
+
+		lda	#$FF
+		sta	$4010
+		lda	#$FF
+		sta	$4011
+
+		tii	$4010, $4012, 14
+
+		tii	$4000, $4020, $1000-$20
+
+		lda	#$00
+		sta	$5000
+		lda	#$FF
+		sta	$5001
+
+		tii	$5000, $5002, 14
+
+		lda	#$00
+		sta	$5010
+		lda	#$00
+		sta	$5011
+
+		tii	$5010, $5012, 14
+
+		tii	$5000, $5020, $1000-$20
+
+;--------
 		lda	#$FB
 		tam	#$02
 
-		stz	$4000
-		tii	$4000, $4001, $2000-1
+		lda	#$00
+		sta	$4000
+		lda	#$FF
+		sta	$4001
+
+		tii	$4000, $4002, 14
+
+		lda	#$00
+		sta	$4010
+		lda	#$00
+		sta	$4011
+
+		tii	$4010, $4012, 14
+
+		tii	$4000, $4020, $2000-$20
 
 		rts
 
@@ -4839,22 +5095,38 @@ polyLineRightMasks:
 
 ;----------------------------
 polyLineColorData0:
-		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF
+		;.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF
+		.db	$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF,\
+			$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF,\
+			$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF,\
+			$00, $00, $55, $AA, $FF, $FF, $55, $AA, $00, $00, $AA, $55, $FF, $FF, $FF, $FF
 
 
 ;----------------------------
 polyLineColorData1:
-		.db	$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF
+		;.db	$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF
+		.db	$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF,\
+			$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF,\
+			$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF,\
+			$00, $00, $55, $AA, $FF, $FF, $55, $AA, $00, $00, $AA, $55, $FF, $FF, $FF, $FF
 
 
 ;----------------------------
 polyLineColorData2:
-		.db	$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF
+		;.db	$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF
+		.db	$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
+			$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
+			$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
+			$00, $00, $55, $AA, $FF, $FF, $55, $AA, $00, $00, $AA, $55, $FF, $FF, $FF, $FF
 
 
 ;----------------------------
 polyLineColorData3:
-		.db	$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+		;.db	$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+		.db	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,\
+			$FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
+			$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,\
+			$00, $00, $00, $00, $00, $00, $AA, $55, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 
 
 ;----------------------------
