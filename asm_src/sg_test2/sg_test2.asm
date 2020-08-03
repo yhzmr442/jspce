@@ -2450,7 +2450,6 @@ setModelProc:
 		sta	<setModelBackColor
 
 		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
-		;and	#$01
 		sta	<setModelAttr
 
 		iny
