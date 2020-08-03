@@ -2444,13 +2444,11 @@ setModelProc:
 		iny
 
 		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
+		sta	<setModelAttr
 		and	#$F8
 		lsr	a
 		lsr	a
 		sta	<setModelBackColor
-
-		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
-		sta	<setModelAttr
 
 		iny
 		sty	<polyBufferAddrWork0
