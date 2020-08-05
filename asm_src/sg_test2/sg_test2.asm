@@ -437,20 +437,90 @@ main:
 .checkPadEnd:
 
 ;set datas
-		lda	#0
+		lda	shipX
 		sta	<eyeTranslationX
-		lda	#0
+		lda	shipX+1
 		sta	<eyeTranslationX+1
 
-		lda	#0
+		lda	<eyeTranslationX+1
+		asl	a
+		ror	<eyeTranslationX+1
+		ror	<eyeTranslationX
+
+		sec
+		lda	<eyeTranslationX
+		sbc	#$C1
+		lda	<eyeTranslationX+1
+		sbc	#$FF
+		bpl	.eyeJump0	; >= -63
+
+		clc
+		lda	shipX
+		adc	#$3F
+		sta	<eyeTranslationX
+		lda	shipX+1
+		adc	#$00
+		sta	<eyeTranslationX+1
+
+.eyeJump0:
+		sec
+		lda	<eyeTranslationX
+		sbc	#$40
+		lda	<eyeTranslationX+1
+		sbc	#$00
+		bmi	.eyeJump1	; < 64
+
+		sec
+		lda	shipX
+		sbc	#$3F
+		sta	<eyeTranslationX
+		lda	shipX+1
+		sbc	#$00
+		sta	<eyeTranslationX+1
+
+.eyeJump1:
+		lda	shipY
 		sta	<eyeTranslationY
-		lda	#0
+		lda	shipY+1
 		sta	<eyeTranslationY+1
 
-		lda	#$00
-		sta	<eyeTranslationZ
-		lda	#$00
-		sta	<eyeTranslationZ+1
+		lda	<eyeTranslationY+1
+		asl	a
+		ror	<eyeTranslationY+1
+		ror	<eyeTranslationY
+
+		sec
+		lda	<eyeTranslationY
+		sbc	#$C1
+		lda	<eyeTranslationY+1
+		sbc	#$FF
+		bpl	.eyeJump2	; >= -63
+
+		clc
+		lda	shipY
+		adc	#$3F
+		sta	<eyeTranslationY
+		lda	shipY+1
+		adc	#$00
+		sta	<eyeTranslationY+1
+
+.eyeJump2:
+		sec
+		lda	<eyeTranslationY
+		sbc	#$40
+		lda	<eyeTranslationY+1
+		sbc	#$00
+		bmi	.eyeJump3	; < 64
+
+		sec
+		lda	shipY
+		sbc	#$3F
+		sta	<eyeTranslationY
+		lda	shipY+1
+		sbc	#$00
+		sta	<eyeTranslationY+1
+
+.eyeJump3:
 
 		lda	#0
 		sta	<eyeRotationX
@@ -3311,7 +3381,7 @@ transform2D:
 
 ;----------------------------
 transform2DProc:
-;mul16c(-32768-32767) * 128 / mul16a(1-32768) = mul16a(rough value)
+;mul16c(-32768_32767) * 128 / mul16a(1_32767) = mul16a(rough value)
 		phx
 		phy
 
@@ -3331,14 +3401,7 @@ transform2DProc:
 
 .transform2DPJump06:
 ;get div data
-		sec
-		lda	<div16a
-		sbc	#1
-		sta	<div16a
-		lda	<div16a+1
-		sbc	#0
-
-		tax
+		ldx	<div16a+1
 		lda	divbankdata, x
 		sta	<mulbank
 		tam	#$02
@@ -4763,80 +4826,21 @@ putPolyLine00:
 ;----------------------------
 clearRam:
 ;
-;--------
 		lda	#$F9
 		tam	#$02
-
-		lda	#$00
-		sta	$4000
-		lda	#$FF
-		sta	$4001
-
-		tii	$4000, $4002, 14
-
-		lda	#$FF
-		sta	$4010
-		lda	#$FF
-		sta	$4011
-
-		tii	$4010, $4012, 14
-
+		tii	clearRamData0, $4000, $20
 		tii	$4000, $4020, $2000-$20
 
-;--------
 		lda	#$FA
 		tam	#$02
-
-		lda	#$00
-		sta	$4000
-		lda	#$FF
-		sta	$4001
-
-		tii	$4000, $4002, 14
-
-		lda	#$FF
-		sta	$4010
-		lda	#$FF
-		sta	$4011
-
-		tii	$4010, $4012, 14
-
+		tii	clearRamData0, $4000, $20
 		tii	$4000, $4020, $1000-$20
-
-		lda	#$00
-		sta	$5000
-		lda	#$FF
-		sta	$5001
-
-		tii	$5000, $5002, 14
-
-		lda	#$00
-		sta	$5010
-		lda	#$00
-		sta	$5011
-
-		tii	$5010, $5012, 14
-
+		tii	clearRamData1, $5000, $20
 		tii	$5000, $5020, $1000-$20
 
-;--------
 		lda	#$FB
 		tam	#$02
-
-		lda	#$00
-		sta	$4000
-		lda	#$FF
-		sta	$4001
-
-		tii	$4000, $4002, 14
-
-		lda	#$00
-		sta	$4010
-		lda	#$00
-		sta	$4011
-
-		tii	$4010, $4012, 14
-
+		tii	clearRamData1, $4000, $20
 		tii	$4000, $4020, $2000-$20
 
 		rts
@@ -4916,6 +4920,18 @@ setBAT:
 		bne	.setBatLoop0
 
 		rts
+
+
+;----------------------------
+clearRamData0:
+		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF,\
+			$FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+
+
+;----------------------------
+clearRamData1:
+		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF,\
+			$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 
 
 ;----------------------------
@@ -5092,7 +5108,6 @@ polyLineRightMasks:
 
 ;----------------------------
 polyLineColorData0:
-		;.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF
 		.db	$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF,\
 			$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF,\
 			$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF,\
@@ -5101,7 +5116,6 @@ polyLineColorData0:
 
 ;----------------------------
 polyLineColorData1:
-		;.db	$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF
 		.db	$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF,\
 			$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF,\
 			$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF,\
@@ -5110,7 +5124,6 @@ polyLineColorData1:
 
 ;----------------------------
 polyLineColorData2:
-		;.db	$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF
 		.db	$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
 			$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
 			$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
@@ -5119,7 +5132,6 @@ polyLineColorData2:
 
 ;----------------------------
 polyLineColorData3:
-		;.db	$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 		.db	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,\
 			$FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF,\
 			$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,\
