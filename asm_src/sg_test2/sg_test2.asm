@@ -12,7 +12,7 @@
 ;4000	mul data : div data : polygon buffer ram $1F2000-$1F7FFF($F9-$FB) 24KBYTE
 ;6000
 ;8000
-;A000
+;A000	polygon process
 ;C000	polygon process
 ;E000	main irq
 
@@ -55,9 +55,38 @@ INT_DIS_REG		.equ	$1402
 IO_PAD			.equ	$1000
 
 
-chardatBank		.equ	2
-muldatBank		.equ	3
-divdatBank		.equ	19
+chardatBank		.equ	3
+muldatBank		.equ	4
+divdatBank		.equ	20
+
+
+;----------------------------
+putPolyLine00m		.macro
+		lda	<polyLineColorDataWork0
+		sta	[polyLineLeftAddr]
+		inc	<polyLineLeftAddr
+
+		lda	<polyLineColorDataWork1
+		sta	[polyLineLeftAddr]
+		clc
+		lda	<polyLineLeftAddr
+		adc	#$0F
+		sta	<polyLineLeftAddr
+
+		lda	<polyLineColorDataWork2
+		sta	[polyLineLeftAddr]
+		inc	<polyLineLeftAddr
+
+		lda	<polyLineColorDataWork3
+		sta	[polyLineLeftAddr]
+		clc
+		lda	<polyLineLeftAddr
+		adc	#$0F
+		sta	<polyLineLeftAddr
+		bcc	.jp\@
+		inc	<polyLineLeftAddr+1
+.jp\@
+		.endm
 
 
 ;//////////////////////////////////
@@ -121,7 +150,6 @@ polyLineX1		.ds	1
 polyLineY		.ds	1
 
 polyLineLeftAddr	.ds	2
-polyLineRightAddr	.ds	2
 
 polyLineLeftData	.ds	1
 polyLineLeftMask	.ds	1
@@ -288,6 +316,9 @@ main:
 
 ;set poly proc bank
 		lda	#$01
+		tam	#$05
+
+		lda	#$02
 		tam	#$06
 
 		jsr	setBAT
@@ -1540,9 +1571,7 @@ palettedata:
 
 ;----------------------------
 mulbankdata:
-		.db	$03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03,\
-			$03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03, $03,\
-			$04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04,\
+		.db	$04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04,\
 			$04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04, $04,\
 			$05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05,\
 			$05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05, $05,\
@@ -1555,7 +1584,9 @@ mulbankdata:
 			$09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09,\
 			$09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09, $09,\
 			$0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A,\
-			$0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A
+			$0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A,\
+			$0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B,\
+			$0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B, $0B
 
 
 ;----------------------------
@@ -1592,7 +1623,7 @@ muladdrdata:
 ;////////////////////////////
 		.bank	1
 
-		.org	$C000
+		.org	$A000
 
 ;----------------------------
 vertexRotationSelect:
@@ -4627,18 +4658,11 @@ putPolyLine:
 		tax
 		lda	polyLineLeftDatas,x
 		sta	<polyLineLeftData
-		lda	polyLineLeftMasks,x
+		eor	#$FF
 		sta	<polyLineLeftMask
 
 ;right
 		ldx	edgeRight,y
-		lda	polyLineAddrConvYLow0,y
-		ora	polyLineAddrConvXLow0,x
-		sta	<polyLineRightAddr
-
-		lda	polyLineAddrConvYHigh0,y
-		ora	polyLineAddrConvXHigh0,x
-		sta	<polyLineRightAddr+1
 
 		sec
 		lda	polyLineAddrConvX,x
@@ -4649,14 +4673,14 @@ putPolyLine:
 		tax
 		lda	polyLineRightDatas,x
 		sta	<polyLineRightData
-		lda	polyLineRightMasks,x
+		eor	#$FF
 		sta	<polyLineRightMask
 
 		lda	<polyLineCount
 		beq	.polyLineJump03
 
-		jsr	putPolyLine00
 		jsr	putPolyLine01Left
+		jsr	putPolyLine00
 		jsr	putPolyLine01Right
 
 		rts
@@ -4665,6 +4689,7 @@ putPolyLine:
 		lda	<polyLineLeftData
 		and	<polyLineRightData
 		sta	<polyLineLeftData
+
 		eor	#$FF
 		sta	<polyLineLeftMask
 
@@ -4711,7 +4736,7 @@ putPolyLine01Left:
 		ora	<polyLineColorDataWork
 		sta	[polyLineLeftAddr]
 
-		inc	<polyLineLeftAddr;
+		inc	<polyLineLeftAddr
 
 		lda	<polyLineColorDataWork3
 		and	<polyLineLeftData
@@ -4732,46 +4757,46 @@ putPolyLine01Right:
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineRightAddr]
+		lda	[polyLineLeftAddr]
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineRightAddr]
+		sta	[polyLineLeftAddr]
 
-		inc	<polyLineRightAddr
+		inc	<polyLineLeftAddr
 
 		lda	<polyLineColorDataWork1
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineRightAddr]
+		lda	[polyLineLeftAddr]
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineRightAddr]
+		sta	[polyLineLeftAddr]
 
 		clc
-		lda	<polyLineRightAddr
+		lda	<polyLineLeftAddr
 		adc	#$0F
-		sta	<polyLineRightAddr
+		sta	<polyLineLeftAddr
 
 		lda	<polyLineColorDataWork2
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineRightAddr]
+		lda	[polyLineLeftAddr]
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineRightAddr]
+		sta	[polyLineLeftAddr]
 
-		inc	<polyLineRightAddr
+		inc	<polyLineLeftAddr
 
 		lda	<polyLineColorDataWork3
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineRightAddr]
+		lda	[polyLineLeftAddr]
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineRightAddr]
+		sta	[polyLineLeftAddr]
 
 		rts
 
@@ -4781,45 +4806,81 @@ putPolyLine00:
 ;put left to right poly line
 		clc
 		lda	<polyLineLeftAddr
-		adc	#$20
-		sta	<polyLineYAddr
-		lda	<polyLineLeftAddr+1
+		adc	#$0F
+		sta	<polyLineLeftAddr
 		bcc	.putPolyLine00Jump0
-		inc	a
+		inc	<polyLineLeftAddr+1
+
 .putPolyLine00Jump0:
-		sta	<polyLineYAddr+1
+		lda	<polyLineCount
+		asl	a
+		tax
+		jmp	[putPolyJumpAddr, x]
 
-		ldx	<polyLineCount
-.putPolyLine00Loop:
-		dex
-		beq	.putPolyLine00Jump
+putPolyLine30:
+		putPolyLine00m
+putPolyLine29:
+		putPolyLine00m
+putPolyLine28:
+		putPolyLine00m
+putPolyLine27:
+		putPolyLine00m
+putPolyLine26:
+		putPolyLine00m
+putPolyLine25:
+		putPolyLine00m
+putPolyLine24:
+		putPolyLine00m
+putPolyLine23
+		putPolyLine00m
+putPolyLine22:
+		putPolyLine00m
+putPolyLine21:
+		putPolyLine00m
 
-		lda	<polyLineColorDataWork0
-		sta	[polyLineYAddr]
-		inc	<polyLineYAddr
+putPolyLine20:
+		putPolyLine00m
+putPolyLine19:
+		putPolyLine00m
+putPolyLine18:
+		putPolyLine00m
+putPolyLine17:
+		putPolyLine00m
+putPolyLine16:
+		putPolyLine00m
+putPolyLine15:
+		putPolyLine00m
+putPolyLine14:
+		putPolyLine00m
+putPolyLine13
+		putPolyLine00m
+putPolyLine12:
+		putPolyLine00m
+putPolyLine11:
+		putPolyLine00m
 
-		lda	<polyLineColorDataWork1
-		sta	[polyLineYAddr]
-		clc
-		lda	<polyLineYAddr
-		adc	#$0F
-		sta	<polyLineYAddr
+putPolyLine10:
+		putPolyLine00m
+putPolyLine09:
+		putPolyLine00m
+putPolyLine08:
+		putPolyLine00m
+putPolyLine07:
+		putPolyLine00m
+putPolyLine06:
+		putPolyLine00m
+putPolyLine05:
+		putPolyLine00m
+putPolyLine04:
+		putPolyLine00m
+putPolyLine03
+		putPolyLine00m
+putPolyLine02:
+		putPolyLine00m
+putPolyLine01:
+		putPolyLine00m
 
-		lda	<polyLineColorDataWork2
-		sta	[polyLineYAddr]
-		inc	<polyLineYAddr
-
-		lda	<polyLineColorDataWork3
-		sta	[polyLineYAddr]
-		clc
-		lda	<polyLineYAddr
-		adc	#$0F
-		sta	<polyLineYAddr
-		bcc	.putPolyLine00Loop
-		inc	<polyLineYAddr+1
-		bra	.putPolyLine00Loop
-
-.putPolyLine00Jump:
+putPolyLineEnd:
 		rts
 
 
@@ -4922,6 +4983,51 @@ setBAT:
 		rts
 
 
+;////////////////////////////
+		.bank	2
+
+		.org	$C000
+
+;----------------------------
+putPolyJumpAddr:
+			dw	putPolyLineEnd
+			dw	putPolyLineEnd
+
+			dw	putPolyLine01
+			dw	putPolyLine02
+			dw	putPolyLine03
+			dw	putPolyLine04
+			dw	putPolyLine05
+			dw	putPolyLine06
+			dw	putPolyLine07
+			dw	putPolyLine08
+			dw	putPolyLine09
+
+			dw	putPolyLine10
+			dw	putPolyLine11
+			dw	putPolyLine12
+			dw	putPolyLine13
+			dw	putPolyLine14
+			dw	putPolyLine15
+			dw	putPolyLine16
+			dw	putPolyLine17
+			dw	putPolyLine18
+			dw	putPolyLine19
+
+			dw	putPolyLine20
+			dw	putPolyLine21
+			dw	putPolyLine22
+			dw	putPolyLine23
+			dw	putPolyLine24
+			dw	putPolyLine25
+			dw	putPolyLine26
+			dw	putPolyLine27
+			dw	putPolyLine28
+			dw	putPolyLine29
+
+			dw	putPolyLine30
+
+
 ;----------------------------
 clearRamData0:
 		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF,\
@@ -4936,14 +5042,14 @@ clearRamData1:
 
 ;----------------------------
 divbankdata:
-		.db	$13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13,\
-			$13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13, $13,\
-			$14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14,\
+		.db	$14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14,\
 			$14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14,\
 			$15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15,\
 			$15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15,\
 			$16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16,\
-			$16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16
+			$16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16,\
+			$17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17,\
+			$17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17
 
 
 ;----------------------------
@@ -5092,18 +5198,8 @@ polyLineLeftDatas:
 
 
 ;----------------------------
-polyLineLeftMasks:
-		.db	$00, $80, $C0, $E0, $F0, $F8, $FC, $FE
-
-
-;----------------------------
 polyLineRightDatas:
 		.db	$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF
-
-
-;----------------------------
-polyLineRightMasks:
-		.db	$7F, $3F, $1F, $0F, $07, $03, $01, $00
 
 
 ;----------------------------
@@ -5219,7 +5315,7 @@ cosDataLow:
 
 
 ;////////////////////////////
-		.bank	2
-		INCBIN	"char.dat"		;    8K  2    $02
-		INCBIN	"mul.dat"		;  128K  3~18 $03~$12
-		INCBIN	"div.dat"		;   64K 19~26 $13~$1A
+		.bank	3
+		INCBIN	"char.dat"		;    8K  3    $03
+		INCBIN	"mul.dat"		;  128K  4~19 $04~$13
+		INCBIN	"div.dat"		;   64K 20~27 $14~$1B
