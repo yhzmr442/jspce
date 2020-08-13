@@ -170,20 +170,35 @@ polyLineCount		.ds	1
 
 ;---------------------
 polyBufferAddr		.ds	2
-polyBufferAddrWork0	.ds	1
-polyBufferAddrWork1	.ds	1
-polyBufferAddrWork2	.ds	1
 polyBufferZ0Work0	.ds	2
+polyBufferZ0Work1	.ds	2
 
 polyBufferNow		.ds	2
 polyBufferNext		.ds	2
+
+frontClipFlag		.ds	1
+setModelCountWork
+frontClipCount		.ds	1
+
+frontClipData0		.ds	1
+frontClipData1		.ds	1
+frontClipDataWork	.ds	1
+
+clipFrontX		.ds	2
+clipFrontY		.ds	2
+
+polyBufferAddrWork0
+modelPolygonIndexWork	.ds	1
+polyBufferAddrWork1
+modelPolygonStartIndex	.ds	1
+polyBufferAddrWork2
+model2DClipIndexWork	.ds	1
 
 ;---------------------
 modelAddr		.ds	2
 modelAddrWork		.ds	2
 modelPolygonCount	.ds	1
 setModelCount		.ds	1
-setModelCountWork	.ds	1
 setModelFrontColor	.ds	1
 setModelBackColor	.ds	1
 setModelColorY		.ds	1
@@ -298,6 +313,7 @@ polyBuffer		.ds	2048
 ;X5 Y5 2Byte
 ;X6 Y6 2Byte
 ;X7 Y7 2Byte
+;X8 Y8 2Byte
 
 
 ;//////////////////////////////////
@@ -307,7 +323,6 @@ polyBuffer		.ds	2048
 		.org	$E000
 
 main:
-
 ;initialize VDP
 		jsr	initializeVdp
 
@@ -1396,6 +1411,21 @@ _nmi:
 
 
 ;----------------------------
+;test model
+modelTest0
+		.dw	modelTest0Polygon
+		.db	1	;polygon count
+		.dw	modelTest0Vertex
+		.db	3	;vertex count
+modelTest0Polygon
+		.db	$19*8+3, $19*8+$00, 0*6, 1*6, 2*6, 0*0;0
+modelTest0Vertex
+		.dw	   0,-100, 256;0
+		.dw	 100,   0, 100;1
+		.dw	-100,   0, 100;2
+
+
+;----------------------------
 ;Star Fox Arwing
 modelData0
 		.dw	modelData0Polygon
@@ -2174,6 +2204,21 @@ transform2D2:
 		cly
 
 .transform2D2Loop0:
+		lda	transform2DWork0,y
+		sta	transform2DWork1,y
+		lda	transform2DWork0+1,y
+		sta	transform2DWork1+1,y
+
+		lda	transform2DWork0+2,y
+		sta	transform2DWork1+2,y
+		lda	transform2DWork0+3,y
+		sta	transform2DWork1+3,y
+
+		lda	transform2DWork0+4,y
+		sta	transform2DWork1+4,y
+		lda	transform2DWork0+5,y
+		sta	transform2DWork1+5,y
+
 ;Z0 < 128 check
 		sec
 		lda	transform2DWork0+4,y	;Z0
@@ -2446,7 +2491,7 @@ setModel2:
 ;transform2D
 		jsr	transform2D2
 
-		jsr	setModelProc
+		jsr	setModelProc2
 
 		rts
 
@@ -2509,6 +2554,521 @@ setModel:
 
 		jsr	setModelProc
 
+		rts
+
+
+;----------------------------
+setModelProc2:
+;
+		ldy	#$00
+		lda	[modelAddr],y
+		sta	<modelAddrWork		;ModelData Polygon Addr
+		iny
+		lda	[modelAddr],y
+		sta	<modelAddrWork+1
+
+		ldy	#$02
+		lda	[modelAddr],y		;Polygon Count
+		sta	<modelPolygonCount
+
+		stz	<modelPolygonStartIndex
+
+
+.setModelLoop3:
+		ldy	<modelPolygonStartIndex
+
+		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		and	#$F8
+		lsr	a
+		lsr	a
+		sta	<setModelFrontColor
+
+		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		and	#$07
+		dec	a
+		sta	<setModelCount
+
+		iny
+
+		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
+		sta	<setModelAttr
+		and	#$F8
+		lsr	a
+		lsr	a
+		sta	<setModelBackColor
+
+		iny
+
+		lda	[modelAddrWork],y
+		sta	<frontClipDataWork
+
+		sty	<modelPolygonIndexWork
+		stz	<model2DClipIndexWork
+
+		stz	<frontClipCount
+
+		stz	<polyBufferZ0Work0
+		stz	<polyBufferZ0Work0+1
+
+.setModelLoop4:
+		ldy	<modelPolygonIndexWork
+		lda	[modelAddrWork],y
+		sta	<frontClipData0
+
+		iny
+
+		lda	[modelAddrWork],y
+		sta	<frontClipData1
+
+		sty	<modelPolygonIndexWork
+
+		jsr	clipFront
+
+		dec	<setModelCount
+		bne	.setModelLoop4
+
+;--------
+		ldy	<modelPolygonIndexWork
+		lda	[modelAddrWork],y
+		sta	<frontClipData0
+
+		lda	<frontClipDataWork
+		sta	<frontClipData1
+
+		jsr	clipFront
+
+		lda	<frontClipCount
+		bne	.setModelJump11
+		jmp	.setModelJump0
+
+.setModelJump11:
+		sta	<clip2D0Count
+		jsr	clip2D
+		bne	.setModelJump3
+		jmp	.setModelJump0
+
+.setModelJump3:
+;back side check
+		sec
+		lda	clip2D0+8		;X2
+		sbc	clip2D0+4		;X1
+		sta	<mul16a
+		lda	#0
+		sbc	#0
+		sta	<mul16a+1
+
+		sec
+		lda	clip2D0+2		;Y0
+		sbc	clip2D0+6		;Y1
+		sta	<mul16b
+		lda	#0
+		sbc	#0
+		sta	<mul16b+1
+
+		jsr	smul16
+
+		lda	<mul16c
+		sta	<div16ans
+		lda	<mul16c+1
+		sta	<div16ans+1
+
+		lda	<mul16d
+		sta	<div16work
+		lda	<mul16d+1
+		sta	<div16work+1
+
+		sec
+		lda	clip2D0+10		;Y2
+		sbc	clip2D0+6		;Y1
+		sta	<mul16a
+		lda	#0
+		sbc	#0
+		sta	<mul16a+1
+
+		sec
+		lda	clip2D0			;X0
+		sbc	clip2D0+4		;X1
+		sta	<mul16b
+		lda	#0
+		sbc	#0
+		sta	<mul16b+1
+
+		jsr	smul16
+
+		sec
+		lda	<div16ans
+		sbc	<mul16c
+		lda	<div16ans+1
+		sbc	<mul16c+1
+
+		lda	<div16work
+		sbc	<mul16d
+		lda	<div16work+1
+		sbc	<mul16d+1
+
+		bpl	.setModelJump2
+
+;Back Side
+		bbr0	<setModelAttr,.setModelJump6
+		jmp	.setModelJump0
+
+.setModelJump6:
+		lda	<setModelBackColor
+		bra	.setModelJump5
+
+.setModelJump2:
+;Front Side
+		lda	<setModelFrontColor
+
+.setModelJump5:
+		ldy	#4
+		sta	[polyBufferAddr],y	;COLOR
+
+		lda	<clip2D0Count
+		ldy	#5
+		sta	[polyBufferAddr],y	;COUNT
+
+;SAMPLE Z
+		ldy	#2
+		lda	<polyBufferZ0Work0	;SAMPLE Z
+		sta	[polyBufferAddr],y
+		iny
+		lda	<polyBufferZ0Work0+1
+		sta	[polyBufferAddr],y
+
+;set buffer
+		lda	#LOW(polyBufferStart)
+		sta	<polyBufferNow
+		lda	#HIGH(polyBufferStart)
+		sta	<polyBufferNow+1
+
+.setBufferLoop:
+		ldy	#0			;NEXT ADDR
+		lda	[polyBufferNow],y
+		sta	<polyBufferNext
+		iny
+		lda	[polyBufferNow],y
+		sta	<polyBufferNext+1
+
+		ldy	#2			;NEXT SAMPLE Z
+		lda	[polyBufferNext],y
+		sta	<polyBufferZ0Work0
+		iny
+		lda	[polyBufferNext],y
+		sta	<polyBufferZ0Work0+1
+
+		ldy	#2			;SAMPLE Z
+		sec
+		lda	[polyBufferAddr],y
+		sbc	<polyBufferZ0Work0
+		iny
+		lda	[polyBufferAddr],y
+		sbc	<polyBufferZ0Work0+1
+
+		bpl	.setBufferJump		;SAMPLE Z >= NEXT SAMPLE Z
+
+		lda	<polyBufferNext
+		sta	<polyBufferNow
+		lda	<polyBufferNext+1
+		sta	<polyBufferNow+1
+
+		bra	.setBufferLoop
+
+.setBufferJump:
+		ldy	#0			;BUFFER -> NEXT
+		lda	<polyBufferNext
+		sta	[polyBufferAddr],y
+		iny
+		lda	<polyBufferNext+1
+		sta	[polyBufferAddr],y
+
+		ldy	#0			;NOW -> BUFFER
+		lda	<polyBufferAddr
+		sta	[polyBufferNow],y
+		iny
+		lda	<polyBufferAddr+1
+		sta	[polyBufferNow],y
+
+;set data
+		clx
+		ldy	#6
+.setModelLoop2:
+		lda	clip2D0,x
+		sta	[polyBufferAddr],y
+		inx
+		inx
+		iny
+
+		lda	clip2D0,x
+		sta	[polyBufferAddr],y
+		inx
+		inx
+		iny
+
+		dec	<clip2D0Count
+		bne	.setModelLoop2
+
+;next buffer addr
+		clc
+		tya
+		adc	<polyBufferAddr
+		sta	<polyBufferAddr
+		lda	<polyBufferAddr+1
+		adc	#0
+		sta	<polyBufferAddr+1
+
+.setModelJump0:
+		clc
+		lda	<modelPolygonStartIndex
+		adc	#6
+		sta	<modelPolygonStartIndex
+
+		dec	<modelPolygonCount
+		beq	.setModelEnd
+		jmp	.setModelLoop3
+
+.setModelEnd:
+		rts
+
+
+;----------------------------
+clipFront:
+		ldx	<frontClipData0
+		ldy	<frontClipData1
+
+		lda	transform2DWork0+5,x	;Z0<128 flag
+		and	#$80
+		lsr	a
+		sta	<frontClipFlag
+		lda	transform2DWork0+5,y	;Z0<128 flag
+		and	#$80
+		ora	<frontClipFlag
+		sta	<frontClipFlag
+		bne	.clipFrontJump12
+		jmp	.clipFrontJump8
+
+.clipFrontJump12:
+		cmp	#$C0
+		bne	.clipFrontJump13
+		jmp	.clipFrontJump9
+
+.clipFrontJump13:
+;clip front
+;(128-Z0) to mul16a
+		sec
+		lda	#128
+		sbc	transform2DWork1+4,x
+		sta	<mul16a
+		lda	#0
+		sbc	transform2DWork1+5,x
+		sta	<mul16a+1
+
+;(X1-X0) to mul16b
+		sec
+		lda	transform2DWork1+0,y
+		sbc	transform2DWork1+0,x
+		sta	<mul16b
+		lda	transform2DWork1+1,y
+		sbc	transform2DWork1+1,x
+		sta	<mul16b+1
+
+;(128-Z0)*(X1-X0) to mul16d:mul16c
+		jsr	smul16
+
+;(Z1-Z0) to mul16a
+		sec
+		lda	transform2DWork1+4,y
+		sbc	transform2DWork1+4,x
+		sta	<mul16a
+		lda	transform2DWork1+5,y
+		sbc	transform2DWork1+5,x
+		sta	<mul16a+1
+
+;(128-Z0)*(X1-X0)/(Z1-Z0)
+		jsr	sdiv32
+
+;(128-Z0)*(X1-X0)/(Z1-Z0)+X0
+		clc
+		lda	<mul16a
+		adc	transform2DWork1+0,x
+		sta	<mul16a
+		lda	<mul16a+1
+		adc	transform2DWork1+1,x
+		sta	<mul16a+1
+
+;mul16a+centerX
+		clc
+		lda	<mul16a
+		adc	<centerX
+		sta	<clipFrontX
+		lda	<mul16a+1
+		adc	<centerX+1
+		sta	<clipFrontX+1
+
+;(128-Z0) to mul16a
+		sec
+		lda	#128
+		sbc	transform2DWork1+4,x
+		sta	<mul16a
+		lda	#0
+		sbc	transform2DWork1+5,x
+		sta	<mul16a+1
+
+;(Y1-Y0) to mul16b
+		sec
+		lda	transform2DWork1+2,y
+		sbc	transform2DWork1+2,x
+		sta	<mul16b
+		lda	transform2DWork1+3,y
+		sbc	transform2DWork1+3,x
+		sta	<mul16b+1
+
+;(128-Z0)*(Y1-Y0) to mul16d:mul16c
+		jsr	smul16
+
+;(Z1-Z0) to mul16a
+		sec
+		lda	transform2DWork1+4,y
+		sbc	transform2DWork1+4,x
+		sta	<mul16a
+		lda	transform2DWork1+5,y
+		sbc	transform2DWork1+5,x
+		sta	<mul16a+1
+
+;(128-Z0)*(Y1-Y0)/(Z1-Z0)
+		jsr	sdiv32
+
+;(128-Z0)*(Y1-Y0)/(Z1-Z0)+Y0
+		clc
+		lda	<mul16a
+		adc	transform2DWork1+2,x
+		sta	<mul16a
+		lda	<mul16a+1
+		adc	transform2DWork1+3,x
+		sta	<mul16a+1
+
+;mul16a+centerY
+		clc
+		lda	<mul16a
+		adc	<centerY
+		sta	<clipFrontY
+		lda	<mul16a+1
+		adc	<centerY+1
+		sta	<clipFrontY+1
+
+		bbs7	<frontClipFlag,.clipFrontJump10
+
+		ldy	<model2DClipIndexWork
+
+		lda	<clipFrontX
+		sta	clip2D0,y
+		iny
+		lda	<clipFrontX+1
+		sta	clip2D0,y
+		iny
+
+		lda	<clipFrontY
+		sta	clip2D0,y
+		iny
+		lda	<clipFrontY+1
+		sta	clip2D0,y
+		iny
+
+		sty	<model2DClipIndexWork
+
+		lda	#128
+		sta	polyBufferZ0Work1
+		stz	polyBufferZ0Work1+1
+
+		inc	<frontClipCount
+
+		bra	.clipFrontJump11
+
+.clipFrontJump10:
+		ldy	<model2DClipIndexWork
+
+		lda	transform2DWork0,x
+		sta	clip2D0,y
+		iny
+		lda	transform2DWork0+1,x
+		sta	clip2D0,y
+		iny
+
+		lda	transform2DWork0+2,x
+		sta	clip2D0,y
+		iny
+		lda	transform2DWork0+3,x
+		sta	clip2D0,y
+		iny
+
+		lda	<clipFrontX
+		sta	clip2D0,y
+		iny
+		lda	<clipFrontX+1
+		sta	clip2D0,y
+		iny
+
+		lda	<clipFrontY
+		sta	clip2D0,y
+		iny
+		lda	<clipFrontY+1
+		sta	clip2D0,y
+		iny
+
+		sty	<model2DClipIndexWork
+
+		lda	transform2DWork0+4,x
+		sta	polyBufferZ0Work1
+		lda	transform2DWork0+5,x
+		sta	polyBufferZ0Work1+1
+
+		inc	<frontClipCount
+		inc	<frontClipCount
+
+		bra	.clipFrontJump11
+
+.clipFrontJump8:
+		ldy	<model2DClipIndexWork
+
+		lda	transform2DWork0,x
+		sta	clip2D0,y
+		iny
+		lda	transform2DWork0+1,x
+		sta	clip2D0,y
+		iny
+
+		lda	transform2DWork0+2,x
+		sta	clip2D0,y
+		iny
+		lda	transform2DWork0+3,x
+		sta	clip2D0,y
+		iny
+
+		sty	<model2DClipIndexWork
+
+		lda	transform2DWork0+4,x
+		sta	polyBufferZ0Work1
+		lda	transform2DWork0+5,x
+		sta	polyBufferZ0Work1+1
+
+		inc	<frontClipCount
+
+.clipFrontJump11:
+;check Z sample
+		sec
+		lda	<polyBufferZ0Work0
+		sbc	<polyBufferZ0Work1
+		lda	<polyBufferZ0Work0+1
+		sbc	<polyBufferZ0Work1+1
+
+		bpl	.clipFrontJump9
+
+		lda	<polyBufferZ0Work1
+		sta	<polyBufferZ0Work0
+		lda	<polyBufferZ0Work1+1
+		sta	<polyBufferZ0Work0+1
+
+.clipFrontJump9:
 		rts
 
 
