@@ -9,7 +9,7 @@
 ;Memory
 ;0000	I/O
 ;2000	RAM
-;4000	mul data : div data : polygon buffer ram $1F2000-$1F7FFF($F9-$FB) 24KBYTE
+;4000	mul data : div data : frame buffer ram $1F2000-$1F7FFF($F9-$FB) 24KBYTE
 ;6000
 ;8000
 ;A000	polygon process
@@ -63,26 +63,26 @@ divdatBank		.equ	20
 ;----------------------------
 putPolyLine00m		.macro
 		lda	<polyLineColorDataWork0
-		sta	[polyLineLeftAddr]
-		inc	<polyLineLeftAddr
+		sta	[polyLineLeftAddr],y
+		iny
 
 		lda	<polyLineColorDataWork1
-		sta	[polyLineLeftAddr]
+		sta	[polyLineLeftAddr],y
 		clc
-		lda	<polyLineLeftAddr
+		tya
 		adc	#$0F
-		sta	<polyLineLeftAddr
+		tay
 
 		lda	<polyLineColorDataWork2
-		sta	[polyLineLeftAddr]
-		inc	<polyLineLeftAddr
+		sta	[polyLineLeftAddr],y
+		iny
 
 		lda	<polyLineColorDataWork3
-		sta	[polyLineLeftAddr]
+		sta	[polyLineLeftAddr],y
 		clc
-		lda	<polyLineLeftAddr
+		tya
 		adc	#$0F
-		sta	<polyLineLeftAddr
+		tay
 		bcc	.jp\@
 		inc	<polyLineLeftAddr+1
 .jp\@
@@ -105,7 +105,6 @@ div16d			.ds	2
 div16ans		.ds	2
 div16work		.ds	2
 
-mulbank			.ds	1
 muladdr			.ds	2
 
 ;---------------------
@@ -164,7 +163,6 @@ polyLineColorDataWork1	.ds	1
 polyLineColorDataWork2	.ds	1
 polyLineColorDataWork3	.ds	1
 
-setBatWork
 polyLineYAddr		.ds	2
 polyLineCount		.ds	1
 
@@ -177,7 +175,6 @@ polyBufferNow		.ds	2
 polyBufferNext		.ds	2
 
 frontClipFlag		.ds	1
-setModelCountWork
 frontClipCount		.ds	1
 
 frontClipData0		.ds	1
@@ -187,22 +184,24 @@ frontClipDataWork	.ds	1
 clipFrontX		.ds	2
 clipFrontY		.ds	2
 
-polyBufferAddrWork0
-modelPolygonIndexWork	.ds	1
-polyBufferAddrWork1
-modelPolygonStartIndex	.ds	1
-polyBufferAddrWork2
-model2DClipIndexWork	.ds	1
+polyBufferAddrWork0	.ds	1
+polyBufferAddrWork1	.ds	1
+polyBufferAddrWork2	.ds	1
 
 ;---------------------
 modelAddr		.ds	2
 modelAddrWork		.ds	2
 modelPolygonCount	.ds	1
 setModelCount		.ds	1
+setModelCountWork	.ds	1
 setModelFrontColor	.ds	1
 setModelBackColor	.ds	1
 setModelColorY		.ds	1
 setModelAttr		.ds	1
+model2DClipIndexWork	.ds	1
+
+;---------------------
+setBatWork		.ds	2
 
 ;---------------------
 centerX			.ds	2
@@ -323,8 +322,8 @@ polyBuffer		.ds	2048
 		.org	$E000
 
 main:
-;initialize VDP
-		jsr	initializeVdp
+;initialize VDC
+		jsr	initializeVdc
 
 ;initialize pad
 		jsr	initializepad
@@ -786,7 +785,7 @@ main:
 
 
 ;----------------------------
-initializeVdp:
+initializeVdc:
 ;
 ;reset wait
 		cly
@@ -798,22 +797,22 @@ initializeVdp:
 		dey
 		bne	.resetWaitloop0
 
-;set vdp
-vdpdataloop:	lda	vdpdata, y
+;set vdc
+vdcdataloop:	lda	vdcdata, y
 		cmp	#$FF
-		beq	vdpdataend
+		beq	vdcdataend
 		sta	$0000
 		iny
 
-		lda	vdpdata, y
+		lda	vdcdata, y
 		sta	$0002
 		iny
 
-		lda	vdpdata, y
+		lda	vdcdata, y
 		sta	$0003
 		iny
-		bra	vdpdataloop
-vdpdataend:
+		bra	vdcdataloop
+vdcdataend:
 
 ;disable interrupts TIQD       IRQ2D
 		lda	#$05
@@ -1155,7 +1154,7 @@ umul16:
 
 		ldx	<mul16b
 		lda	mulbankdata, x
-		sta	<mulbank
+		pha
 		tam	#$02
 
 		lda	muladdrdata, x
@@ -1170,7 +1169,7 @@ umul16:
 		lda	[muladdr],y
 		sta	<mul16c+1
 
-		lda	<mulbank
+		pla
 		clc
 		adc	#8
 		tam	#$02
@@ -1188,7 +1187,7 @@ umul16:
 
 		ldx	<mul16b+1
 		lda	mulbankdata, x
-		sta	<mulbank
+		pha
 		tam	#$02
 
 		lda	muladdrdata, x
@@ -1210,7 +1209,7 @@ umul16:
 		adc	#0
 		sta	<mul16d+1
 
-		lda	<mulbank
+		pla
 		clc
 		adc	#8
 		tam	#$02
@@ -1411,21 +1410,6 @@ _nmi:
 
 
 ;----------------------------
-;test model
-modelTest0
-		.dw	modelTest0Polygon
-		.db	1	;polygon count
-		.dw	modelTest0Vertex
-		.db	3	;vertex count
-modelTest0Polygon
-		.db	$19*8+3, $19*8+$00, 0*6, 1*6, 2*6, 0*0;0
-modelTest0Vertex
-		.dw	   0,-100, 256;0
-		.dw	 100,   0, 100;1
-		.dw	-100,   0, 100;2
-
-
-;----------------------------
 ;Star Fox Arwing
 modelData0
 		.dw	modelData0Polygon
@@ -1580,7 +1564,7 @@ modelData2Vertex
 
 
 ;----------------------------
-vdpdata:
+vdcdata:
 		.db	$05, $00, $00	;screen off +1
 		.db	$0A, $02, $02	;HSW $02 HDS $02
 		.db	$0B, $1F, $04	;HDW $1F HDE $04
@@ -2571,11 +2555,10 @@ setModelProc2:
 		lda	[modelAddr],y		;Polygon Count
 		sta	<modelPolygonCount
 
-		stz	<modelPolygonStartIndex
-
+		cly
 
 .setModelLoop3:
-		ldy	<modelPolygonStartIndex
+		phy
 
 		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
 		and	#$F8
@@ -2602,7 +2585,6 @@ setModelProc2:
 		lda	[modelAddrWork],y
 		sta	<frontClipDataWork
 
-		sty	<modelPolygonIndexWork
 		stz	<model2DClipIndexWork
 
 		stz	<frontClipCount
@@ -2611,7 +2593,6 @@ setModelProc2:
 		stz	<polyBufferZ0Work0+1
 
 .setModelLoop4:
-		ldy	<modelPolygonIndexWork
 		lda	[modelAddrWork],y
 		sta	<frontClipData0
 
@@ -2620,15 +2601,14 @@ setModelProc2:
 		lda	[modelAddrWork],y
 		sta	<frontClipData1
 
-		sty	<modelPolygonIndexWork
-
+		phy
 		jsr	clipFront
+		ply
 
 		dec	<setModelCount
 		bne	.setModelLoop4
 
 ;--------
-		ldy	<modelPolygonIndexWork
 		lda	[modelAddrWork],y
 		sta	<frontClipData0
 
@@ -2813,15 +2793,14 @@ setModelProc2:
 		tya
 		adc	<polyBufferAddr
 		sta	<polyBufferAddr
-		lda	<polyBufferAddr+1
-		adc	#0
-		sta	<polyBufferAddr+1
+		bcc	.setModelJump0
+		inc	<polyBufferAddr+1
 
 .setModelJump0:
 		clc
-		lda	<modelPolygonStartIndex
+		pla
 		adc	#6
-		sta	<modelPolygonStartIndex
+		tay
 
 		dec	<modelPolygonCount
 		beq	.setModelEnd
@@ -3248,7 +3227,7 @@ setModelProc:
 
 		bpl	.setModelJump2
 
-;Back Side
+;back side
 		bbr0	<setModelAttr, .setModelJump6
 		jmp	.setModelJump0
 
@@ -3257,7 +3236,7 @@ setModelProc:
 		bra	.setModelJump5
 
 .setModelJump2:
-;Front Side
+;front side
 		lda	<setModelFrontColor
 
 .setModelJump5:
@@ -3354,9 +3333,8 @@ setModelProc:
 		lda	<polyBufferAddr
 		adc	<polyBufferAddrWork2
 		sta	<polyBufferAddr
-		lda	<polyBufferAddr+1
-		adc	#0
-		sta	<polyBufferAddr+1
+		bcc	.setModelJump0
+		inc	<polyBufferAddr+1
 
 ;unset polygon
 .setModelJump0:
@@ -3994,7 +3972,7 @@ transform2DProc:
 ;get div data
 		ldx	<div16a+1
 		lda	divbankdata, x
-		sta	<mulbank
+		pha
 		tam	#$02
 
 		lda	muladdrdata, x
@@ -4006,7 +3984,7 @@ transform2DProc:
 		sta	<udiv32_2Work
 
 		clc
-		lda	<mulbank
+		pla
 		adc	#4
 		tam	#$02
 
@@ -4016,7 +3994,7 @@ transform2DProc:
 ;mul udiv32_2Work low byte
 		ldx	<udiv32_2Work
 		lda	mulbankdata, x
-		sta	<mulbank
+		pha
 		tam	#$02
 
 		lda	muladdrdata, x
@@ -4037,7 +4015,7 @@ transform2DProc:
 		lda	[muladdr],y
 		sta	<div16work+1
 
-		lda	<mulbank
+		pla
 		clc
 		adc	#8
 		tam	#$02
@@ -4056,7 +4034,7 @@ transform2DProc:
 ;mul udiv32_2Work high byte
 		ldx	<udiv32_2Work+1
 		lda	mulbankdata, x
-		sta	<mulbank
+		pha
 		tam	#$02
 
 		lda	muladdrdata, x
@@ -4074,7 +4052,7 @@ transform2DProc:
 		adc	<div16work+1
 		sta	<div16work+1
 
-		lda	<mulbank
+		pla
 		clc
 		adc	#8
 		tam	#$02
@@ -5227,6 +5205,7 @@ putPolyLine:
 		sec
 		lda	polyLineAddrConvX,x
 		sbc	<polyLineCount
+		beq	.polyLineJump03
 		sta	<polyLineCount
 
 		lda	polyLineAddrConvXShift,x
@@ -5236,20 +5215,20 @@ putPolyLine:
 		eor	#$FF
 		sta	<polyLineRightMask
 
-		lda	<polyLineCount
-		beq	.polyLineJump03
-
 		jsr	putPolyLine01Left
+		phy
 		jsr	putPolyLine00
 		jsr	putPolyLine01Right
+		ply
 
 		rts
 
 .polyLineJump03:
+		lda	polyLineAddrConvXShift,x
+		tax
 		lda	<polyLineLeftData
-		and	<polyLineRightData
+		and	polyLineRightDatas,x
 		sta	<polyLineLeftData
-
 		eor	#$FF
 		sta	<polyLineLeftMask
 
@@ -5317,46 +5296,46 @@ putPolyLine01Right:
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineLeftAddr]
+		lda	[polyLineLeftAddr],y
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
+		sta	[polyLineLeftAddr],y
 
-		inc	<polyLineLeftAddr
+		iny
 
 		lda	<polyLineColorDataWork1
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineLeftAddr]
+		lda	[polyLineLeftAddr],y
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
+		sta	[polyLineLeftAddr],y
 
 		clc
-		lda	<polyLineLeftAddr
+		tya
 		adc	#$0F
-		sta	<polyLineLeftAddr
+		tay
 
 		lda	<polyLineColorDataWork2
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineLeftAddr]
+		lda	[polyLineLeftAddr],y
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
+		sta	[polyLineLeftAddr],y
 
-		inc	<polyLineLeftAddr
+		iny
 
 		lda	<polyLineColorDataWork3
 		and	<polyLineRightData
 		sta	<polyLineColorDataWork
 
-		lda	[polyLineLeftAddr]
+		lda	[polyLineLeftAddr],y
 		and	<polyLineRightMask
 		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
+		sta	[polyLineLeftAddr],y
 
 		rts
 
@@ -5364,14 +5343,14 @@ putPolyLine01Right:
 ;----------------------------
 putPolyLine00:
 ;put left to right poly line
-		clc
 		lda	<polyLineLeftAddr
 		adc	#$0F
-		sta	<polyLineLeftAddr
+		tay
 		bcc	.putPolyLine00Jump0
 		inc	<polyLineLeftAddr+1
-
 .putPolyLine00Jump0:
+		stz	<polyLineLeftAddr
+
 		lda	<polyLineCount
 		asl	a
 		tax
