@@ -44,6 +44,17 @@ function RomChange(changerom) {
 }
 
 
+function FullScreen() {
+	let canvas = document.querySelector("#canvas0");
+	if(canvas.requestFullScreen)
+		canvas.requestFullScreen();
+	else if(canvas.webkitRequestFullScreen)
+		canvas.webkitRequestFullScreen();
+	else if(canvas.mozRequestFullScreen)
+		canvas.mozRequestFullScreen();
+}
+
+
 function Set() {
 	pce = new PCE();
 	if(!pce.SetCanvas("canvas0"))
@@ -79,6 +90,7 @@ function Set() {
 
 	document.querySelector("#pause").addEventListener("click", Pause, false);
 	document.querySelector("#start").addEventListener("click", Start, false);
+	document.querySelector("#fullscreen").addEventListener("click",  FullScreen, false);
 }
 
 
