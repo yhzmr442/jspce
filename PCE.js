@@ -2,392 +2,43 @@
 
 class PCE {
 	constructor() {
-		/* ************* */
-		/* **** ETC **** */
-		/* ************* */
-		this.TimerID = null;
-		this.MainCanvas = null;
-		this.Ctx = null;
-		this.ImageData = null;
+		/* ***************** */
+		/* **** Setting **** */
+		/* ***************** */
 		this.SuperGrafx = false;
-
-		/* ************* */
-		/* **** CPU **** */
-		/* ************* */
-		this.OpCycles = [
-		 8, 7, 3, 4, 6, 4, 6, 7, 3, 2, 2, 2, 7, 5, 7, 6,// 0x00
-		 2, 7, 7, 4, 6, 4, 6, 7, 2, 5, 2, 2, 7, 5, 7, 6,// 0x10
-		 7, 7, 3, 4, 4, 4, 6, 7, 3, 2, 2, 2, 5, 5, 7, 6,// 0x20
-		 2, 7, 7, 2, 4, 4, 6, 7, 2, 5, 2, 2, 5, 5, 7, 6,// 0x30
-		 7, 7, 3, 4, 8, 4, 6, 7, 3, 2, 2, 2, 4, 5, 7, 6,// 0x40
-		 2, 7, 7, 5, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6,// 0x50
-		 7, 7, 2, 2, 4, 4, 6, 7, 3, 2, 2, 2, 7, 5, 7, 6,// 0x60
-		 2, 7, 7, 0, 4, 4, 6, 7, 2, 5, 3, 2, 7, 5, 7, 6,// 0x70
-		 4, 7, 2, 7, 4, 4, 4, 7, 2, 2, 2, 2, 5, 5, 5, 6,// 0x80
-		 2, 7, 7, 8, 4, 4, 4, 7, 2, 5, 2, 2, 5, 5, 5, 6,// 0x90
-		 2, 7, 2, 7, 4, 4, 4, 7, 2, 2, 2, 2, 5, 5, 5, 6,// 0xA0
-		 2, 7, 7, 8, 4, 4, 4, 7, 2, 5, 2, 2, 5, 5, 5, 6,// 0xB0
-		 2, 7, 2, 0, 4, 4, 6, 7, 2, 2, 2, 2, 5, 5, 7, 6,// 0xC0
-		 2, 7, 7, 0, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6,// 0xD0
-		 2, 7, 2, 0, 4, 4, 6, 7, 2, 2, 2, 2, 5, 5, 7, 6,// 0xE0
-		 2, 7, 7, 0, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6];//0xF0
-
-		this.OpBytes = [
-		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x00
-		 0, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x10
-		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x20
-		 0, 2, 2, 1, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x30
-		 0, 2, 1, 2, 0, 2, 2, 2, 1, 2, 1, 1, 0, 3, 3, 0,// 0x40
-		 0, 2, 2, 2, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0,// 0x50
-		 0, 2, 1, 1, 2, 2, 2, 2, 1, 2, 1, 1, 0, 3, 3, 0,// 0x60
-		 0, 2, 2, 0, 2, 2, 2, 2, 1, 3, 1, 1, 0, 3, 3, 0,// 0x70
-		 0, 2, 1, 3, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x80
-		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x90
-		 2, 2, 2, 3, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xA0
-		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0xB0
-		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xC0
-		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0,// 0xD0
-		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xE0
-		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0];//0xF0
-
-		this.A = 0;
-		this.X = 0;
-		this.Y = 0;
-		this.PC = 0;
-		this.S = 0;
-		this.P = 0;
-
-		this.NZCacheTable = new Array(0x100).fill(0x00);
-		this.NZCacheTable = this.NZCacheTable.map((d, i) => { return i & 0x80; });
-		this.NZCacheTable[0x00] = 0x02;
-
-		this.NFlag = 0x80;
-		this.VFlag = 0x40;
-		this.TFlag = 0x20;
-		this.BFlag = 0x10;
-		this.DFlag = 0x08;
-		this.IFlag = 0x04;
-		this.ZFlag = 0x02;
-		this.CFlag = 0x01;
-
-		this.TIQFlag = 0x04;
-		this.IRQ1Flag = 0x02;
-		this.IRQ2Flag = 0x01;
-
-		this.ProgressClock = 0;
-		this.CPUBaseClock = 0;
-
-		this.BaseClock1 = 12;
-		this.BaseClock3 = 6;
-		this.BaseClock5 = 4;
-		this.BaseClock7 = 3;
-		this.BaseClock10 = 2;
-
-		this.TransferSrc = 0;
-		this.TransferDist = 0;
-		this.TransferLen = 0;
-		this.TransferAlt = 0;
-
-		/* ***************** */
-		/* **** Storage **** */
-		/* ***************** */
-		this.MPR = new Array(8);
-		this.MPRSelect = 0;
-		this.RAM = new Array(0x8000);
-		this.RAMMask = 0x1FFF;
-		this.BRAM = new Array(0x2000).fill(0x00);
-		this.BRAMUse = false;
-
-		this.INTIRQ2 = 0x00;
-		this.IntDisableRegister = 0;
-
-		this.Mapper = null;
-
-		this.MapperBase = class {
-			constructor(core) {
-				this.ROM = null;
-				this.Core = core;
-			}
-
-			Init() {
-			}
-
-			Read(address) {
-				return 0xFF;
-			}
-
-			Write(address, data) {
-			}
-		};
-
-		this.Mapper0 = class extends this.MapperBase {
-			constructor(rom, core) {
-				super(core);
-				this.ROM = rom;
-
-				let tmp = this.ROM.length - 1;
-				this.Address = 0x80000;
-				while(this.Address > 0x0000) {
-					if((this.Address & tmp) != 0x0000)
-						break;
-					this.Address >>>= 1;
-				}
-			}
-
-			Read(address) {
-				if(address >= this.ROM.length)
-					return this.ROM[(address & (this.Address - 1)) | this.Address];
-				else
-					return this.ROM[address];
-			}
-		};
-
-		this.Mapper1 = class extends this.MapperBase {
-			constructor(rom, core) {
-				super(core);
-				this.ROM = rom;
-				this.Address = 0;
-			}
-
-			Init() {
-				this.Address = 0;
-			}
-
-			Read(address) {
-				if(address < 0x80000)
-					return this.ROM[address];
-				else
-					return this.ROM[this.Address | (address & 0x7FFFF)];
-			}
-
-			Write(address, data) {
-				this.Address = ((address & 0x000F) + 1) << 19;
-			}
-		};
-
-		this.Mapper2 = class extends this.MapperBase {
-			constructor(rom, core) {
-				super(core);
-				this.ROM = rom.concat(new Array(0x80000).fill(0x00));
-			}
-
-			Read(address) {
-				return this.ROM[address];
-			}
-
-			Write(address, data) {
-				if(address >= 0x80000)
-					this.ROM[address] = data;
-			}
-		};
-
-		/* ************* */
-		/* **** VCE **** */
-		/* ************* */
-		this.Palette = new Array(512);
-		this.PaletteData = new Array(512);
-		this.MonoPaletteData = new Array(512);
-
-		this.VCEBaseClock = 0;
-		this.VCEControl = 0;
-		this.VCEAddress = 0;
-		this.VCEData = 0;
-
-		/* ************* */
-		/* **** VPC **** */
-		/* ************* */
-		this.VPCRegister = new Array(8);
-		this.VDCSelect = 0;
-		this.VPCWindow1 = 0;
-		this.VPCWindow2 = 0;
-		this.VPCPriority = new Array(4);
-
-		/* ************* */
-		/* **** VDC **** */
-		/* ************* */
-		this.DrawFlag = false;
-		this.VDCPutLineProgressClock = 0;
-		this.VDCPutLine = 0;
-		this.VDC = new Array(2);
-
-		this.VDCLineClock = 1368;
-
-		this.ScreenSize = [];
-		this.ScreenSize[this.BaseClock5] = 342;
-		this.ScreenSize[this.BaseClock7] = 456;
-		this.ScreenSize[this.BaseClock10] = 684;
-
-		this.PutScreenSize = [];
-		this.PutScreenSize[this.BaseClock5] = 320;
-		this.PutScreenSize[this.BaseClock7] = 428;
-		this.PutScreenSize[this.BaseClock10] = 640;
-
-		this.ScreenHeightMAX = 262;
-		this.ScreenWidthMAX = 684;
-
-		this.VScreenWidthArray = [];
-		this.VScreenWidthArray[0x00] = 32;
-		this.VScreenWidthArray[0x10] = 64;
-		this.VScreenWidthArray[0x20] = 128;
-		this.VScreenWidthArray[0x30] = 128;
-
-		this.ReverseBit = new Array(0x100).fill(0x00);
-		this.ReverseBit = this.ReverseBit.map((d, i) => { return ((i & 0x80) >> 7) | ((i & 0x40) >> 5) | 
-									 ((i & 0x20) >> 3) | ((i & 0x10) >> 1) | 
-									 ((i & 0x08) << 1) | ((i & 0x04) << 3) | 
-									 ((i & 0x02) << 5) | ((i & 0x01) << 7); });
-
-		this.ReverseBit16 = new Array(0x10000).fill(0x00);
-		this.ReverseBit16 = this.ReverseBit16.map((d, i) => { return (this.ReverseBit[i & 0x00FF] << 8) | this.ReverseBit[(i & 0xFF00) >> 8]; });
-
-		this.ReverseBit256 = new Array(0x100).fill(0x00);
-		this.ReverseBit256 = this.ReverseBit256.map((d, i) => { let b = this.ReverseBit[i];
-									return ((b & 0x80) << (28 - 7)) |
-									       ((b & 0x40) << (24 - 6)) |
-									       ((b & 0x20) << (20 - 5)) |
-									       ((b & 0x10) << (16 - 4)) |
-									       ((b & 0x08) << (12 - 3)) |
-									       ((b & 0x04) << ( 8 - 2)) |
-									       ((b & 0x02) << ( 4 - 1)) |
-									       ((b & 0x01) << ( 0 - 0)); });
-
-		this.SPAddressMask = [];
-		this.SPAddressMask[16] = [];
-		this.SPAddressMask[32] = [];
-		this.SPAddressMask[16][16] = 0x07FE;
-		this.SPAddressMask[16][32] = 0x07FE & 0x07FA;
-		this.SPAddressMask[16][64] = 0x07FE & 0x07F2;
-		this.SPAddressMask[32][16] = 0x07FC;
-		this.SPAddressMask[32][32] = 0x07FC & 0x07FA;
-		this.SPAddressMask[32][64] = 0x07FC & 0x07F2;
-
-		/* *************** */
-		/* **** Sound **** */
-		/* *************** */
-		this.WaveDataArray = [];
-		this.WaveClockCounter = 0;
-		this.WaveVolume = 1.0;
-
-		this.WebAudioCtx = null;
-		this.WebAudioJsNode = null;
-		this.WebAudioGainNode = null;
-		this.WebAudioBufferSize = 2048;
-
-		this.PSGClock = 3579545;
-
-		/* ************* */
-		/* **** PSG **** */
-		/* ************* */
-		this.PSGChannel = new Array(6);
-		this.PSGBaseClock = this.BaseClock3;
-
-		this.PSGProgressClock = 0;
-
-		this.WaveVolumeLeft = 0;
-		this.WaveVolumeRight = 0;
-
-		this.WaveLfoOn = false;
-		this.WaveLfoControl = 0;
-		this.WaveLfoFreqency = 0;
-
-		/* *************** */
-		/* **** TIMER **** */
-		/* *************** */
-		this.TimerBaseClock = this.BaseClock7;
-		this.TimerReload = 0;
-		this.TimerFlag = false;
-		this.TimerCounter = 0;
-		this.TimerPrescaler = 0;
-		this.INTTIQ = 0;
-
-		/* ****************** */
-		/* **** Joystick **** */
-		/* ****************** */
-		this.JoystickSEL = 0;
-		this.JoystickCLR = 0;
-		this.KeyUpFunction = null;
-		this.KeyDownFunction = null;
-
 		this.CountryTypePCE = 0x40;
 		this.CountryTypeTG16 = 0x00;
 		this.CountryType = this.CountryTypePCE;
-
-		this.Keybord = new Array(5).fill([]);
-		this.Keybord = this.Keybord.map((d) => { return new Array(4); });
-
-		this.GamePad = new Array(5).fill([]);
-		this.GamePad = this.Keybord.map((d) => { return new Array(4); });
-
-		this.GamePadSelect = 0x00;
-		this.GamePadButtonSelect = 0x00;
-		this.GamePadBuffer = 0x00;
 		this.GamePadButton6 = false;
 		this.MultiTap = false;
 
-		this.GamePadData = [];
-		this.GamePadData["STANDARD PAD"] = [
-			[[{type:"B", index:1}],// SHOT1
-			 [{type:"B", index:0}],// SHOT2
-			 [{type:"B", index:8}],// SELECT
-			 [{type:"B", index:9}, {type:"B", index:2}],// RUN
-			 [{type:"B", index:12}],// UP
-			 [{type:"B", index:13}],// DOWN
-			 [{type:"B", index:14}],// LEFT
-			 [{type:"B", index:15}]],// RIGHT
-
-			[[{type:"B", index:1}],// SHOT1
-			 [{type:"B", index:0}],// SHOT2
-			 [{type:"B", index:8}],// SELECT
-			 [{type:"B", index:9}],// RUN
-			 [{type:"B", index:12}],// UP
-			 [{type:"B", index:13}],// DOWN
-			 [{type:"B", index:14}],// LEFT
-			 [{type:"B", index:15}],// RIGHT
-			 [{type:"B", index:7}],// SHOT3
-			 [{type:"B", index:5}],// SHOT4
-			 [{type:"B", index:2}],// SHOT5
-			 [{type:"B", index:3}]]];// SHOT6
-
-		this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"] = [// Chrome
-			[[{type:"B", index:2}],// SHOT1
-			 [{type:"B", index:1}],// SHOT2
-			 [{type:"B", index:8}],// SELECT
-			 [{type:"B", index:9}, {type:"B", index:0}],// RUN
-			 [{type:"P", index:9}],// UP (POV)
-			 [{type:"N", index:0}],// DOWN (POV)
-			 [{type:"N", index:0}],// LEFT (POV)
-			 [{type:"N", index:0}]],// RIGHT (POV)
-
-			[[{type:"B", index:2}],// SHOT1
-			 [{type:"B", index:1}],// SHOT2
-			 [{type:"B", index:8}],// SELECT
-			 [{type:"B", index:9}],// RUN
-			 [{type:"P", index:9}],// UP (POV)
-			 [{type:"N", index:0}],// DOWN (POV)
-			 [{type:"N", index:0}],// LEFT (POV)
-			 [{type:"N", index:0}],// RIGHT (POV)
-			 [{type:"B", index:7}],// SHOT3
-			 [{type:"B", index:5}],// SHOT4
-			 [{type:"B", index:0}],// SHOT5
-			 [{type:"B", index:3}]]];// SHOT6
-
-		this.GamePadData["0f0d-0009-HORI PAD 3 TURBO"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];// Firefox
-		this.GamePadData["UNKNOWN PAD"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];
-
-		this.GamePadKeyData = [{index:0, data:0x01}, {index:0, data:0x02},
-				       {index:0, data:0x04}, {index:0, data:0x08},
-				       {index:1, data:0x01}, {index:1, data:0x04},
-				       {index:1, data:0x08}, {index:1, data:0x02},
-				       {index:2, data:0x01}, {index:2, data:0x02},
-				       {index:2, data:0x04}, {index:2, data:0x08}];
-
-		this.GamePadPovData = [0x01, 0x01|0x02, 0x02, 0x02|0x04, 0x04, 0x04|0x08, 0x08, 0x01|0x08];
+		/* ******************* */
+		/* **** Construct **** */
+		/* ******************* */
+		this.EtcConstruct();
+		this.CPUConstruct();
+		this.StorageConstruct();
+		this.VCEConstruct();
+		this.VPCConstruct();
+		this.VDCConstruct();
+		this.SoundConstruct();
+		this.PSGConstruct();
+		this.TimerConstruct();
+		this.JoystickConstruct();
 	}
 
 
 	/* ************* */
 	/* **** ETC **** */
 	/* ************* */
+	EtcConstruct() {
+		this.TimerID = null;
+		this.MainCanvas = null;
+		this.Ctx = null;
+		this.ImageData = null;
+	}
+
+
 	UpdateAnimationFrame() {
 		this.TimerID = window.requestAnimationFrame(this.UpdateAnimationFrame.bind(this));
 		this.Run();
@@ -476,6 +127,83 @@ class PCE {
 	/* ************* */
 	/* **** CPU **** */
 	/* ************* */
+	CPUConstruct() {
+		this.OpCycles = [
+		 8, 7, 3, 4, 6, 4, 6, 7, 3, 2, 2, 2, 7, 5, 7, 6,// 0x00
+		 2, 7, 7, 4, 6, 4, 6, 7, 2, 5, 2, 2, 7, 5, 7, 6,// 0x10
+		 7, 7, 3, 4, 4, 4, 6, 7, 3, 2, 2, 2, 5, 5, 7, 6,// 0x20
+		 2, 7, 7, 2, 4, 4, 6, 7, 2, 5, 2, 2, 5, 5, 7, 6,// 0x30
+		 7, 7, 3, 4, 8, 4, 6, 7, 3, 2, 2, 2, 4, 5, 7, 6,// 0x40
+		 2, 7, 7, 5, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6,// 0x50
+		 7, 7, 2, 2, 4, 4, 6, 7, 3, 2, 2, 2, 7, 5, 7, 6,// 0x60
+		 2, 7, 7, 0, 4, 4, 6, 7, 2, 5, 3, 2, 7, 5, 7, 6,// 0x70
+		 4, 7, 2, 7, 4, 4, 4, 7, 2, 2, 2, 2, 5, 5, 5, 6,// 0x80
+		 2, 7, 7, 8, 4, 4, 4, 7, 2, 5, 2, 2, 5, 5, 5, 6,// 0x90
+		 2, 7, 2, 7, 4, 4, 4, 7, 2, 2, 2, 2, 5, 5, 5, 6,// 0xA0
+		 2, 7, 7, 8, 4, 4, 4, 7, 2, 5, 2, 2, 5, 5, 5, 6,// 0xB0
+		 2, 7, 2, 0, 4, 4, 6, 7, 2, 2, 2, 2, 5, 5, 7, 6,// 0xC0
+		 2, 7, 7, 0, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6,// 0xD0
+		 2, 7, 2, 0, 4, 4, 6, 7, 2, 2, 2, 2, 5, 5, 7, 6,// 0xE0
+		 2, 7, 7, 0, 2, 4, 6, 7, 2, 5, 3, 2, 2, 5, 7, 6];//0xF0
+
+		this.OpBytes = [
+		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x00
+		 0, 2, 2, 2, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x10
+		 0, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x20
+		 0, 2, 2, 1, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x30
+		 0, 2, 1, 2, 0, 2, 2, 2, 1, 2, 1, 1, 0, 3, 3, 0,// 0x40
+		 0, 2, 2, 2, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0,// 0x50
+		 0, 2, 1, 1, 2, 2, 2, 2, 1, 2, 1, 1, 0, 3, 3, 0,// 0x60
+		 0, 2, 2, 0, 2, 2, 2, 2, 1, 3, 1, 1, 0, 3, 3, 0,// 0x70
+		 0, 2, 1, 3, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0x80
+		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0x90
+		 2, 2, 2, 3, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xA0
+		 0, 2, 2, 4, 2, 2, 2, 2, 1, 3, 1, 1, 3, 3, 3, 0,// 0xB0
+		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xC0
+		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0,// 0xD0
+		 2, 2, 1, 0, 2, 2, 2, 2, 1, 2, 1, 1, 3, 3, 3, 0,// 0xE0
+		 0, 2, 2, 0, 1, 2, 2, 2, 1, 3, 1, 1, 1, 3, 3, 0];//0xF0
+
+		this.A = 0;
+		this.X = 0;
+		this.Y = 0;
+		this.PC = 0;
+		this.S = 0;
+		this.P = 0;
+
+		this.NZCacheTable = new Array(0x100).fill(0x00);
+		this.NZCacheTable = this.NZCacheTable.map((d, i) => { return i & 0x80; });
+		this.NZCacheTable[0x00] = 0x02;
+
+		this.NFlag = 0x80;
+		this.VFlag = 0x40;
+		this.TFlag = 0x20;
+		this.BFlag = 0x10;
+		this.DFlag = 0x08;
+		this.IFlag = 0x04;
+		this.ZFlag = 0x02;
+		this.CFlag = 0x01;
+
+		this.TIQFlag = 0x04;
+		this.IRQ1Flag = 0x02;
+		this.IRQ2Flag = 0x01;
+
+		this.ProgressClock = 0;
+		this.CPUBaseClock = 0;
+
+		this.BaseClock1 = 12;
+		this.BaseClock3 = 6;
+		this.BaseClock5 = 4;
+		this.BaseClock7 = 3;
+		this.BaseClock10 = 2;
+
+		this.TransferSrc = 0;
+		this.TransferDist = 0;
+		this.TransferLen = 0;
+		this.TransferAlt = 0;
+	}
+
+
 	CPUReset() {
 		this.TransferSrc = 0;
 		this.TransferDist = 0;
@@ -1957,6 +1685,99 @@ class PCE {
 	/* ***************** */
 	/* **** Storage **** */
 	/* ***************** */
+	StorageConstruct() {
+		this.MPR = new Array(8);
+		this.MPRSelect = 0;
+		this.RAM = new Array(0x8000);
+		this.RAMMask = 0x1FFF;
+		this.BRAM = new Array(0x2000).fill(0x00);
+		this.BRAMUse = false;
+
+		this.INTIRQ2 = 0x00;
+		this.IntDisableRegister = 0;
+
+		this.Mapper = null;
+
+		this.MapperBase = class {
+			constructor(core) {
+				this.ROM = null;
+				this.Core = core;
+			}
+
+			Init() {
+			}
+
+			Read(address) {
+				return 0xFF;
+			}
+
+			Write(address, data) {
+			}
+		};
+
+		this.Mapper0 = class extends this.MapperBase {
+			constructor(rom, core) {
+				super(core);
+				this.ROM = rom;
+
+				let tmp = this.ROM.length - 1;
+				this.Address = 0x80000;
+				while(this.Address > 0x0000) {
+					if((this.Address & tmp) != 0x0000)
+						break;
+					this.Address >>>= 1;
+				}
+			}
+
+			Read(address) {
+				if(address >= this.ROM.length)
+					return this.ROM[(address & (this.Address - 1)) | this.Address];
+				else
+					return this.ROM[address];
+			}
+		};
+
+		this.Mapper1 = class extends this.MapperBase {
+			constructor(rom, core) {
+				super(core);
+				this.ROM = rom;
+				this.Address = 0;
+			}
+
+			Init() {
+				this.Address = 0;
+			}
+
+			Read(address) {
+				if(address < 0x80000)
+					return this.ROM[address];
+				else
+					return this.ROM[this.Address | (address & 0x7FFFF)];
+			}
+
+			Write(address, data) {
+				this.Address = ((address & 0x000F) + 1) << 19;
+			}
+		};
+
+		this.Mapper2 = class extends this.MapperBase {
+			constructor(rom, core) {
+				super(core);
+				this.ROM = rom.concat(new Array(0x80000).fill(0x00));
+			}
+
+			Read(address) {
+				return this.ROM[address];
+			}
+
+			Write(address, data) {
+				if(address >= 0x80000)
+					this.ROM[address] = data;
+			}
+		};
+	}
+
+
 	GetIntStatus() {
 		return ~this.IntDisableRegister & this.GetIntReqest();
 	}
@@ -2251,6 +2072,18 @@ class PCE {
 	/* ************* */
 	/* **** VCE **** */
 	/* ************* */
+	VCEConstruct() {
+		this.Palette = new Array(512);
+		this.PaletteData = new Array(512);
+		this.MonoPaletteData = new Array(512);
+
+		this.VCEBaseClock = 0;
+		this.VCEControl = 0;
+		this.VCEAddress = 0;
+		this.VCEData = 0;
+	}
+
+
 	VCEInit() {
 		this.Palette.fill(0x0000);
 		for(let i=0; i<512; i++) {
@@ -2335,6 +2168,15 @@ class PCE {
 	/* ************* */
 	/* **** VPC **** */
 	/* ************* */
+	VPCConstruct() {
+		this.VPCRegister = new Array(8);
+		this.VDCSelect = 0;
+		this.VPCWindow1 = 0;
+		this.VPCWindow2 = 0;
+		this.VPCPriority = new Array(4);
+	}
+
+
 	VPCInit() {
 		this.VPCRegister.fill(0x00);
 		this.VPCRegister[0] = 0x11;
@@ -2388,6 +2230,65 @@ class PCE {
 	/* ************* */
 	/* **** VDC **** */
 	/* ************* */
+	VDCConstruct() {
+		this.DrawFlag = false;
+		this.VDCPutLineProgressClock = 0;
+		this.VDCPutLine = 0;
+		this.VDC = new Array(2);
+
+		this.VDCLineClock = 1368;
+
+		this.ScreenSize = [];
+		this.ScreenSize[this.BaseClock5] = 342;
+		this.ScreenSize[this.BaseClock7] = 456;
+		this.ScreenSize[this.BaseClock10] = 684;
+
+		this.PutScreenSize = [];
+		this.PutScreenSize[this.BaseClock5] = 320;
+		this.PutScreenSize[this.BaseClock7] = 428;
+		this.PutScreenSize[this.BaseClock10] = 640;
+
+		this.ScreenHeightMAX = 262;
+		this.ScreenWidthMAX = 684;
+
+		this.VScreenWidthArray = [];
+		this.VScreenWidthArray[0x00] = 32;
+		this.VScreenWidthArray[0x10] = 64;
+		this.VScreenWidthArray[0x20] = 128;
+		this.VScreenWidthArray[0x30] = 128;
+
+		this.ReverseBit = new Array(0x100).fill(0x00);
+		this.ReverseBit = this.ReverseBit.map((d, i) => { return ((i & 0x80) >> 7) | ((i & 0x40) >> 5) | 
+									 ((i & 0x20) >> 3) | ((i & 0x10) >> 1) | 
+									 ((i & 0x08) << 1) | ((i & 0x04) << 3) | 
+									 ((i & 0x02) << 5) | ((i & 0x01) << 7); });
+
+		this.ReverseBit16 = new Array(0x10000).fill(0x00);
+		this.ReverseBit16 = this.ReverseBit16.map((d, i) => { return (this.ReverseBit[i & 0x00FF] << 8) | this.ReverseBit[(i & 0xFF00) >> 8]; });
+
+		this.ReverseBit256 = new Array(0x100).fill(0x00);
+		this.ReverseBit256 = this.ReverseBit256.map((d, i) => { let b = this.ReverseBit[i];
+									return ((b & 0x80) << (28 - 7)) |
+									       ((b & 0x40) << (24 - 6)) |
+									       ((b & 0x20) << (20 - 5)) |
+									       ((b & 0x10) << (16 - 4)) |
+									       ((b & 0x08) << (12 - 3)) |
+									       ((b & 0x04) << ( 8 - 2)) |
+									       ((b & 0x02) << ( 4 - 1)) |
+									       ((b & 0x01) << ( 0 - 0)); });
+
+		this.SPAddressMask = [];
+		this.SPAddressMask[16] = [];
+		this.SPAddressMask[32] = [];
+		this.SPAddressMask[16][16] = 0x07FE;
+		this.SPAddressMask[16][32] = 0x07FE & 0x07FA;
+		this.SPAddressMask[16][64] = 0x07FE & 0x07F2;
+		this.SPAddressMask[32][16] = 0x07FC;
+		this.SPAddressMask[32][32] = 0x07FC & 0x07FA;
+		this.SPAddressMask[32][64] = 0x07FC & 0x07F2;
+	}
+
+
 	MakeSpriteLine(vdcno) {
 		let vdcc = this.VDC[vdcno];
 
@@ -2613,7 +2514,7 @@ class PCE {
 			}
 
 			vdcc.RasterCount++;
-			if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW))
+			if(vdcc.DrawBGYLine == (vdcc.VDS + vdcc.VSW - 1))
 				vdcc.RasterCount = 64;
 
 			if(vdcc.RasterCount == vdcc.VDCRegister[0x06] && (vdcc.VDCStatus & 0x20) == 0x00)
@@ -2957,6 +2858,20 @@ class PCE {
 	/* *************** */
 	/* **** Sound **** */
 	/* *************** */
+	SoundConstruct() {
+		this.WaveDataArray = [];
+		this.WaveClockCounter = 0;
+		this.WaveVolume = 1.0;
+
+		this.WebAudioCtx = null;
+		this.WebAudioJsNode = null;
+		this.WebAudioGainNode = null;
+		this.WebAudioBufferSize = 2048;
+
+		this.PSGClock = 3579545;
+	}
+
+
 	WebAudioFunction(e) {
 		let output = [];
 		let data = [];
@@ -2982,8 +2897,6 @@ class PCE {
 		this.WaveDataArray = [];
 		this.WaveDataArray[0] = [];
 		this.WaveDataArray[1] = [];
-		this.WaveDataArrayLeft = [];
-		this.WaveDataArrayRight = [];
 
 		if(typeof AudioContext !== "undefined" && this.WebAudioCtx == null) {
 			this.WebAudioCtx = new window.AudioContext();
@@ -3034,6 +2947,21 @@ class PCE {
 	/* ************* */
 	/* **** PSG **** */
 	/* ************* */
+	PSGConstruct() {
+		this.PSGChannel = new Array(6);
+		this.PSGBaseClock = this.BaseClock3;
+
+		this.PSGProgressClock = 0;
+
+		this.WaveVolumeLeft = 0;
+		this.WaveVolumeRight = 0;
+
+		this.WaveLfoOn = false;
+		this.WaveLfoControl = 0;
+		this.WaveLfoFreqency = 0;
+	}
+
+
 	PSGInit() {
 		this.SoundInit();
 
@@ -3205,6 +3133,16 @@ class PCE {
 	/* *************** */
 	/* **** TIMER **** */
 	/* *************** */
+	TimerConstruct() {
+		this.TimerBaseClock = this.BaseClock7;
+		this.TimerReload = 0;
+		this.TimerFlag = false;
+		this.TimerCounter = 0;
+		this.TimerPrescaler = 0;
+		this.INTTIQ = 0;
+	}
+
+
 	TimerInit() {
 		this.TimerReload = 0x00;
 		this.TimerFlag = false;
@@ -3257,6 +3195,83 @@ class PCE {
 	/* ****************** */
 	/* **** Joystick **** */
 	/* ****************** */
+	JoystickConstruct() {
+		this.JoystickSEL = 0;
+		this.JoystickCLR = 0;
+		this.KeyUpFunction = null;
+		this.KeyDownFunction = null;
+
+		this.Keybord = new Array(5).fill([]);
+		this.Keybord = this.Keybord.map((d) => { return new Array(4); });
+
+		this.GamePad = new Array(5).fill([]);
+		this.GamePad = this.Keybord.map((d) => { return new Array(4); });
+
+		this.GamePadSelect = 0x00;
+		this.GamePadButtonSelect = 0x00;
+		this.GamePadBuffer = 0x00;
+
+		this.GamePadData = [];
+		this.GamePadData["STANDARD PAD"] = [
+			[[{type:"B", index:1}],// SHOT1
+			 [{type:"B", index:0}],// SHOT2
+			 [{type:"B", index:8}],// SELECT
+			 [{type:"B", index:9}, {type:"B", index:2}],// RUN
+			 [{type:"B", index:12}],// UP
+			 [{type:"B", index:13}],// DOWN
+			 [{type:"B", index:14}],// LEFT
+			 [{type:"B", index:15}]],// RIGHT
+
+			[[{type:"B", index:1}],// SHOT1
+			 [{type:"B", index:0}],// SHOT2
+			 [{type:"B", index:8}],// SELECT
+			 [{type:"B", index:9}],// RUN
+			 [{type:"B", index:12}],// UP
+			 [{type:"B", index:13}],// DOWN
+			 [{type:"B", index:14}],// LEFT
+			 [{type:"B", index:15}],// RIGHT
+			 [{type:"B", index:7}],// SHOT3
+			 [{type:"B", index:5}],// SHOT4
+			 [{type:"B", index:2}],// SHOT5
+			 [{type:"B", index:3}]]];// SHOT6
+
+		this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"] = [// Chrome
+			[[{type:"B", index:2}],// SHOT1
+			 [{type:"B", index:1}],// SHOT2
+			 [{type:"B", index:8}],// SELECT
+			 [{type:"B", index:9}, {type:"B", index:0}],// RUN
+			 [{type:"P", index:9}],// UP (POV)
+			 [{type:"N", index:0}],// DOWN (POV)
+			 [{type:"N", index:0}],// LEFT (POV)
+			 [{type:"N", index:0}]],// RIGHT (POV)
+
+			[[{type:"B", index:2}],// SHOT1
+			 [{type:"B", index:1}],// SHOT2
+			 [{type:"B", index:8}],// SELECT
+			 [{type:"B", index:9}],// RUN
+			 [{type:"P", index:9}],// UP (POV)
+			 [{type:"N", index:0}],// DOWN (POV)
+			 [{type:"N", index:0}],// LEFT (POV)
+			 [{type:"N", index:0}],// RIGHT (POV)
+			 [{type:"B", index:7}],// SHOT3
+			 [{type:"B", index:5}],// SHOT4
+			 [{type:"B", index:0}],// SHOT5
+			 [{type:"B", index:3}]]];// SHOT6
+
+		this.GamePadData["0f0d-0009-HORI PAD 3 TURBO"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];// Firefox
+		this.GamePadData["UNKNOWN PAD"] = this.GamePadData["HORI PAD 3 TURBO (Vendor: 0f0d Product: 0009)"];
+
+		this.GamePadKeyData = [{index:0, data:0x01}, {index:0, data:0x02},
+				       {index:0, data:0x04}, {index:0, data:0x08},
+				       {index:1, data:0x01}, {index:1, data:0x04},
+				       {index:1, data:0x08}, {index:1, data:0x02},
+				       {index:2, data:0x01}, {index:2, data:0x02},
+				       {index:2, data:0x04}, {index:2, data:0x08}];
+
+		this.GamePadPovData = [0x01, 0x01|0x02, 0x02, 0x02|0x04, 0x04, 0x04|0x08, 0x08, 0x01|0x08];
+	}
+
+
 	JoystickInit() {
 		this.JoystickSEL = 0;
 		this.JoystickCLR = 0;
@@ -3308,52 +3323,172 @@ class PCE {
 	}
 
 
+	UnsetButtonRUN(no) {
+		this.Keybord[no][0] |= 0x08;
+	}
+
+
+	UnsetButtonSELECT(no) {
+		this.Keybord[no][0] |= 0x04;
+	}
+
+
+	UnsetButtonSHOT2(no) {
+		this.Keybord[no][0] |= 0x02;
+	}
+
+
+	UnsetButtonSHOT1(no) {
+		this.Keybord[no][0] |= 0x01;
+	}
+
+
+	UnsetButtonLEFT(no) {
+		this.Keybord[no][1] |= 0x08;
+	}
+
+
+	UnsetButtonDOWN(no) {
+		this.Keybord[no][1] |= 0x04;
+	}
+
+
+	UnsetButtonRIGHT(no) {
+		this.Keybord[no][1] |= 0x02;
+	}
+
+
+	UnsetButtonUP(no) {
+		this.Keybord[no][1] |= 0x01;
+	}
+
+
+	UnsetButtonSHOT6(no) {
+		this.Keybord[no][2] |= 0x08;
+	}
+
+
+	UnsetButtonSHOT5(no) {
+		this.Keybord[no][2] |= 0x04;
+	}
+
+
+	UnsetButtonSHOT4(no) {
+		this.Keybord[no][2] |= 0x02;
+	}
+
+
+	UnsetButtonSHOT3(no) {
+		this.Keybord[no][2] |= 0x01;
+	}
+
+
+	SetButtonRUN(no) {
+		this.Keybord[no][0] &= ~0x08;
+	}
+
+
+	SetButtonSELECT(no) {
+		this.Keybord[no][0] &= ~0x04;
+	}
+
+
+	SetButtonSHOT2(no) {
+		this.Keybord[no][0] &= ~0x02;
+	}
+
+
+	SetButtonSHOT1(no) {
+		this.Keybord[no][0] &= ~0x01;
+	}
+
+
+	SetButtonLEFT(no) {
+		this.Keybord[no][1] &= ~0x08;
+	}
+
+
+	SetButtonDOWN(no) {
+		this.Keybord[no][1] &= ~0x04;
+	}
+
+
+	SetButtonRIGHT(no) {
+		this.Keybord[no][1] &= ~0x02;
+	}
+
+
+	SetButtonUP(no) {
+		this.Keybord[no][1] &= ~0x01;
+	}
+
+
+	SetButtonSHOT6(no) {
+		this.Keybord[no][2] &= ~0x08;
+	}
+
+
+	SetButtonSHOT5(no) {
+		this.Keybord[no][2] &= ~0x04;
+	}
+
+
+	SetButtonSHOT4(no) {
+		this.Keybord[no][2] &= ~0x02;
+	}
+
+
+	SetButtonSHOT3(no) {
+		this.Keybord[no][2] &= ~0x01;
+	}
+
+
 	CheckKeyUpFunction(evt) {
 		switch (evt.keyCode){
 			case 83:// RUN 'S'
-				this.Keybord[0][0] |= 0x08;
+				this.UnsetButtonRUN(0);
 				break;
 			case 65:// SELECT 'A'
-				this.Keybord[0][0] |= 0x04;
+				this.UnsetButtonSELECT(0);
 				break;
 			case 90:// SHOT2 'Z'
-				this.Keybord[0][0] |= 0x02;
+				this.UnsetButtonSHOT2(0);
 				break;
 			case 88:// SHOT1 'X'
-				this.Keybord[0][0] |= 0x01;
+				this.UnsetButtonSHOT1(0);
 				break;
 
 			case 86:// SHOT2 'V'
-				this.Keybord[0][0] |= 0x02;
+				this.UnsetButtonSHOT2(0);
 				break;
 			case 66:// SHOT1 'B'
-				this.Keybord[0][0] |= 0x01;
+				this.UnsetButtonSHOT1(0);
 				break;
 
 			case 37:// LEFT
-				this.Keybord[0][1] |= 0x08;
+				this.UnsetButtonLEFT(0);
 				break;
 			case 39:// RIGHT
-				this.Keybord[0][1] |= 0x02;
+				this.UnsetButtonRIGHT(0);
 				break;
 			case 40:// DOWN
-				this.Keybord[0][1] |= 0x04;
+				this.UnsetButtonDOWN(0);
 				break;
 			case 38:// UP
-				this.Keybord[0][1] |= 0x01;
+				this.UnsetButtonUP(0);
 				break;
 
 			case 71:// SHOT6 'G'
-				this.Keybord[0][2] |= 0x08;
+				this.UnsetButtonSHOT6(0);
 				break;
 			case 70:// SHOT5 'F'
-				this.Keybord[0][2] |= 0x04;
+				this.UnsetButtonSHOT5(0);
 				break;
 			case 68:// SHOT4 'D'
-				this.Keybord[0][2] |= 0x02;
+				this.UnsetButtonSHOT4(0);
 				break;
 			case 67:// SHOT3 'C'
-				this.Keybord[0][2] |= 0x01;
+				this.UnsetButtonSHOT3(0);
 				break;
 		}
 		evt.preventDefault();
@@ -3363,49 +3498,49 @@ class PCE {
 	CheckKeyDownFunction(evt) {
 		switch (evt.keyCode){
 			case 83:// RUN 'S'
-				this.Keybord[0][0] &= ~0x08;
+				this.SetButtonRUN(0);
 				break;
 			case 65:// SELECT 'A'
-				this.Keybord[0][0] &= ~0x04;
+				this.SetButtonSELECT(0);
 				break;
 			case 90:// SHOT2 'Z'
-				this.Keybord[0][0] &= ~0x02;
+				this.SetButtonSHOT2(0);
 				break;
 			case 88:// SHOT1 'X'
-				this.Keybord[0][0] &= ~0x01;
+				this.SetButtonSHOT1(0);
 				break;
 
 			case 86:// SHOT2 'V'
-				this.Keybord[0][0] &= ~0x02;
+				this.SetButtonSHOT2(0);
 				break;
 			case 66:// SHOT1 'B'
-				this.Keybord[0][0] &= ~0x01;
+				this.SetButtonSHOT1(0);
 				break;
 
 			case 37:// LEFT
-				this.Keybord[0][1] &= ~0x08;
+				this.SetButtonLEFT(0);
 				break;
 			case 39:// RIGHT
-				this.Keybord[0][1] &= ~0x02;
+				this.SetButtonRIGHT(0);
 				break;
 			case 40:// DOWN
-				this.Keybord[0][1] &= ~0x04;
+				this.SetButtonDOWN(0);
 				break;
 			case 38:// UP
-				this.Keybord[0][1] &= ~0x01;
+				this.SetButtonUP(0);
 				break;
 
 			case 71:// SHOT6 'G'
-				this.Keybord[0][2] &= ~0x08;
+				this.SetButtonSHOT6(0);
 				break;
 			case 70:// SHOT5 'F'
-				this.Keybord[0][2] &= ~0x04;
+				this.SetButtonSHOT5(0);
 				break;
 			case 68:// SHOT4 'D'
-				this.Keybord[0][2] &= ~0x02;
+				this.SetButtonSHOT4(0);
 				break;
 			case 67:// SHOT3 'C'
-				this.Keybord[0][2] &= ~0x01;
+				this.SetButtonSHOT3(0);
 				break;
 		}
 		evt.preventDefault();
