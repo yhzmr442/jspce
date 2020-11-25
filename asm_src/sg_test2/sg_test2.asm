@@ -141,7 +141,6 @@ edgeY1			.ds	1
 edgeSlopeX		.ds	1
 edgeSlopeY		.ds	1
 edgeSigneX		.ds	1
-edgeSlopeTemp		.ds	1
 
 ;---------------------
 polyLineX0		.ds	1
@@ -4956,11 +4955,10 @@ calcEdge:
 		bcs	.edgeJump4
 
 ;edgeSlopeX > edgeSlopeY
-;edgeSlopeTemp initialize
+;edgeSlope initialize
 		lda	<edgeSlopeX
 		eor	#$FF
 		inc	a
-		sta	<edgeSlopeTemp
 
 		ldy	<edgeX0
 		ldx	<edgeY0
@@ -4970,24 +4968,20 @@ calcEdge:
 
 ;edgeSigneX plus
 .edgeXLoop0:
+		pha
 		jsr	setEdgeBuffer
+		pla
 .edgeXLoop1:
 		cpy	<edgeX1
 		beq	.edgeXLoop3
 
 		iny
 
-		clc
-		lda	<edgeSlopeTemp
 		adc	<edgeSlopeY
-		sta	<edgeSlopeTemp
 
 		bcc	.edgeXLoop1
 
-		sec
-		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeX
-		sta	<edgeSlopeTemp
 
 		inx
 		bra	.edgeXLoop0
@@ -4997,7 +4991,9 @@ calcEdge:
 
 ;edgeSigneX minus
 .edgeXLoop4:
+		pha
 		jsr	setEdgeBuffer
+		pla
 .edgeXLoop5:
 		cpy	<edgeX1
 		beq	.edgeXLoop7
@@ -5005,16 +5001,11 @@ calcEdge:
 		dey
 
 		clc
-		lda	<edgeSlopeTemp
 		adc	<edgeSlopeY
-		sta	<edgeSlopeTemp
 
 		bcc	.edgeXLoop5
 
-		sec
-		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeX
-		sta	<edgeSlopeTemp
 
 		inx
 
@@ -5025,11 +5016,10 @@ calcEdge:
 
 .edgeJump4:
 ;edgeSlopeY >= edgeSlopeX
-;edgeSlopeTemp initialize
+;edgeSlope initialize
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
-		sta	<edgeSlopeTemp
 
 		ldy	<edgeX0
 		ldx	<edgeY0
@@ -5039,24 +5029,20 @@ calcEdge:
 
 ;edgeSigneX plus
 .edgeYLoop0:
+		pha
 		jsr	setEdgeBuffer
+		pla
 .edgeYLoop1:
 		cpx	<edgeY1
 		beq	.edgeYLoop3
 
 		inx
 
-		clc
-		lda	<edgeSlopeTemp
 		adc	<edgeSlopeX
-		sta	<edgeSlopeTemp
 
 		bcc	.edgeYLoop0
 
-		sec
-		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeY
-		sta	<edgeSlopeTemp
 
 		iny
 
@@ -5066,24 +5052,20 @@ calcEdge:
 
 ;edgeSigneX minus
 .edgeYLoop4:
+		pha
 		jsr	setEdgeBuffer
+		pla
 .edgeYLoop5:
 		cpx	<edgeY1
 		beq	.edgeYLoop7
 
 		inx
 
-		clc
-		lda	<edgeSlopeTemp
 		adc	<edgeSlopeX
-		sta	<edgeSlopeTemp
 
 		bcc	.edgeYLoop4
 
-		sec
-		lda	<edgeSlopeTemp
 		sbc	<edgeSlopeY
-		sta	<edgeSlopeTemp
 
 		dey
 
