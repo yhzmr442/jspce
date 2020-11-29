@@ -4870,12 +4870,18 @@ calcEdge_putPoly:
 
 ;----------------------------
 calcEdge:
-;calculation edge
-;compare edgeY0 edgeY1
+;calculation edge Y
+		sec
 		lda	<edgeY1
-		cmp	<edgeY0
+		sbc	<edgeY0
 		beq	.edgeJump6
+
+		sta	<edgeSlopeY
 		bcs	.edgeJump7
+
+		eor	#$FF
+		inc	a
+		sta	<edgeSlopeY
 
 ;edgeY0 > edgeY1 exchange X0 X1 Y0 Y1
 		lda	<edgeX0
@@ -4888,7 +4894,7 @@ calcEdge:
 		sta	<edgeY1
 		stx	<edgeY0
 
-		jmp	.edgeJump7
+		bra	.edgeJump7
 
 .edgeJump6:
 ;edgeY0 = edgeY1
@@ -4901,11 +4907,26 @@ calcEdge:
 		rts
 
 .edgeJump7:
-;compare edgeX0 edgeX1
+;calculation edge X
+		sec
 		lda	<edgeX1
-		cmp	<edgeX0
-		bne	.edgeJump8
+		sbc	<edgeX0
+		beq	.edgeJump1
 
+		sta	<edgeSlopeX
+		stz	<edgeSigneX
+		bcs	.edgeJump3
+
+		eor	#$FF
+		inc	a
+		sta	<edgeSlopeX
+
+		lda	#$FF
+		sta	<edgeSigneX
+
+		bra	.edgeJump3
+
+.edgeJump1:
 ;edgeX0 = edgeX1
 		ldy	<edgeX0
 		ldx	<edgeY0
@@ -4917,36 +4938,6 @@ calcEdge:
 		bra	.edgeLoop0
 .edgeJump9:
 		rts
-
-.edgeJump8:
-;calculation edge X sign
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-
-		bcs	.edgeJump0
-
-		eor	#$FF
-		inc	a
-		sta	<edgeSlopeX
-
-		lda	#$FF
-		sta	<edgeSigneX
-
-		bra	.edgeJump1
-
-.edgeJump0:
-		sta	<edgeSlopeX
-
-		stz	<edgeSigneX
-.edgeJump1:
-
-;calculation edge Y sign
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-
-		sta	<edgeSlopeY
 
 .edgeJump3:
 ;edgeSlope compare
@@ -4960,13 +4951,12 @@ calcEdge:
 		eor	#$FF
 		inc	a
 
-		ldy	<edgeX0
-		ldx	<edgeY0
-
 ;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeXLoop4
+		bbs7	<edgeSigneX, .edgeJump10
 
 ;edgeSigneX plus
+		ldy	<edgeX0
+		ldx	<edgeY0
 .edgeXLoop0:
 		pha
 		jsr	setEdgeBuffer
@@ -4976,41 +4966,35 @@ calcEdge:
 		beq	.edgeXLoop3
 
 		iny
-
 		adc	<edgeSlopeY
-
 		bcc	.edgeXLoop1
 
 		sbc	<edgeSlopeX
-
 		inx
 		bra	.edgeXLoop0
-
 .edgeXLoop3:
 		rts
 
 ;edgeSigneX minus
+.edgeJump10:
+		ldy	<edgeX1
+		ldx	<edgeY1
+
 .edgeXLoop4:
 		pha
 		jsr	setEdgeBuffer
 		pla
 .edgeXLoop5:
-		cpy	<edgeX1
+		cpy	<edgeX0
 		beq	.edgeXLoop7
 
-		dey
-
-		clc
+		iny
 		adc	<edgeSlopeY
-
 		bcc	.edgeXLoop5
 
 		sbc	<edgeSlopeX
-
-		inx
-
+		dex
 		bra	.edgeXLoop4
-
 .edgeXLoop7:
 		rts
 
@@ -5037,15 +5021,11 @@ calcEdge:
 		beq	.edgeYLoop3
 
 		inx
-
 		adc	<edgeSlopeX
-
 		bcc	.edgeYLoop0
 
 		sbc	<edgeSlopeY
-
 		iny
-
 		bra	.edgeYLoop0
 .edgeYLoop3:
 		rts
@@ -5060,17 +5040,12 @@ calcEdge:
 		beq	.edgeYLoop7
 
 		inx
-
 		adc	<edgeSlopeX
-
 		bcc	.edgeYLoop4
 
 		sbc	<edgeSlopeY
-
 		dey
-
 		bra	.edgeYLoop4
-
 .edgeYLoop7:
 		rts
 
