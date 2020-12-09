@@ -1,16 +1,19 @@
 ;VRAM
 ;0000-03FF	BG0	 1KWORD
 ;0400-07FF	BG1	 1KWORD
-;0800-0FFF		 2KWORD	SPCHR SATB ETC
+;0800-0FFF		 2KWORD	SPCHR SATB
 ;1000-1FFF	CHR	 4KWORD	0-255CHR
-;2000-4FFF	CHRBG0	12KWORD	32*24CHR(256*192)
-;5000-7FFF	CHRBG1	12KWORD	32*24CHR(256*192)
+;2000-37FF	CHRBG0	 6KWORD	32*12CHR(256*192 2bpp)
+;3800-4FFF	CHRBG1	 6KWORD	32*12CHR(256*192 2bpp)
+;5000-7FFF
 
+
+CHRBG0Addr		.equ	$20
+CHRBG1Addr		.equ	$38
 
 chardatBank		.equ	2
 muldatBank		.equ	3
 divdatBank		.equ	19
-
 
 VDC_0			.equ	$0000
 VDC_1			.equ	$0001
@@ -473,15 +476,11 @@ clearBGWork		.ds	2
 
 CH0			.ds	1
 CH1			.ds	1
-CH2			.ds	1
-CH3			.ds	1
 getVramChrAddr		.ds	2
 setVramChrAddr		.ds	2
 
 CH0Data			.ds	1
 CH1Data			.ds	1
-CH2Data			.ds	1
-CH3Data			.ds	1
 CHMask			.ds	1
 CHNegMask		.ds	1
 
@@ -528,9 +527,6 @@ wireLineRightMask	.ds	1
 wireLineCount		.ds	1
 
 ;---------------------
-wireLineColorNoIndex	.ds	1
-
-;---------------------
 vertexCount		.ds	1
 vertexCountWork		.ds	1
 vertex0Addr		.ds	2
@@ -568,13 +564,9 @@ rotationSelect		.ds	1
 drawFlag		.ds	1
 
 ;---------------------
-clearVramFlag		.ds	1
-
-;---------------------
 clearVramDmaAddr	.ds	1
-
-;---------------------
 clearVramCount		.ds	1
+clearVramFlag		.ds	1
 
 ;---------------------
 eyeTranslationX		.ds	2
@@ -586,6 +578,14 @@ eyeRotationY		.ds	1
 eyeRotationZ		.ds	1
 
 eyeRotationSelect	.ds	1
+
+;---------------------
+vdcStatus		.ds	1
+
+;---------------------
+lineColor		.ds	1
+lineBufferCount		.ds	1
+lineBufferAddr		.ds	2
 
 
 		.bss
@@ -622,9 +622,11 @@ ringRandomData		.ds	2
 ringGetCount		.ds	1
 hitCheckRingWork	.ds	4
 
+ringSwitchColor		.ds	1
 
-		.org 	$3C00
-clearMemory		.ds	1024
+;---------------------
+lineBuffer		.ds	1024
+
 
 ;//////////////////////////////////
 		.code
@@ -657,8 +659,8 @@ main:
 		mov	<centerX, #128
 		mov	<centerY, #96
 
-;initialize color number index
-		jsr	initWireLineColorNoIndex
+;initialize switch color
+		jsr	initSwitchColor
 
 ;set eye position
 		stzw	<eyeTranslationX
@@ -678,93 +680,6 @@ main:
 		stzw	shipTranslationY
 		stzw	shipTranslationZ
 
-		jmp	.jump000
-
-
-;+++++++++++++++++++++++++++++++++++++++++++++++++++++++
-;initialize ship angle
-		mov	shipRotationX, #32
-		mov	shipRotationY, #192
-		mov	shipRotationZ, #0
-
-;set eye matrix
-		ldx	<eyeRotationZ
-		jsr	setMatrix1RotationZ
-		jsr	moveMatrix1ToMatrix0
-
-		ldx	<eyeRotationX
-		jsr	setMatrix1RotationX
-		jsr	matrixMultiply
-
-		ldx	<eyeRotationY
-		jsr	setMatrix1RotationY
-		jsr	moveMatrix2ToMatrix0
-		jsr	matrixMultiply
-
-		jsr	moveMatrix2ToEyeMatrix
-
-		cli
-.mainloop1:
-;check pad
-		jsr	checkPad2
-
-;set arwing model data
-		movw	<modelAddr, #modelArwingData
-
-;set arwing model matrix
-		ldx	shipRotationZ
-		jsr	setMatrix1RotationZ
-		jsr	moveMatrix1ToMatrix0
-
-		ldx	shipRotationX
-		jsr	setMatrix1RotationX
-		jsr	matrixMultiply
-
-		ldx	shipRotationY
-		jsr	setMatrix1RotationY
-		jsr	moveMatrix2ToMatrix0
-		jsr	matrixMultiply
-
-;set arwing model position
-		stzw	<translationX
-		stzw	<translationY
-		stzw	<translationZ
-
-;set arwing model color
-		lda	#1
-		jsr	setWireLineColor
-
-;draw arwing model
-		jsr	drawModel
-
-;put data
-		lda	shipRotationX
-		ldx	#2
-		ldy	#24
-		jsr	puthex
-
-		lda	shipRotationY
-		ldx	#6
-		ldy	#24
-		jsr	puthex
-
-		lda	shipRotationZ
-		ldx	#10
-		ldy	#24
-		jsr	puthex
-
-;set next color number index
-		jsr	nextWireLineColorNoIndex
-
-;set draw flag
-		smb7	<drawFlag
-
-;jump main loop
-		jmp	.mainloop1
-
-
-;+++++++++++++++++++++++++++++++++++++++++++++++++++++++
-.jump000:
 ;initialize ship angle
 		stz	shipRotationX
 		stz	shipRotationY
@@ -784,8 +699,13 @@ main:
 
 		jsr	setRing
 
+		jsr	initLineBuffer
+
 		jsr	drawRing
 		jsr	drawShip
+
+		jsr	clearVram
+		jsr	putLineBuffer
 
 		lda	ringGetCount
 		ldx	#2
@@ -793,9 +713,9 @@ main:
 		jsr	puthex
 
 .mainLoopEnd:
-		jsr	nextWireLineColorNoIndex
+		jsr	switchColor
 
-		smb7	<drawFlag
+		jsr	switchBG
 
 		jmp	.mainloop
 
@@ -1068,12 +988,13 @@ drawRing:
 		lda	#2
 		bra	.drawRingJump2
 .drawRingJump1:
-		lda	#4
+		lda	#2
+		ora	ringSwitchColor
 		bra	.drawRingJump2
 .drawRingJump3:
 		lda	#3
 .drawRingJump2:
-		jsr	setWireLineColor
+		jsr	setLineColor
 
 		stz	<rotationX
 		stz	<rotationY
@@ -1109,7 +1030,7 @@ drawShip:
 		mov	<rotationZ, shipRotationZ
 
 		lda	#1
-		jsr	setWireLineColor
+		jsr	setLineColor
 
 		lda	#$21
 		sta	<rotationSelect
@@ -1118,6 +1039,22 @@ drawShip:
 
 		jsr	drawModel2
 
+		rts
+
+
+;----------------------------
+initSwitchColor:
+;
+		stz	ringSwitchColor
+		rts
+
+
+;----------------------------
+switchColor:
+;
+		lda	ringSwitchColor
+		eor	#$01
+		sta	ringSwitchColor
 		rts
 
 
@@ -1664,7 +1601,7 @@ vdpdataend:
 ;set palette
 		stz	VCE_2
 		stz	VCE_3
-		tia	palettedata, VCE_4, $20
+		tia	palettedata, VCE_4, $80
 
 ;CHAR set to vram
 		lda	#chardatBank
@@ -1677,7 +1614,6 @@ vdpdataend:
 
 		st0	#$02
 		tia	$C000, VDC_2, $1000
-
 
 ;clear zeropage
 		stz	$2000
@@ -1706,11 +1642,14 @@ _irq1:
 
 ;ACK interrupt
 		lda	VDC_0
+		sta	<vdcStatus
 
 		jsr	wireIrqProc
+		bcs	.irqEnd
 
 		jsr	getPadData
 
+.irqEnd:
 		ply
 		plx
 		pla
@@ -1874,6 +1813,15 @@ palettedata:
 		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
 			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
 
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0000, $0020, $0100, $0004, $0000, $0020, $0100, $0004,\
+			$0000, $0020, $0100, $0004, $0000, $0020, $0100, $0004
+
+		.dw	$0000, $0000, $0000, $0000, $0020, $0020, $0020, $0020,\
+			$0100, $0100, $0100, $0100, $0004, $0004, $0004, $0004
+
 
 ;----------------------------
 ;interrupt vectors
@@ -1893,14 +1841,10 @@ palettedata:
 
 
 ;----------------------------
-setWireLineColor:
+setLineColorData:
 ;reg A color no
 		phx
 
-		ora	<wireLineColorNoIndex
-		tax
-
-		lda	wireLineColorNo, x
 		tax
 
 		lda	wireLineColorData0,x
@@ -1909,48 +1853,40 @@ setWireLineColor:
 		lda	wireLineColorData1,x
 		sta	<CH1Data
 
-		;lda	wireLineColorData2,x
-		;sta	<CH2Data
-
-		;lda	wireLineColorData3,x
-		;sta	<CH3Data
-
 		plx
-		rts
-
-
-;----------------------------
-nextWireLineColorNoIndex:
-;
-		clc
-		lda	<wireLineColorNoIndex
-		adc	#$08
-		and	#$18
-		sta	<wireLineColorNoIndex
-		rts
-
-
-;----------------------------
-initWireLineColorNoIndex:
-;
-		stz	<wireLineColorNoIndex
 		rts
 
 
 ;----------------------------
 initWire:
 ;
-		stz	clearMemory
-		tii	clearMemory, clearMemory+1, 1023
-
-		stz	<drawFlag
-		lda	#$20
+		lda	#CHRBG0Addr
 		sta	<wireBGAddr
 		sta	<clearVramDmaAddr
+		stz	<clearVramFlag
+		smb7	<drawFlag
 
-		smb7	<clearVramFlag
-		lda	#24
-		sta	<clearVramCount
+		rts
+
+
+;----------------------------
+switchBG:
+;
+		lda	<wireBGAddr
+		cmp	#CHRBG0Addr
+		bne	.switchBGJump0
+
+		lda	#CHRBG1Addr
+		bra	.switchBGJump1
+
+.switchBGJump0:
+		lda	#CHRBG0Addr
+.switchBGJump1:
+		sta	<wireBGAddr
+
+		stz	<clearVramFlag
+
+		smb7	<drawFlag
 
 		rts
 
@@ -1958,58 +1894,59 @@ initWire:
 ;----------------------------
 wireIrqProc:
 ;
-		bbs7	<drawFlag, .wireIrqJump2
-		jmp	.wireIrqEnd
+;check DMA completion
+		lda	<vdcStatus
+		and	#$10
+		bne	.wireIrqJump3
+
+		bbr7	<drawFlag, .wireIrqEnd
 
 .wireIrqJump2:
 		rmb7	<drawFlag
 
-		stz	<clearVramFlag
-
-		lda	#24
+		lda	#2
 		sta	<clearVramCount
 
 		lda	<wireBGAddr
-		cmp	#$20
-		bne	.wireIrqJump0
-
-		st0	#$08
-		st1	#$00
-		st2	#$00
-
-		lda	#$50
-		sta	<wireBGAddr
 		sta	<clearVramDmaAddr
 
-		bra	.wireIrqJump1
+		cmp	#CHRBG0Addr
+		bne	.wireIrqJump
 
-.wireIrqJump0:
 		st0	#$08
 		st1	#$00
 		st2	#$01
 
-		lda	#$20
-		sta	<wireBGAddr
-		sta	<clearVramDmaAddr
+		bra	.wireIrqEnd
 
-.wireIrqJump1:
+.wireIrqJump:
+		st0	#$08
+		st1	#$00
+		st2	#$00
+
 .wireIrqEnd:
 		jsr	clearVramDma
 
+		clc
+		rts
+
+;DMA completion
+.wireIrqJump3:
+		lda	<clearVramCount
+		bne	.wireIrqJump4
+		smb7	<clearVramFlag
+.wireIrqJump4:
+		sec
 		rts
 
 
 ;----------------------------
 clearVramDma:
 ;
-		bbs7	<clearVramFlag, .clearVramDmaEnd
-
 		lda	<clearVramCount
 		beq	.clearVramDmaEnd
 
-		sec
-		sbc	#6
-		sta	<clearVramCount
+		dec	<clearVramCount
 
 		st0	#$00
 		st1	#$00
@@ -2017,6 +1954,10 @@ clearVramDma:
 
 		st0	#$02
 		st1	#$00
+		st2	#$00
+
+		st0	#$0F
+		st1	#$02	;inc dst, inc src, VRAM-VRAM interrupt
 		st2	#$00
 
 		st0	#$10
@@ -2038,45 +1979,10 @@ clearVramDma:
 
 
 ;----------------------------
-waitVsync:
-;
-.waitVsyncLoop:
-		bbs7	<drawFlag, .waitVsyncLoop
-		rts
-
-
-;----------------------------
 clearVram:
 ;
-		bbs7	<clearVramFlag, .clearVramEnd
-		smb7	<clearVramFlag
-
-;wait DMA
-.clearVramJump0:
-		lda	VDC_0
-		and	#$40
-		bne	.clearVramJump0
-
-		sei
-		st0	#$00
-		st1	#$00
-		lda	<clearVramDmaAddr
-		sta	VDC_3
-		cli
-
-		ldx	<clearVramCount
-		beq	.clearVramEnd
-
-.clearVramLoop:
-		sei
-		st0	#$02
-		tia	clearMemory, VDC_2, 1024
-		cli
-
-		dex
-		bne	.clearVramLoop
-
-.clearVramEnd:
+.clearVramJump:
+		bbr7	<clearVramFlag, .clearVramJump
 		rts
 
 
@@ -2149,9 +2055,6 @@ drawModel:
 		movw	<vertex1Addr, #transform2DWork0
 
 		jsr	transform2D
-
-		jsr	waitVsync
-		jsr	clearVram
 
 		jsr	drawModelProc
 
@@ -2233,9 +2136,6 @@ drawModel2:
 
 ;transform2D
 		jsr	transform2D2
-
-		jsr	waitVsync
-		jsr	clearVram
 
 		jsr	drawModelProc
 
@@ -2348,7 +2248,7 @@ drawModelProc:
 		sta	<lineY1+1
 
 .drawModelJump3:
-		jsr	drawLine
+		jsr	drawLineClip2D
 
 .drawModelJump0:
 		dec	<modelWireCount
@@ -2528,7 +2428,7 @@ vertexRotationSelect:
 
 ;----------------------------
 vertexRotationZ:
-;x=xcosA-ysinA y=xsinA+ycosA z=z
+;x=xcosA-ysinA	y=xsinA+ycosA	z=z
 ;transform2DWork0 => transform2DWork0
 ;vertexCount = count
 ;x = angle
@@ -2641,7 +2541,7 @@ vertexRotationZ:
 
 ;----------------------------
 vertexRotationY:
-;x=xcosA+zsinA y=y           z=-xsinA+zcosA
+;x=xcosA+zsinA	y=y		z=-xsinA+zcosA
 ;transform2DWork0 => transform2DWork0
 ;vertexCount = count
 ;x = angle
@@ -2754,7 +2654,7 @@ vertexRotationY:
 
 ;----------------------------
 vertexRotationX:
-;x=x           y=ycosA-zsinA z= ysinA+zcosA
+;x=x		y=ycosA-zsinA	z=ysinA+zcosA
 ;transform2DWork0 => transform2DWork0
 ;vertexCount = count
 ;x = angle
@@ -3016,7 +2916,7 @@ transform2D2:
 
 ;----------------------------
 transform2DProc:
-;mul16c(-32768-32767) * 128 / mul16a(1-32768) = mul16a(rough value)
+;mul16c(-32768_32767) * 128 / mul16a(1_32767) = mul16a(rough value)
 		phy
 
 		lda	<mul16c+1
@@ -3035,8 +2935,6 @@ transform2DProc:
 
 .transform2DPJump06:
 ;get div data
-		subw	<div16a, #1
-
 		lda	<div16a+1
 		lsr	a
 		lsr	a
@@ -3716,23 +3614,124 @@ transform2D:
 
 
 ;----------------------------
-drawLine:
+setLineColor:
+;
+		sta	<lineColor
+		rts
+
+
+;----------------------------
+initLineBuffer:
+;
+		stz	<lineBufferCount
+
+		lda	#LOW(lineBuffer)
+		sta	lineBufferAddr
+		lda	#HIGH(lineBuffer)
+		sta	lineBufferAddr+1
+
+		rts
+
+
+;----------------------------
+putLineBuffer:
+;
+		lda	<lineBufferCount
+		beq	.putLineBufferEnd
+
+		lda	#LOW(lineBuffer)
+		sta	lineBufferAddr
+		lda	#HIGH(lineBuffer)
+		sta	lineBufferAddr+1
+
+.putLineBufferLoop:
+
+		cly
+		lda	[lineBufferAddr],y
+		sta	<edgeX0
+
+		iny
+		lda	[lineBufferAddr],y
+		sta	<edgeY0
+
+		iny
+		lda	[lineBufferAddr],y
+		sta	<edgeX1
+
+		iny
+		lda	[lineBufferAddr],y
+		sta	<edgeY1
+
+		iny
+		lda	[lineBufferAddr],y
+		jsr	setLineColorData
+
+		jsr	calcEdge
+
+		clc
+		lda	lineBufferAddr
+		adc	#$05
+		sta	lineBufferAddr
+		lda	lineBufferAddr+1
+		adc	#$00
+		sta	lineBufferAddr+1
+
+		dec	<lineBufferCount
+		bne	.putLineBufferLoop
+
+.putLineBufferEnd:
+		rts
+
+
+;----------------------------
+setLineBuffer:
+;
+		cly
+
+		lda	<lineX0
+		sta	[lineBufferAddr],y
+
+		iny
+		lda	<lineY0
+		sta	[lineBufferAddr],y
+
+		iny
+		lda	<lineX1
+		sta	[lineBufferAddr],y
+
+		iny
+		lda	<lineY1
+		sta	[lineBufferAddr],y
+
+		iny
+		lda	<lineColor
+		sta	[lineBufferAddr],y
+
+		clc
+		lda	lineBufferAddr
+		adc	#$05
+		sta	lineBufferAddr
+		lda	lineBufferAddr+1
+		adc	#$00
+		sta	lineBufferAddr+1
+
+		inc	<lineBufferCount
+
+		rts
+
+
+;----------------------------
+drawLineClip2D:
 ;
 		phx
 		phy
 
 		jsr	clip2D
-		bcs	.drawLineEnd
+		bcs	.drawLineClip2DEnd
 
-		mov	<edgeX0, <lineX0
-		mov	<edgeY0, <lineY0
+		jsr	setLineBuffer
 
-		mov	<edgeX1, <lineX1
-		mov	<edgeY1, <lineY1
-
-		jsr	calcEdge
-
-.drawLineEnd:
+.drawLineClip2DEnd:
 		ply
 		plx
 
@@ -4116,28 +4115,26 @@ calcEdge:
 		lda	<edgeSlopeX
 		eor	#$FF
 		inc	a
-		sta	<edgeSlopeTemp
-
-		ldx	<edgeX0
-		ldy	<edgeY0
 
 ;check edgeSigneX
 		bbs7	<edgeSigneX, .edgeXLoop4Jump2
 
 ;edgeSigneX plus
+		ldx	<edgeX0
+		ldy	<edgeY0
 		stx	<wireLineX0
 .edgeXLoop0:
 		cpx	<edgeX1
 		beq	.edgeXLoop0Jump0
 
-		add	<edgeSlopeTemp, <edgeSlopeY
-
+		adc	<edgeSlopeY
 		bcs	.edgeXLoop0Jump1
+
 		inx
 		bra	.edgeXLoop0
 
 .edgeXLoop0Jump1:
-		sub	<edgeSlopeTemp, <edgeSlopeX
+		sbc	<edgeSlopeX
 
 		stx	<wireLineX1
 		jsr	putHorizontalLine
@@ -4155,19 +4152,22 @@ calcEdge:
 
 ;edgeSigneX minus
 .edgeXLoop4Jump2:
+		ldx	<edgeX0
+		ldy	<edgeY0
 		stx	<wireLineX1
 .edgeXLoop4:
 		cpx	<edgeX1
 		beq	.edgeXLoop4Jump0
 
-		add	<edgeSlopeTemp, <edgeSlopeY
-
+		clc
+		adc	<edgeSlopeY
 		bcs	.edgeXLoop4Jump1
+
 		dex
 		bra	.edgeXLoop4
 
 .edgeXLoop4Jump1:
-		sub	<edgeSlopeTemp, <edgeSlopeX
+		sbc	<edgeSlopeX
 
 		stx	<wireLineX0
 		jsr	putHorizontalLine
@@ -4183,6 +4183,50 @@ calcEdge:
 
 		rts
 
+;;;;--------------------------------
+;;;;edgeSigneX minus
+;;;.edgeXLoop4Jump2:
+;;;;exchange X0 X1 Y0 Y1
+;;;		ldy	<edgeY0
+;;;		ldx	<edgeY1
+;;;		sty	<edgeY1
+;;;		stx	<edgeY0
+;;;
+;;;		ldy	<edgeX0
+;;;		ldx	<edgeX1
+;;;		sty	<edgeX1
+;;;		stx	<edgeX0
+;;;
+;;;		ldy	<edgeY0
+;;;		stx	<wireLineX0
+;;;.edgeXLoop4:
+;;;		cpx	<edgeX1
+;;;		beq	.edgeXLoop4Jump0
+;;;
+;;;		adc	<edgeSlopeY
+;;;		bcs	.edgeXLoop4Jump1
+;;;
+;;;		inx
+;;;		bra	.edgeXLoop4
+;;;
+;;;.edgeXLoop4Jump1:
+;;;		sbc	<edgeSlopeX
+;;;
+;;;		stx	<wireLineX1
+;;;		jsr	putHorizontalLine
+;;;
+;;;		inx
+;;;		stx	<wireLineX0
+;;;		dey
+;;;		bra	.edgeXLoop4
+;;;
+;;;.edgeXLoop4Jump0:
+;;;		stx	<wireLineX1
+;;;		jsr	putHorizontalLine
+;;;
+;;;		rts
+;;;;--------------------------------
+
 .edgeJump4:
 ;edgeSlopeY >= edgeSlopeX
 ;edgeSlopeTemp initialize
@@ -4190,7 +4234,6 @@ calcEdge:
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
-		sta	<edgeSlopeTemp
 
 		ldx	<edgeX0
 		ldy	<edgeY0
@@ -4208,18 +4251,18 @@ calcEdge:
 		beq	.edgeYLoop0Jump0
 
 		iny
-
-		add	<edgeSlopeTemp, <edgeSlopeX
-
+		adc	<edgeSlopeX
 		bcc	.edgeYLoop0
 
-		sub	<edgeSlopeTemp, <edgeSlopeY
-
+		sbc	<edgeSlopeY
 		inx
 
 .edgeYLoop0Jump1:
+		pha
+
 		phx
-		lda	wireLineAddrConvXShift,x
+		txa
+		and	#$07
 		tax
 		lda	wireLinePixelDatas,x
 		sta	<CHMask
@@ -4235,14 +4278,7 @@ calcEdge:
 		and	<CHMask
 		sta	<CH1
 
-		;lda	<CH2Data
-		;and	<CHMask
-		;sta	<CH2
-
-		;lda	<CH3Data
-		;and	<CHMask
-		;sta	<CH3
-
+		pla
 		bra	.edgeYLoop0
 
 .edgeYLoop0Jump0:
@@ -4258,18 +4294,18 @@ calcEdge:
 		beq	.edgeYLoop4Jump0
 
 		iny
-
-		add	<edgeSlopeTemp, <edgeSlopeX
-
+		adc	<edgeSlopeX
 		bcc	.edgeYLoop4
 
-		sub	<edgeSlopeTemp, <edgeSlopeY
-
+		sbc	<edgeSlopeY
 		dex
 
 .edgeYLoop4Jump1:
+		pha
+
 		phx
-		lda	wireLineAddrConvXShift,x
+		txa
+		and	#$07
 		tax
 		lda	wireLinePixelDatas,x
 		sta	<CHMask
@@ -4285,14 +4321,7 @@ calcEdge:
 		and	<CHMask
 		sta	<CH1
 
-		;lda	<CH2Data
-		;and	<CHMask
-		;sta	<CH2
-
-		;lda	<CH3Data
-		;and	<CHMask
-		;sta	<CH3
-
+		pla
 		bra	.edgeYLoop4
 
 .edgeYLoop4Jump0:
@@ -4302,6 +4331,7 @@ calcEdge:
 ;----------------------------
 putPixelEdge:
 ;
+		pha
 		phx
 
 		lda	wireLineAddrConvYLow0,y
@@ -4347,42 +4377,10 @@ putPixelEdge:
 		stx	VDC_2
 		sta	VDC_3
 
-;;next addr
-;		lda	<setVramChrAddr
-;		clc
-;		adc	#$08
-;		ldx	<setVramChrAddr+1
-;
-;;set write next addr
-;		st0	#$00
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;set read next addr
-;		st0	#$01
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;read
-;		st0	#$02
-;
-;		lda	VDC_2
-;		and	<CHNegMask
-;		ora	<CH2
-;		tax
-;
-;		lda	VDC_3
-;		and	<CHNegMask
-;		ora	<CH3
-;
-;;write
-;		stx	VDC_2
-;		sta	VDC_3
-
 		cli
 
 		plx
-
+		pla
 		rts
 
 
@@ -4401,7 +4399,8 @@ putPixel:
 		adc	<wireBGAddr
 		sta	<setVramChrAddr+1
 
-		lda	wireLineAddrConvXShift,x
+		txa
+		and	#$07
 		tax
 		lda	wireLinePixelDatas,x
 		sta	<CHMask
@@ -4449,46 +4448,6 @@ putPixel:
 		stx	VDC_2
 		sta	VDC_3
 
-;;next addr
-;		lda	<setVramChrAddr
-;		clc
-;		adc	#$08
-;		ldx	<setVramChrAddr+1
-;
-;;set write next addr
-;		st0	#$00
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;set read next addr
-;		st0	#$01
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;read
-;		st0	#$02
-;
-;		lda	VDC_2
-;		and	<CHNegMask
-;		sta	<CH2
-;
-;		lda	<CH2Data
-;		and	<CHMask
-;		ora	<CH2
-;		tax
-;
-;		lda	VDC_3
-;		and	<CHNegMask
-;		sta	<CH3
-;
-;		lda	<CH3Data
-;		and	<CHMask
-;		ora	<CH3
-;
-;;write
-;		stx	VDC_2
-;		sta	VDC_3
-
 		cli
 
 		plx
@@ -4500,6 +4459,7 @@ putPixel:
 putHorizontalLine:
 ;
 ;calation vram address
+		pha
 		phx
 
 ;left
@@ -4517,7 +4477,8 @@ putHorizontalLine:
 		lda	wireLineAddrConvX,x
 		sta	<wireLineCount
 
-		lda	wireLineAddrConvXShift,x
+		txa
+		and	#$07
 		tax
 		lda	wireLineLeftDatas,x
 		sta	<wireLineLeftData
@@ -4541,7 +4502,8 @@ putHorizontalLine:
 		sbc	<wireLineCount
 		sta	<wireLineCount
 
-		lda	wireLineAddrConvXShift,x
+		txa
+		and	#$07
 		tax
 		lda	wireLineRightDatas,x
 		sta	<wireLineRightData
@@ -4568,6 +4530,7 @@ putHorizontalLine:
 
 .wireLineJump04:
 		plx
+		pla
 
 		rts
 
@@ -4622,46 +4585,6 @@ putHorizontalLine01Left:
 ;write
 		stx	VDC_2
 		sta	VDC_3
-
-;;next addr
-;		lda	<setVramChrAddr
-;		clc
-;		adc	#$08
-;		ldx	<setVramChrAddr+1
-;
-;;set write next addr
-;		st0	#$00
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;set read next addr
-;		st0	#$01
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;read
-;		st0	#$02
-;
-;		lda	VDC_2
-;		and	<CHNegMask
-;		sta	<CH2
-;
-;		lda	<CH2Data
-;		and	<CHMask
-;		ora	<CH2
-;		tax
-;
-;		lda	VDC_3
-;		and	<CHNegMask
-;		sta	<CH3
-;
-;		lda	<CH3Data
-;		and	<CHMask
-;		ora	<CH3
-;
-;;write
-;		stx	VDC_2
-;		sta	VDC_3
 
 		cli
 
@@ -4719,46 +4642,6 @@ putHorizontalLine01Right:
 		stx	VDC_2
 		sta	VDC_3
 
-;;next addr
-;		lda	<setVramChrAddr
-;		clc
-;		adc	#$08
-;		ldx	<setVramChrAddr+1
-;
-;;set write next addr
-;		st0	#$00
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;set read next addr
-;		st0	#$01
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;read
-;		st0	#$02
-;
-;		lda	VDC_2
-;		and	<CHNegMask
-;		sta	<CH2
-;
-;		lda	<CH2Data
-;		and	<CHMask
-;		ora	<CH2
-;		tax
-;
-;		lda	VDC_3
-;		and	<CHNegMask
-;		sta	<CH3
-;
-;		lda	<CH3Data
-;		and	<CHMask
-;		ora	<CH3
-;
-;;write
-;		stx	VDC_2
-;		sta	VDC_3
-
 		cli
 
 		rts
@@ -4797,16 +4680,6 @@ putHorizontalLine00:
 		mov	VDC_2, <CH0Data
 		mov	VDC_3, <CH1Data
 
-;		st0	#$00
-;
-;		add	VDC_2, <setVramChrAddr, #$08
-;		mov	VDC_3, <setVramChrAddr+1
-;
-;		st0	#$02
-;
-;		mov	VDC_2, <CH2Data
-;		mov	VDC_3, <CH3Data
-
 		cli
 
 		add	<setVramChrAddr, #$10
@@ -4816,163 +4689,6 @@ putHorizontalLine00:
 		bra	.putHorizontalLine00Loop
 
 .putHorizontalLine00Jump:
-		rts
-
-
-;----------------------------
-setAndVramChr:
-;param	setVramChrAddr
-;	CH0Data
-;	CH1Data
-;	CH2Data
-;	CH3Data
-;	CHMask
-;	CHNegMask
-
-		sei
-
-;first addr
-		lda	<setVramChrAddr
-		ldx	<setVramChrAddr+1
-
-;set write first addr
-		st0	#$00
-		sta	VDC_2
-		stx	VDC_3
-
-;set read first addr
-		st0	#$01
-		sta	VDC_2
-		stx	VDC_3
-
-;read
-		st0	#$02
-
-		lda	VDC_2
-		and	<CHNegMask
-		sta	<CH0
-
-		lda	<CH0Data
-		and	<CHMask
-		ora	<CH0
-		tax
-
-		lda	VDC_3
-		and	<CHNegMask
-		sta	<CH1
-
-		lda	<CH1Data
-		and	<CHMask
-		ora	<CH1
-
-;write
-		stx	VDC_2
-		sta	VDC_3
-
-;;next addr
-;		lda	<setVramChrAddr
-;		clc
-;		adc	#$08
-;		ldx	<setVramChrAddr+1
-;
-;;set write next addr
-;		st0	#$00
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;set read next addr
-;		st0	#$01
-;		sta	VDC_2
-;		stx	VDC_3
-;
-;;read
-;		st0	#$02
-;
-;		lda	VDC_2
-;		and	<CHNegMask
-;		sta	<CH2
-;
-;		lda	<CH2Data
-;		and	<CHMask
-;		ora	<CH2
-;		tax
-;
-;		lda	VDC_3
-;		and	<CHNegMask
-;		sta	<CH3
-;
-;		lda	<CH3Data
-;		and	<CHMask
-;		ora	<CH3
-;
-;;write
-;		stx	VDC_2
-;		sta	VDC_3
-
-		cli
-
-		rts
-
-
-;----------------------------
-getVramChr:
-;param	getVramChrAddr
-
-		sei
-
-		st0	#$01
-		lda	<getVramChrAddr
-		sta	VDC_2
-		lda	<getVramChrAddr+1
-		sta	VDC_3
-
-		st0	#$02
-
-		mov	<CH0, VDC_2
-		mov	<CH1, VDC_3
-
-;		st0	#$01
-;
-;		add	VDC_2, <getVramChrAddr, #$08
-;		mov	VDC_3, <getVramChrAddr+1
-;
-;		st0	#$02
-;
-;		mov	<CH2, VDC_2
-;		mov	<CH3, VDC_2
-
-		cli
-
-		rts
-
-
-;----------------------------
-setVramChr:
-;param	setVramChrAddr
-
-		sei
-
-		st0	#$00
-
-		movw	VDC_2, <setVramChrAddr
-
-		st0	#$02
-
-		mov	VDC_2, <CH0
-		mov	VDC_3, <CH1
-
-;		st0	#$00
-;
-;		add	VDC_2, <setVramChrAddr, #$08
-;		mov	VDC_3, <setVramChrAddr+1
-;
-;		st0	#$02
-;
-;		mov	VDC_2, <CH2
-;		mov	VDC_3, <CH3
-
-		cli
-
 		rts
 
 
@@ -4997,14 +4713,14 @@ clearBG:
 		bne	.clearbatloop8
 
 ;clear BG0 BAT
-		movw	<clearBGWork, #$0200
+		movw	<clearBGWork, #$2200
 
 		st0	#$00
 		st1	#$00
 		st2	#$00
 
 		st0	#$02
-		ldy	#24
+		ldy	#12
 .clearbatloop0:
 		ldx	#32
 .clearbatloop1:
@@ -5017,15 +4733,35 @@ clearBG:
 		dey
 		bne	.clearbatloop0
 
+		movw	<clearBGWork, #$3200
+
+		st0	#$00
+		st1	#$80
+		st2	#$01
+
+		st0	#$02
+		ldy	#12
+.clearbatloop0B:
+		ldx	#32
+.clearbatloop1B:
+		movw	VDC_2, <clearBGWork
+
+		addw	<clearBGWork, #1
+
+		dex
+		bne	.clearbatloop1B
+		dey
+		bne	.clearbatloop0B
+
 ;clear BG1 BAT
-		movw	<clearBGWork, #$0500
+		movw	<clearBGWork, #$2380
 
 		st0	#$00
 		st1	#$00
 		st2	#$04
 
 		st0	#$02
-		ldy	#24
+		ldy	#12
 .clearbatloop2:
 		ldx	#32
 .clearbatloop3:
@@ -5037,6 +4773,27 @@ clearBG:
 		bne	.clearbatloop3
 		dey
 		bne	.clearbatloop2
+
+;clear BG1 BAT
+		movw	<clearBGWork, #$3380
+
+		st0	#$00
+		st1	#$80
+		st2	#$05
+
+		st0	#$02
+		ldy	#12
+.clearbatloop2B:
+		ldx	#32
+.clearbatloop3B:
+		movw	VDC_2, <clearBGWork
+
+		addw	<clearBGWork, #1
+
+		dex
+		bne	.clearbatloop3B
+		dey
+		bne	.clearbatloop2B
 
 		rts
 
@@ -5065,7 +4822,7 @@ puthex:
 		sta	<puthexaddr
 
 		lda	<wireBGAddr
-		cmp	#$50
+		cmp	#CHRBG1Addr
 		bne	.putHexJump0
 
 		clc
@@ -5110,23 +4867,18 @@ puthex:
 
 ;----------------------------
 wireLineAddrConvYLow0:
-wireLineAddrConvXShift:
 		.db	$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07
+			$08, $09, $0A, $0B, $0C, $0D, $0E, $0F, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
+			$08, $09, $0A, $0B, $0C, $0D, $0E, $0F, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
+			$08, $09, $0A, $0B, $0C, $0D, $0E, $0F, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
+			$08, $09, $0A, $0B, $0C, $0D, $0E, $0F, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
+			$08, $09, $0A, $0B, $0C, $0D, $0E, $0F, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
+			$08, $09, $0A, $0B, $0C, $0D, $0E, $0F, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F
 
 
 ;----------------------------
@@ -5137,16 +4889,13 @@ wireLineAddrConvYHigh0:
 			$0C, $0C, $0C, $0C, $0C, $0C, $0C, $0C, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E,\
 			$10, $10, $10, $10, $10, $10, $10, $10, $12, $12, $12, $12, $12, $12, $12, $12,\
 			$14, $14, $14, $14, $14, $14, $14, $14, $16, $16, $16, $16, $16, $16, $16, $16,\
-			$18, $18, $18, $18, $18, $18, $18, $18, $1A, $1A, $1A, $1A, $1A, $1A, $1A, $1A,\
-			$1C, $1C, $1C, $1C, $1C, $1C, $1C, $1C, $1E, $1E, $1E, $1E, $1E, $1E, $1E, $1E,\
-			$20, $20, $20, $20, $20, $20, $20, $20, $22, $22, $22, $22, $22, $22, $22, $22,\
-			$24, $24, $24, $24, $24, $24, $24, $24, $26, $26, $26, $26, $26, $26, $26, $26,\
-			$28, $28, $28, $28, $28, $28, $28, $28, $2A, $2A, $2A, $2A, $2A, $2A, $2A, $2A,\
-			$2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2E, $2E, $2E, $2E, $2E, $2E, $2E, $2E,\
-			$30, $30, $30, $30, $30, $30, $30, $30, $32, $32, $32, $32, $32, $32, $32, $32,\
-			$34, $34, $34, $34, $34, $34, $34, $34, $36, $36, $36, $36, $36, $36, $36, $36,\
-			$38, $38, $38, $38, $38, $38, $38, $38, $3A, $3A, $3A, $3A, $3A, $3A, $3A, $3A,\
-			$3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3E, $3E, $3E, $3E, $3E, $3E, $3E, $3E
+			$00, $00, $00, $00, $00, $00, $00, $00, $02, $02, $02, $02, $02, $02, $02, $02,\
+			$04, $04, $04, $04, $04, $04, $04, $04, $06, $06, $06, $06, $06, $06, $06, $06,\
+			$08, $08, $08, $08, $08, $08, $08, $08, $0A, $0A, $0A, $0A, $0A, $0A, $0A, $0A,\
+			$0C, $0C, $0C, $0C, $0C, $0C, $0C, $0C, $0E, $0E, $0E, $0E, $0E, $0E, $0E, $0E,\
+			$10, $10, $10, $10, $10, $10, $10, $10, $12, $12, $12, $12, $12, $12, $12, $12,\
+			$14, $14, $14, $14, $14, $14, $14, $14, $16, $16, $16, $16, $16, $16, $16, $16
+
 
 
 ;----------------------------
@@ -5249,22 +4998,12 @@ wireLineColorNo:
 
 ;----------------------------
 wireLineColorData0:
-		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF
+		.db	$00, $FF, $00, $FF
 
 
 ;----------------------------
 wireLineColorData1:
-		.db	$00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF, $00, $00, $FF, $FF
-
-
-;----------------------------
-wireLineColorData2:
-		.db	$00, $00, $00, $00, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $FF, $FF, $FF, $FF
-
-
-;----------------------------
-wireLineColorData3:
-		.db	$00, $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+		.db	$00, $00, $FF, $FF
 
 
 ;----------------------------
