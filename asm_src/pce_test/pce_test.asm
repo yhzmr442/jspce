@@ -7,6 +7,16 @@
 ;3800-4FFF	CHRBG1	 6KWORD	32*12CHR(256*192 2bpp)
 ;5000-7FFF
 
+;Memory
+;0000	I/O
+;2000	RAM
+;4000	mul data : div data
+;6000
+;8000
+;A000
+;C000	wireframe process
+;E000	main irq
+
 
 CHRBG0Addr		.equ	$20
 CHRBG1Addr		.equ	$38
@@ -340,19 +350,15 @@ mov		.macro
 movw		.macro
 ;\1 = \2
 		.if	(\?2 = 2);Immediate
-
 			lda	#LOW(\2)
 			sta	\1
 			lda	#HIGH(\2)
 			sta	\1+1
-
 		.else
-
 			lda	\2
 			sta	\1
 			lda	\2+1
 			sta	\1+1
-
 		.endif
 		.endm
 
@@ -360,14 +366,26 @@ movw		.macro
 ;----------------------------
 movq		.macro
 ;\1 = \2
-		lda	\2
-		sta	\1
-		lda	\2+1
-		sta	\1+1
-		lda	\2+2
-		sta	\1+2
-		lda	\2+3
-		sta	\1+3
+;\1 = \2:\3
+		.if	(\?2 = 2);Immediate
+			lda	#LOW(\3)
+			sta	\1
+			lda	#HIGH(\3)
+			sta	\1+1
+			lda	#LOW(\2)
+			sta	\1+2
+			lda	#HIGH(\2)
+			sta	\1+3
+		.else
+			lda	\2
+			sta	\1
+			lda	\2+1
+			sta	\1+1
+			lda	\2+2
+			sta	\1+2
+			lda	\2+3
+			sta	\1+3
+		.endif
 		.endm
 
 
@@ -409,6 +427,48 @@ cmpw		.macro
 
 
 ;----------------------------
+cmpzw		.macro
+;\1 - \2
+		phx
+		tsx
+		pha
+
+		.if	(\?2 = 2);Immediate
+			sec
+			lda	\1
+			sbc	#LOW(\2)
+			sta	$2100,x
+			lda	\1+1
+			sbc	#HIGH(\2)
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			sta	$2100,x
+			lda	\1+1
+			sbc	\2+1
+		.endif
+
+		php
+		ora	$2100,x
+		bne	.jp0\@
+
+		pla
+		ora	#$02
+		bra	.jp1\@
+.jp0\@
+		pla
+		and	#$FD
+.jp1\@
+		txs
+		plx
+
+		pha
+		plp
+		.endm
+
+
+;----------------------------
 cmpq		.macro
 ;\1 - \2
 ;\1 - \2:\3
@@ -436,30 +496,102 @@ cmpq		.macro
 		.endm
 
 
+;----------------------------
+cmpzq		.macro
+;\1 - \2
+;\1 - \2:\3
+		phx
+		tsx
+		pha
+
+		.if	(\?2 = 2);Immediate
+			sec
+			lda	\1
+			sbc	#LOW(\3)
+			sta	$2100,x
+			lda	\1+1
+			sbc	#HIGH(\3)
+			ora	$2100,x
+			sta	$2100,x
+			lda	\1+2
+			sbc	#LOW(\2)
+			ora	$2100,x
+			sta	$2100,x
+			lda	\1+3
+			sbc	#HIGH(\2)
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			sta	$2100,x
+			lda	\1+1
+			sbc	\2+1
+			ora	$2100,x
+			sta	$2100,x
+			lda	\1+2
+			sbc	\2+2
+			ora	$2100,x
+			sta	$2100,x
+			lda	\1+3
+			sbc	\2+3
+		.endif
+
+		php
+		ora	$2100,x
+		bne	.jp0\@
+
+		pla
+		ora	#$02
+		bra	.jp1\@
+.jp0\@
+		pla
+		and	#$FD
+.jp1\@
+		txs
+		plx
+
+		pha
+		plp
+
+		.endm
+
+
 ;//////////////////////////////////
 		.zp
 ;**********************************
 		.org	$2000
 
 ;---------------------
+div64ans
 mul16a
 div16a			.ds	2
 mul16b
 div16b			.ds	2
+
+div64a
 mul16c
 div16c			.ds	2
 mul16d
 div16d			.ds	2
-div16ans		.ds	2
-div16work		.ds	2
+			.ds	4
+div64b
+mul32a
+div32ans		.ds	2
+div32work		.ds	2
+mul32b			.ds	4
 
-mulbank			.ds	1
+mul32work
+div64work		.ds	8
+
+sqrt64a			.ds	8
+sqrt64ans
+sqrt64b			.ds	8
+
 muladdr			.ds	2
-
-udiv32_2Work		.ds	2
+mulbank			.ds	1
 
 ;---------------------
-;LDRU SsBA
+;LDRU RSBA
 padlast			.ds	1
 padnow			.ds	1
 padstate		.ds	1
@@ -493,9 +625,7 @@ edgeY1			.ds	1
 edgeSlopeX		.ds	2
 edgeSlopeY		.ds	2
 
-edgeSigneX		.ds	1
-
-edgeSlopeTemp		.ds	2
+edgeSignX		.ds	1
 
 ;---------------------
 lineX0			.ds	2
@@ -507,9 +637,6 @@ clip2DFlag		.ds	1
 
 ;---------------------
 wireBGAddr		.ds	1
-
-wirePixelX		.ds	1
-wirePixelY		.ds	1
 
 wireLineX0		.ds	1
 wireLineX1		.ds	1
@@ -587,6 +714,9 @@ lineColor		.ds	1
 lineBufferCount		.ds	1
 lineBufferAddr		.ds	2
 
+;---------------------
+udiv32_2Work		.ds	2
+
 
 		.bss
 ;**********************************
@@ -602,9 +732,30 @@ matrix2			.ds	2*3*3
 eyeMatrix		.ds	2*3*3
 
 ;---------------------
+unitVectorX0		.ds	2
+unitVectorY0		.ds	2
+unitVectorZ0		.ds	2
+
+unitVectorX
+unitVectorX1		.ds	2
+			.ds	2
+unitVectorY
+unitVectorY1		.ds	2
+			.ds	2
+unitVectorZ
+unitVectorZ1		.ds	2
+			.ds	2
+
+unitVectorWork		.ds	4
+
+;---------------------
 transform2DWork0	.ds	256
 transform2DWork1	.ds	256
 
+;---------------------
+lineBuffer		.ds	1024
+
+;---------------------
 ;---------------------
 shipTranslationX	.ds	2
 shipTranslationY	.ds	2
@@ -623,9 +774,6 @@ ringGetCount		.ds	1
 hitCheckRingWork	.ds	4
 
 ringSwitchColor		.ds	1
-
-;---------------------
-lineBuffer		.ds	1024
 
 
 ;//////////////////////////////////
@@ -1059,37 +1207,6 @@ switchColor:
 
 
 ;----------------------------
-checkPad2:
-;check pad
-.checkPadUp:
-		bbr4	<padnow, .checkPadDown
-		inc	shipRotationX
-
-.checkPadDown:
-		bbr6	<padnow, .checkPadLeft
-		dec	shipRotationX
-
-.checkPadLeft:
-		bbr7	<padnow, .checkPadRight
-		dec	shipRotationY
-
-.checkPadRight:
-		bbr5	<padnow, .checkPadA
-		inc	shipRotationY
-
-.checkPadA:
-		bbr0	<padnow, .checkPadB
-		inc	shipRotationZ
-
-.checkPadB:
-		bbr1	<padnow, .checkPadEnd
-		dec	shipRotationZ
-
-.checkPadEnd:
-		rts
-
-
-;----------------------------
 checkPad:
 ;check pad
 .checkPadUp:
@@ -1112,12 +1229,10 @@ checkPad:
 		rts
 
 
+;********************************
 ;----------------------------
 sdiv32:
 ;div16d:div16c / div16a = div16a div16b
-;push x
-		phx
-
 ;d sign
 		lda	<div16d+1
 		pha
@@ -1127,85 +1242,83 @@ sdiv32:
 		pha
 
 ;d sign
-		bbr7	<div16d+1, .sdiv16jp00
+		bbr7	<div16d+1, .sdiv32jp00
 
 ;d neg
 		sec
-		lda	<mul16c
+		lda	<div16c
 		eor	#$FF
 		adc	#0
-		sta	<mul16c
+		sta	<div16c
 
-		lda	<mul16c+1
+		lda	<div16c+1
 		eor	#$FF
 		adc	#0
-		sta	<mul16c+1
+		sta	<div16c+1
 
-		lda	<mul16d
+		lda	<div16d
 		eor	#$FF
 		adc	#0
-		sta	<mul16d
+		sta	<div16d
 
-		lda	<mul16d+1
+		lda	<div16d+1
 		eor	#$FF
 		adc	#0
-		sta	<mul16d+1
+		sta	<div16d+1
 
-.sdiv16jp00:
+.sdiv32jp00:
 ;a sign
-		bbr7	<div16a+1, .sdiv16jp01
+		bbr7	<div16a+1, .sdiv32jp01
 
 ;a neg
 		sec
-		lda	<mul16a
+		lda	<div16a
 		eor	#$FF
 		adc	#0
-		sta	<mul16a
+		sta	<div16a
 
-		lda	<mul16a+1
+		lda	<div16a+1
 		eor	#$FF
 		adc	#0
-		sta	<mul16a+1
+		sta	<div16a+1
 
-.sdiv16jp01:
+.sdiv32jp01:
 		jsr	udiv32
 
 ;anser sign
 		pla
-		bpl	.sdiv16jp02
+		bpl	.sdiv32jp02
 
 ;anser neg
 		sec
-		lda	<mul16a
+		lda	<div16a
 		eor	#$FF
 		adc	#0
-		sta	<mul16a
+		sta	<div16a
 
-		lda	<mul16a+1
+		lda	<div16a+1
 		eor	#$FF
 		adc	#0
-		sta	<mul16a+1
+		sta	<div16a+1
 
-.sdiv16jp02:
+.sdiv32jp02:
 ;remainder sign
 		pla
-		bpl	.sdiv16jp03
+		bpl	.sdiv32jp03
 
 ;remainder neg
 		sec
-		lda	<mul16b
+		lda	<div16b
 		eor	#$FF
 		adc	#0
-		sta	<mul16b
+		sta	<div16b
 
-		lda	<mul16b+1
+		lda	<div16b+1
 		eor	#$FF
 		adc	#0
-		sta	<mul16b+1
+		sta	<div16b+1
 
-.sdiv16jp03:
-;pull x
-		plx
+.sdiv32jp03:
 		rts
 
 
@@ -1227,10 +1340,6 @@ udiv32:
 		stz	<div16a
 		stz	<div16a+1
 
-;set zero div16ans
-		stz	<div16ans
-		stz	<div16ans+1
-
 ;set count
 		ldx	#16
 
@@ -1241,15 +1350,15 @@ udiv32:
 		ror	<div16a+1
 		ror	<div16a
 
-;div16d:div16c - div16b:div16a = a:y:div16work
+;div16d:div16c - div16b:div16a = a:y:div32work
 		sec
 		lda	<div16c
 		sbc	<div16a
-		sta	<div16work
+		sta	<div32work
 
 		lda	<div16c+1
 		sbc	<div16a+1
-		sta	<div16work+1
+		sta	<div32work+1
 
 		lda	<div16d
 		sbc	<div16b
@@ -1261,18 +1370,18 @@ udiv32:
 ;check div16d:div16c >= div16b:div16a
 		bcc	.udivjump
 
-		rol	<div16ans
-		rol	<div16ans+1
+		rol	<div32ans
+		rol	<div32ans+1
 
-;div16d:div16c = a:y:div16work
+;div16d:div16c = a:y:div32work
 		sty	<div16d
 
 		sta	<div16d+1
 
-		lda	<div16work
+		lda	<div32work
 		sta	<div16c
 
-		lda	<div16work+1
+		lda	<div32work+1
 		sta	<div16c+1
 
 		dex
@@ -1280,18 +1389,18 @@ udiv32:
 		bra	.udivjump01
 
 .udivjump:
-		rol	<div16ans
-		rol	<div16ans+1
+		rol	<div32ans
+		rol	<div32ans+1
 ;decrement x
 		dex
 		bne	.udivloop
 
 .udivjump01:
-;div16ans to div16a
-		lda	<div16ans
+;div32ans to div16a
+		lda	<div32ans
 		sta	<div16a
 
-		lda	<div16ans+1
+		lda	<div32ans+1
 		sta	<div16a+1
 
 ;div16c to div16b
@@ -1303,6 +1412,472 @@ udiv32:
 
 ;pull y x
 		ply
+		plx
+		rts
+
+
+;----------------------------
+sqrt64:
+;sqrt64ans = sqrt(sqrt64a)
+;push x
+		phx
+
+		bbr7	<sqrt64a+7,.sqrtjump3
+
+		lda	#$FF
+		sta	<sqrt64b
+		sta	<sqrt64b+1
+		sta	<sqrt64b+2
+		sta	<sqrt64b+3
+
+		bra	.sqrtjump0
+
+.sqrtjump3:
+;sqrt64a to sqrt64b
+		lda	<sqrt64a
+		sta	<sqrt64b
+
+		lda	<sqrt64a+1
+		sta	<sqrt64b+1
+
+		lda	<sqrt64a+2
+		sta	<sqrt64b+2
+
+		lda	<sqrt64a+3
+		sta	<sqrt64b+3
+
+		lda	<sqrt64a+4
+		sta	<sqrt64b+4
+
+		lda	<sqrt64a+5
+		sta	<sqrt64b+5
+
+		lda	<sqrt64a+6
+		sta	<sqrt64b+6
+
+		lda	<sqrt64a+7
+		sta	<sqrt64b+7
+
+.sqrtjump1:
+;right shift sqrt64b
+		lda	<sqrt64b+4
+		ora	<sqrt64b+5
+		ora	<sqrt64b+6
+		ora	<sqrt64b+7
+		beq	.sqrtjump0
+
+		lsr	<sqrt64b+7
+		ror	<sqrt64b+6
+		ror	<sqrt64b+5
+		ror	<sqrt64b+4
+		ror	<sqrt64b+3
+		ror	<sqrt64b+2
+		ror	<sqrt64b+1
+		ror	<sqrt64b
+
+		bra	.sqrtjump1
+
+.sqrtjump0:
+;set loop counter
+		ldx	#32
+
+.sqrtloop:
+;sqrt64a to div64a
+		lda	<sqrt64a
+		sta	<div64a
+
+		lda	<sqrt64a+1
+		sta	<div64a+1
+
+		lda	<sqrt64a+2
+		sta	<div64a+2
+
+		lda	<sqrt64a+3
+		sta	<div64a+3
+
+		lda	<sqrt64a+4
+		sta	<div64a+4
+
+		lda	<sqrt64a+5
+		sta	<div64a+5
+
+		lda	<sqrt64a+6
+		sta	<div64a+6
+
+		lda	<sqrt64a+7
+		sta	<div64a+7
+
+;sqrt64b to div16b:div16a
+		lda	<sqrt64b
+		sta	<div16a
+
+		lda	<sqrt64b+1
+		sta	<div16a+1
+
+		lda	<sqrt64b+2
+		sta	<div16b
+
+		lda	<sqrt64b+3
+		sta	<div16b+1
+
+		jsr	udiv64
+
+;sqrt64b+4 = (sqrt64b + div16b:div16a) / 2
+		clc
+		lda	<sqrt64b
+		adc	<div16a
+		sta	<sqrt64b+4
+
+		lda	<sqrt64b+1
+		adc	<div16a+1
+		sta	<sqrt64b+5
+
+		lda	<sqrt64b+2
+		adc	<div16b
+		sta	<sqrt64b+6
+
+		lda	<sqrt64b+3
+		adc	<div16b+1
+		sta	<sqrt64b+7
+
+		ror	<sqrt64b+7
+		ror	<sqrt64b+6
+		ror	<sqrt64b+5
+		ror	<sqrt64b+4
+
+;compare sqrt64b and sqrt64b+4
+		lda	<sqrt64b+3
+		cmp	<sqrt64b+7
+		bne	.sqrtjump2
+
+		lda	<sqrt64b+2
+		cmp	<sqrt64b+6
+		bne	.sqrtjump2
+
+		lda	<sqrt64b+1
+		cmp	<sqrt64b+5
+		bne	.sqrtjump2
+
+		lda	<sqrt64b
+		cmp	<sqrt64b+4
+		beq	.sqrtend
+
+.sqrtjump2:
+;sqrt64b+4 to sqrt64b
+		lda	<sqrt64b+4
+		sta	<sqrt64b
+
+		lda	<sqrt64b+5
+		sta	<sqrt64b+1
+
+		lda	<sqrt64b+6
+		sta	<sqrt64b+2
+
+		lda	<sqrt64b+7
+		sta	<sqrt64b+3
+
+;check loop counter
+		dex
+		bne	.sqrtloop
+
+.sqrtend:
+;pull x
+		plx
+		rts
+
+
+;----------------------------
+sdiv64:
+;div64a / div16b:div16a = div16b:div16a div16d:div16c
+;64a sign
+		lda	<div64a+7
+		pha
+
+;64a eor b:a sign
+		eor	<div16b+1
+		pha
+
+;64a sign
+		bbr7	<div64a+7, .sdiv64jp00
+
+;64a neg
+		sec
+		lda	<div64a
+		eor	#$FF
+		adc	#0
+		sta	<div64a
+
+		lda	<div64a+1
+		eor	#$FF
+		adc	#0
+		sta	<div64a+1
+
+		lda	<div64a+2
+		eor	#$FF
+		adc	#0
+		sta	<div64a+2
+
+		lda	<div64a+3
+		eor	#$FF
+		adc	#0
+		sta	<div64a+3
+
+		lda	<div64a+4
+		eor	#$FF
+		adc	#0
+		sta	<div64a+4
+
+		lda	<div64a+5
+		eor	#$FF
+		adc	#0
+		sta	<div64a+5
+
+		lda	<div64a+6
+		eor	#$FF
+		adc	#0
+		sta	<div64a+6
+
+		lda	<div64a+7
+		eor	#$FF
+		adc	#0
+		sta	<div64a+7
+
+.sdiv64jp00:
+;b:a sign
+		bbr7	<div16b+1, .sdiv64jp01
+
+;b:a neg
+		sec
+		lda	<div16a
+		eor	#$FF
+		adc	#0
+		sta	<div16a
+
+		lda	<div16a+1
+		eor	#$FF
+		adc	#0
+		sta	<div16a+1
+
+		lda	<div16b
+		eor	#$FF
+		adc	#0
+		sta	<div16b
+
+		lda	<div16b+1
+		eor	#$FF
+		adc	#0
+		sta	<div16b+1
+
+.sdiv64jp01:
+		jsr	udiv64
+
+;anser sign
+		pla
+		bpl	.sdiv64jp02
+
+;anser neg
+		sec
+		lda	<div16a
+		eor	#$FF
+		adc	#0
+		sta	<div16a
+
+		lda	<div16a+1
+		eor	#$FF
+		adc	#0
+		sta	<div16a+1
+
+		lda	<div16b
+		eor	#$FF
+		adc	#0
+		sta	<div16b
+
+		lda	<div16b+1
+		eor	#$FF
+		adc	#0
+		sta	<div16b+1
+
+.sdiv64jp02:
+;remainder sign
+		pla
+		bpl	.sdiv64jp03
+
+;remainder neg
+		sec
+		lda	<div16c
+		eor	#$FF
+		adc	#0
+		sta	<div16c
+
+		lda	<div16c+1
+		eor	#$FF
+		adc	#0
+		sta	<div16c+1
+
+		lda	<div16d
+		eor	#$FF
+		adc	#0
+		sta	<div16d
+
+		lda	<div16d+1
+		eor	#$FF
+		adc	#0
+		sta	<div16d+1
+
+.sdiv64jp03:
+		rts
+
+
+;----------------------------
+udiv64:
+;div64a / div16b:div16a = div16b:div16a div16d:div16c
+;push x
+		phx
+
+;div16b:div16a to div64b+4
+		lda	<div16a
+		sta	<div64b+4
+
+		lda	<div16a+1
+		sta	<div64b+5
+
+		lda	<div16b
+		sta	<div64b+6
+
+		lda	<div16b+1
+		sta	<div64b+7
+
+;set zero div64b
+		stz	<div64b
+		stz	<div64b+1
+		stz	<div64b+2
+		stz	<div64b+3
+
+;set count
+		ldx	#32
+
+.udivloop:
+;right shift div64b
+		lsr	<div64b+7
+		ror	<div64b+6
+		ror	<div64b+5
+		ror	<div64b+4
+		ror	<div64b+3
+		ror	<div64b+2
+		ror	<div64b+1
+		ror	<div64b
+
+;div64a - div64b = div64work
+		sec
+		lda	<div64a
+		sbc	<div64b
+		sta	<div64work
+
+		lda	<div64a+1
+		sbc	<div64b+1
+		sta	<div64work+1
+
+		lda	<div64a+2
+		sbc	<div64b+2
+		sta	<div64work+2
+
+		lda	<div64a+3
+		sbc	<div64b+3
+		sta	<div64work+3
+
+		lda	<div64a+4
+		sbc	<div64b+4
+		sta	<div64work+4
+
+		lda	<div64a+5
+		sbc	<div64b+5
+		sta	<div64work+5
+
+		lda	<div64a+6
+		sbc	<div64b+6
+		sta	<div64work+6
+
+		lda	<div64a+7
+		sbc	<div64b+7
+		sta	<div64work+7
+
+
+;check div64a >= div64b
+		bcc	.udivjump
+
+		rol	<div64ans
+		rol	<div64ans+1
+		rol	<div64ans+2
+		rol	<div64ans+3
+
+;div64a = div64work
+		lda	<div64work
+		sta	<div64a
+
+		lda	<div64work+1
+		sta	<div64a+1
+
+		lda	<div64work+2
+		sta	<div64a+2
+
+		lda	<div64work+3
+		sta	<div64a+3
+
+		lda	<div64work+4
+		sta	<div64a+4
+
+		lda	<div64work+5
+		sta	<div64a+5
+
+		lda	<div64work+6
+		sta	<div64a+6
+
+		lda	<div64work+7
+		sta	<div64a+7
+
+;decrement x
+		dex
+		bne	.udivloop
+		bra	.udivjump01
+
+.udivjump:
+		rol	<div64ans
+		rol	<div64ans+1
+		rol	<div64ans+2
+		rol	<div64ans+3
+
+;decrement x
+		dex
+		bne	.udivloop
+
+.udivjump01:
+;div64ans to div16b:div16a
+		lda	<div64ans
+		sta	<div16a
+
+		lda	<div64ans+1
+		sta	<div16a+1
+
+		lda	<div64ans+2
+		sta	<div16b
+
+		lda	<div64ans+3
+		sta	<div16b+1
+
+;div64a to div16d:div16c
+		lda	<div64a
+		sta	<div16c
+
+		lda	<div64a+1
+		sta	<div16c+1
+
+		lda	<div64a+2
+		sta	<div16d
+
+		lda	<div64a+3
+		sta	<div16d+1
+
+;pull x
 		plx
 		rts
 
@@ -1485,6 +2060,286 @@ umul16:
 		plx
 		rts
 
+
+;----------------------------
+smul32:
+;mul16d:mul16c:mul16b:mul16a = mul16d:mul16c * mul16b:mul16a
+;b eor d sign
+		lda	<mul16b+1
+		eor	<mul16d+1
+		pha
+
+;b sign
+		bbr7	<mul16b+1, .smul32jp00
+
+;b neg
+		sec
+		lda	<mul16a
+		eor	#$FF
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
+
+		lda	<mul16b
+		eor	#$FF
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
+
+.smul32jp00:
+;d sign
+		bbr7	<mul16d+1, .smul32jp01
+
+;d neg
+		sec
+		lda	<mul16c
+		eor	#$FF
+		adc	#0
+		sta	<mul16c
+
+		lda	<mul16c+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16c+1
+
+		lda	<mul16d
+		eor	#$FF
+		adc	#0
+		sta	<mul16d
+
+		lda	<mul16d+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16d+1
+
+.smul32jp01:
+		jsr	umul32
+
+;anser sign
+		pla
+		bpl	.smul32jp02
+
+;anser neg
+		sec
+		lda	<mul16a
+		eor	#$FF
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
+
+		lda	<mul16b
+		eor	#$FF
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
+
+		lda	<mul16c
+		eor	#$FF
+		adc	#0
+		sta	<mul16c
+
+		lda	<mul16c+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16c+1
+
+		lda	<mul16d
+		eor	#$FF
+		adc	#0
+		sta	<mul16d
+
+		lda	<mul16d+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16d+1
+
+.smul32jp02:
+		rts
+
+;----------------------------
+umul32:
+;mul16d:mul16c:mul16b:mul16a = mul16d:mul16c * mul16b:mul16a
+		lda	<mul16a
+		sta	<mul32a
+
+		lda	<mul16a+1
+		sta	<mul32a+1
+
+		lda	<mul16b
+		sta	<mul32a+2
+
+		lda	<mul16b+1
+		sta	<mul32a+3
+
+		lda	<mul16c
+		sta	<mul32b
+
+		lda	<mul16c+1
+		sta	<mul32b+1
+
+		lda	<mul16d
+		sta	<mul32b+2
+
+		lda	<mul16d+1
+		sta	<mul32b+3
+
+;mul16c * mul16a
+		lda	<mul32a
+		sta	<mul16a
+
+		lda	<mul32a+1
+		sta	<mul16a+1
+
+		lda	<mul32b
+		sta	<mul16b
+
+		lda	<mul32b+1
+		sta	<mul16b+1
+
+		jsr	umul16
+
+		lda	<mul16c
+		sta	<mul32work
+
+		lda	<mul16c+1
+		sta	<mul32work+1
+
+		lda	<mul16d
+		sta	<mul32work+2
+
+		lda	<mul16d+1
+		sta	<mul32work+3
+
+;mul16d * mul16a
+		lda	<mul32a
+		sta	<mul16a
+
+		lda	<mul32a+1
+		sta	<mul16a+1
+
+		lda	<mul32b+2
+		sta	<mul16b
+
+		lda	<mul32b+3
+		sta	<mul16b+1
+
+		jsr	umul16
+
+		clc
+		lda	<mul16c
+		adc	<mul32work+2
+		sta	<mul32work+2
+
+		lda	<mul16c+1
+		adc	<mul32work+3
+		sta	<mul32work+3
+
+		lda	<mul16d
+		adc	#$00
+		sta	<mul32work+4
+
+		lda	<mul16d+1
+		adc	#$00
+		sta	<mul32work+5
+
+
+;mul16c * mul16b
+		lda	<mul32a+2
+		sta	<mul16a
+
+		lda	<mul32a+3
+		sta	<mul16a+1
+
+		lda	<mul32b
+		sta	<mul16b
+
+		lda	<mul32b+1
+		sta	<mul16b+1
+
+		jsr	umul16
+
+		clc
+		lda	<mul16c
+		adc	<mul32work+2
+		sta	<mul32work+2
+
+		lda	<mul16c+1
+		adc	<mul32work+3
+		sta	<mul32work+3
+
+		lda	<mul16d
+		adc	<mul32work+4
+		sta	<mul32work+4
+
+		lda	<mul16d+1
+		adc	<mul32work+5
+		sta	<mul32work+5
+
+		cla
+		adc	#$00
+		sta	<mul32work+6
+
+;mul16d * mul16b
+		lda	<mul32a+2
+		sta	<mul16a
+
+		lda	<mul32a+3
+		sta	<mul16a+1
+
+		lda	<mul32b+2
+		sta	<mul16b
+
+		lda	<mul32b+3
+		sta	<mul16b+1
+
+		jsr	umul16
+
+		lda	<mul32work
+		sta	<mul16a
+
+		lda	<mul32work+1
+		sta	<mul16a+1
+
+		lda	<mul32work+2
+		sta	<mul16b
+
+		lda	<mul32work+3
+		sta	<mul16b+1
+
+		clc
+		lda	<mul16c
+		adc	<mul32work+4
+		sta	<mul16c
+
+		lda	<mul16c+1
+		adc	<mul32work+5
+		sta	<mul16c+1
+
+		lda	<mul16d
+		adc	<mul32work+6
+		sta	<mul16d
+
+		lda	<mul16d+1
+		adc	#$00
+		sta	<mul16d+1
+
+		rts
 
 ;----------------------------
 initRandom:
@@ -1674,7 +2529,6 @@ _reset:
 ;RAM page1
 		lda	#$F8
 		tam	#$01
-
 ;jump main
 		jmp	main
 
@@ -1801,7 +2655,7 @@ vdpdata:
 		.db	$0C, $02, $0D	;VSW $02 VDS $0D
 		.db	$0D, $EF, $00	;VDW $00EF
 		.db	$0E, $03, $00	;VCR $03
-		.db	$0F, $00, $00	;DMA INC INC
+		.db	$0F, $00, $00	;DMA +1 +1
 		.db	$07, $00, $00	;scrollx 0
 		.db	$08, $00, $00	;scrolly 0
 		.db	$09, $40, $00	;32x64
@@ -2454,7 +3308,7 @@ vertexRotationZ:
 
 		jsr	smul16			;xcosA
 
-		movq	<div16ans, <mul16c
+		movq	<div32ans, <mul16c
 
 		lda	transform2DWork0+2,y	;Y0
 		sta	<mul16a
@@ -2467,7 +3321,7 @@ vertexRotationZ:
 
 		jsr	smul16			;ysinA
 
-		subq	<mul16c, <div16ans, <mul16c	;xcosA-ysinA
+		subq	<mul16c, <div32ans, <mul16c	;xcosA-ysinA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2493,7 +3347,7 @@ vertexRotationZ:
 
 		jsr	smul16			;xsinA
 
-		movq	<div16ans, <mul16c
+		movq	<div32ans, <mul16c
 
 		lda	transform2DWork0+2,y	;Y0
 		sta	<mul16a
@@ -2506,7 +3360,7 @@ vertexRotationZ:
 
 		jsr	smul16			;ycosA
 
-		addq	<mul16c, <div16ans, <mul16c	;xsinA+ycosA
+		addq	<mul16c, <div32ans, <mul16c	;xsinA+ycosA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2567,7 +3421,7 @@ vertexRotationY:
 
 		jsr	smul16			;zsinA
 
-		movq	<div16ans, <mul16c
+		movq	<div32ans, <mul16c
 
 		lda	transform2DWork0,y	;X0
 		sta	<mul16a
@@ -2580,7 +3434,7 @@ vertexRotationY:
 
 		jsr	smul16			;xcosA
 
-		addq	<mul16c, <div16ans, <mul16c	;zsinA+xcosA
+		addq	<mul16c, <div32ans, <mul16c	;zsinA+xcosA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2606,7 +3460,7 @@ vertexRotationY:
 
 		jsr	smul16			;zcosA
 
-		movq	<div16ans, <mul16c
+		movq	<div32ans, <mul16c
 
 		lda	transform2DWork0,y	;X0
 		sta	<mul16a
@@ -2619,7 +3473,7 @@ vertexRotationY:
 
 		jsr	smul16			;xsinA
 
-		subq	<mul16c, <div16ans, <mul16c	;zcosA-xsinA
+		subq	<mul16c, <div32ans, <mul16c	;zcosA-xsinA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2680,7 +3534,7 @@ vertexRotationX:
 
 		jsr	smul16			;ycosA
 
-		movq	<div16ans, <mul16c
+		movq	<div32ans, <mul16c
 
 		lda	transform2DWork0+4,y	;Z0
 		sta	<mul16a
@@ -2693,7 +3547,7 @@ vertexRotationX:
 
 		jsr	smul16			;zsinA
 
-		subq	<mul16c, <div16ans, <mul16c	;ycosA-zsinA
+		subq	<mul16c, <div32ans, <mul16c	;ycosA-zsinA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2719,7 +3573,7 @@ vertexRotationX:
 
 		jsr	smul16			;ysinA
 
-		movq	<div16ans, <mul16c
+		movq	<div32ans, <mul16c
 
 		lda	transform2DWork0+4,y	;Z0
 		sta	<mul16a
@@ -2732,7 +3586,7 @@ vertexRotationX:
 
 		jsr	smul16			;zcosA
 
-		addq	<mul16c, <div16ans, <mul16c	;ysinA+zcosA
+		addq	<mul16c, <div32ans, <mul16c	;ysinA+zcosA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2916,7 +3770,7 @@ transform2D2:
 
 ;----------------------------
 transform2DProc:
-;mul16c(-32768_32767) * 128 / mul16a(1_32767) = mul16a(rough value)
+;mul16a(rough value) = mul16c(-32768_32767) * 128 / mul16a(1_32767)
 		phy
 
 		lda	<mul16c+1
@@ -2984,19 +3838,19 @@ transform2DProc:
 		stz	<muladdr
 		sta	<muladdr+1
 
-		stz	<div16ans
+		stz	<div32ans
 
 		ldy	<mul16c+1
 		lda	[muladdr],y
-		sta	<div16ans+1
+		sta	<div32ans+1
 
 		ldy	<mul16d
 		lda	[muladdr],y
-		sta	<div16work
+		sta	<div32work
 
 		ldy	<mul16d+1
 		lda	[muladdr],y
-		sta	<div16work+1
+		sta	<div32work+1
 
 		lda	<mulbank
 		clc
@@ -3006,13 +3860,13 @@ transform2DProc:
 		clc
 		ldy	<mul16c+1
 		lda	[muladdr],y
-		adc	<div16work
-		sta	<div16work
+		adc	<div32work
+		sta	<div32work
 
 		ldy	<mul16d
 		lda	[muladdr],y
-		adc	<div16work+1
-		sta	<div16work+1
+		adc	<div32work+1
+		sta	<div32work+1
 
 ;mul udiv32_2Work high byte
 		lda	<udiv32_2Work+1
@@ -3036,13 +3890,13 @@ transform2DProc:
 		clc
 		ldy	<mul16c+1
 		lda	[muladdr],y
-		adc	<div16work
-		sta	<div16work
+		adc	<div32work
+		sta	<div32work
 
 		ldy	<mul16d
 		lda	[muladdr],y
-		adc	<div16work+1
-		sta	<div16work+1
+		adc	<div32work+1
+		sta	<div32work+1
 
 		lda	<mulbank
 		clc
@@ -3052,12 +3906,12 @@ transform2DProc:
 		clc
 		ldy	<mul16c+1
 		lda	[muladdr],y
-		adc	<div16work+1
-		sta	<div16work+1
+		adc	<div32work+1
+		sta	<div32work+1
 
-		lda	<div16work
+		lda	<div32work
 		sta	<div16a
-		lda	<div16work+1
+		lda	<div32work+1
 		sta	<div16a+1
 
 		ply
@@ -3569,7 +4423,7 @@ transform2D:
 		adc	<centerY+1
 		sta	[vertex1Addr],y
 
-;;Z0>=128 flag set
+;Z0>=128 flag set
 ;Z0 set
 		iny
 		lda	[vertex0Addr],y
@@ -3582,7 +4436,6 @@ transform2D:
 
 .transform2DJump00:
 ;Z0<128 flag set
-;<-------
 		ldy	#$04
 		lda	#$00
 		sta	[vertex1Addr],y
@@ -4025,9 +4878,8 @@ clip2DY0:
 
 
 ;----------------------------
-;calculation edge
-;
 calcEdge:
+;calculation edge
 ;compare edgeY0 edgeY1
 		lda	<edgeY1
 		cmp	<edgeY0
@@ -4082,7 +4934,7 @@ calcEdge:
 		sta	<edgeSlopeX
 		stz	<edgeSlopeX+1
 
-		mov	<edgeSigneX, #$FF
+		mov	<edgeSignX, #$FF
 
 		bra	.edgeJump1
 
@@ -4091,7 +4943,7 @@ calcEdge:
 		stz	<edgeSlopeX+1
 
 		lda	#$01
-		sta	<edgeSigneX
+		sta	<edgeSignX
 .edgeJump1:
 
 ;calculation edge Y sign
@@ -4116,10 +4968,10 @@ calcEdge:
 		eor	#$FF
 		inc	a
 
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeXLoop4Jump2
+;check edgeSignX
+		bbs7	<edgeSignX, .edgeXLoop4Jump2
 
-;edgeSigneX plus
+;edgeSignX plus
 		ldx	<edgeX0
 		ldy	<edgeY0
 		stx	<wireLineX0
@@ -4150,7 +5002,7 @@ calcEdge:
 
 		rts
 
-;edgeSigneX minus
+;edgeSignX minus
 .edgeXLoop4Jump2:
 		ldx	<edgeX0
 		ldy	<edgeY0
@@ -4184,7 +5036,7 @@ calcEdge:
 		rts
 
 ;;;;--------------------------------
-;;;;edgeSigneX minus
+;;;;edgeSignX minus
 ;;;.edgeXLoop4Jump2:
 ;;;;exchange X0 X1 Y0 Y1
 ;;;		ldy	<edgeY0
@@ -4238,10 +5090,10 @@ calcEdge:
 		ldx	<edgeX0
 		ldy	<edgeY0
 
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeYLoop4Jump2
+;check edgeSignX
+		bbs7	<edgeSignX, .edgeYLoop4Jump2
 
-;edgeSigneX plus
+;edgeSignX plus
 		bra	.edgeYLoop0Jump1
 
 .edgeYLoop0:
@@ -4285,7 +5137,7 @@ calcEdge:
 		rts
 
 .edgeYLoop4Jump2:
-;edgeSigneX minus
+;edgeSignX minus
 		bra	.edgeYLoop4Jump1
 .edgeYLoop4:
 		jsr	putPixelEdge
@@ -4536,9 +5388,8 @@ putHorizontalLine:
 
 
 ;----------------------------
-;put left horizontal line
-;
 putHorizontalLine01Left:
+;put left horizontal line
 		movw	<setVramChrAddr, <wireLineLeftAddr
 
 		mov	<CHMask, <wireLineLeftData
@@ -4592,9 +5443,8 @@ putHorizontalLine01Left:
 
 
 ;----------------------------
-;put right horizontal line
-;
 putHorizontalLine01Right:
+;put right horizontal line
 		movw	<setVramChrAddr, <wireLineRightAddr
 
 		mov	<CHMask, <wireLineRightData
@@ -4648,9 +5498,8 @@ putHorizontalLine01Right:
 
 
 ;----------------------------
-;put left to right horizontal line
-;
 putHorizontalLine00:
+;put left to right horizontal line
 		add	<setVramChrAddr, <wireLineLeftAddr, #$10
 
 		lda	<wireLineLeftAddr+1
@@ -4799,6 +5648,240 @@ clearBG:
 
 
 ;----------------------------
+calcUnitVector:
+;unitVectorX, unitVectorY, unitVectorZ
+;sqrt64a+4 = unitVectorX * unitVectorX
+		lda	unitVectorX
+		sta	<mul16a
+		sta	<mul16b
+
+		lda	unitVectorX+1
+		sta	<mul16a+1
+		sta	<mul16b+1
+
+		jsr	smul16
+
+		movq	sqrt64a+4,<mul16c
+
+;sqrt64a+4 += unitVectorY * unitVectorY
+		lda	unitVectorY
+		sta	<mul16a
+		sta	<mul16b
+		lda	unitVectorY+1
+		sta	<mul16a+1
+		sta	<mul16b+1
+
+		jsr	smul16
+
+		addq	sqrt64a+4,<mul16c
+
+;sqrt64a+4 += unitVectorZ * unitVectorZ
+		lda	unitVectorZ
+		sta	<mul16a
+		sta	<mul16b
+
+		lda	unitVectorZ+1
+		sta	<mul16a+1
+		sta	<mul16b+1
+
+		jsr	smul16
+
+		addq	sqrt64a+4,<mul16c
+
+;sqrt
+		stzq	sqrt64a
+		jsr	sqrt64
+
+;unitVectorX / sqrt
+		stzq	div64a
+		lda	unitVectorX
+		sta	div64a+4
+		lda	unitVectorX+1
+		sta	div64a+5
+		bpl	.calcUnitJump0
+		movw	div64a+6,#$FFFF
+		bra	.calcUnitJump1
+.calcUnitJump0:
+		stzw	div64a+6
+
+.calcUnitJump1:
+		movq	<div16a,<sqrt64ans
+		jsr	sdiv64
+		movq	unitVectorX,<div16a
+
+;unitVectorY / sqrt
+		stzq	div64a
+		lda	unitVectorY
+		sta	div64a+4
+		lda	unitVectorY+1
+		sta	div64a+5
+		bpl	.calcUnitJump2
+		movw	div64a+6,#$FFFF
+		bra	.calcUnitJump3
+.calcUnitJump2:
+		stzw	div64a+6
+
+.calcUnitJump3:
+		movq	<div16a,<sqrt64ans
+		jsr	sdiv64
+		movq	unitVectorY,<div16a
+
+;unitVectorZ / sqrt
+		stzq	div64a
+		lda	unitVectorZ
+		sta	div64a+4
+		lda	unitVectorZ+1
+		sta	div64a+5
+		bpl	.calcUnitJump4
+		movw	div64a+6,#$FFFF
+		bra	.calcUnitJump5
+.calcUnitJump4:
+		stzw	div64a+6
+
+.calcUnitJump5:
+		movq	<div16a,<sqrt64ans
+		jsr	sdiv64
+		movq	unitVectorZ,<div16a
+
+		rts
+
+
+;----------------------------
+atan:
+;mul16a=x(-32768_32767), mul16b=y(-32768_32767)
+;A(0_255) = atan(y/x)
+		phx
+
+		lda	<mul16b+1
+		pha
+		bpl	.atanJump0
+
+		sec
+		lda	<mul16b
+		eor	#$FF
+		adc	#0
+		sta	<mul16b
+
+		lda	<mul16b+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16b+1
+
+.atanJump0:
+		lda	<mul16a+1
+		pha
+		bpl	.atanJump1
+
+		sec
+		lda	<mul16a
+		eor	#$FF
+		adc	#0
+		sta	<mul16a
+
+		lda	<mul16a+1
+		eor	#$FF
+		adc	#0
+		sta	<mul16a+1
+
+.atanJump1:
+		jsr	_atan
+
+		plx
+		bpl	.atanJump2
+
+		sta	<mul16a
+		sec
+		lda	#128
+		sbc	<mul16a
+
+.atanJump2:
+		plx
+		bpl	.atanJump3
+
+		eor	#$FF
+		inc	a
+
+.atanJump3:
+		plx
+		rts
+
+
+;----------------------------
+_atan:
+;mul16a=x(0_65535), mul16b=y(0_65535)
+;A(0_63) = atan(y/x)
+		phx
+
+		lda	<mul16a
+		ora	<mul16a+1
+		beq	.atanJump0
+
+		stz	<mul16c
+
+		lda	<mul16b
+		sta	<mul16c+1
+
+		lda	<mul16b+1
+		sta	<mul16d
+
+		stz	<mul16d+1
+
+		asl	<mul16c+1
+		rol	<mul16d
+		rol	<mul16d+1
+
+		asl	<mul16c+1
+		rol	<mul16d
+		rol	<mul16d+1
+
+		sec
+		lda	<mul16d
+		sbc	<mul16a
+		lda	<mul16d+1
+		sbc	<mul16a+1
+		bcs	.atanJump0
+
+		jsr	udiv32
+
+		clx
+.atanLoop:
+		sec
+		lda	tanDataLow,x
+		sbc	<div16a
+		lda	tanDataHigh,x
+		sbc	<div16a+1
+		bcs	.atanJump1
+
+		inx
+		cpx	#64
+		bne	.atanLoop
+
+.atanJump1:
+		txa
+		bra	.atanEnd
+
+.atanJump0:
+		lda	#64
+
+.atanEnd:
+		plx
+		rts
+
+
+;----------------------------
+conv8to16:
+;x:a = a(sign extension)
+		tax
+		bpl	.convPositive
+		ldx	#$FF
+		bra	.convEnd
+.convPositive:
+		clx
+.convEnd:
+		rts
+
+
+;----------------------------
 puthex:
 ;
 		pha
@@ -4897,7 +5980,6 @@ wireLineAddrConvYHigh0:
 			$14, $14, $14, $14, $14, $14, $14, $14, $16, $16, $16, $16, $16, $16, $16, $16
 
 
-
 ;----------------------------
 wireLineAddrConvXLow0:
 		.db	$00, $00, $00, $00, $00, $00, $00, $00, $10, $10, $10, $10, $10, $10, $10, $10,\
@@ -4989,14 +6071,6 @@ wireLineRightMasks:
 
 
 ;----------------------------
-wireLineColorNo:
-		.db	$00, $01, $02, $03, $01, $01, $02, $01
-		.db	$00, $01, $02, $03, $02, $03, $03, $02
-		.db	$00, $01, $02, $03, $01, $01, $02, $01
-		.db	$00, $01, $02, $03, $02, $03, $03, $03
-
-
-;----------------------------
 wireLineColorData0:
 		.db	$00, $FF, $00, $FF
 
@@ -5008,6 +6082,7 @@ wireLineColorData1:
 
 ;----------------------------
 sinDataHigh:
+;sin * 16384
 		.db	$00, $01, $03, $04, $06, $07, $09, $0A, $0C, $0E, $0F, $11, $12, $14, $15, $17,\
 			$18, $19, $1B, $1C, $1E, $1F, $20, $22, $23, $24, $26, $27, $28, $29, $2A, $2C,\
 			$2D, $2E, $2F, $30, $31, $32, $33, $34, $35, $36, $36, $37, $38, $39, $39, $3A,\
@@ -5028,6 +6103,7 @@ sinDataHigh:
 
 ;----------------------------
 sinDataLow:
+;sin * 16384
 		.db	$00, $92, $24, $B5, $46, $D6, $64, $F1, $7C, $06, $8D, $12, $94, $13, $90, $09,\
 			$7E, $EF, $5D, $C6, $2B, $8C, $E7, $3D, $8E, $DA, $20, $60, $9A, $CE, $FB, $21,\
 			$41, $5A, $6C, $76, $79, $74, $68, $53, $37, $12, $E5, $B0, $71, $2B, $DB, $82,\
@@ -5048,6 +6124,7 @@ sinDataLow:
 
 ;----------------------------
 cosDataHigh:
+;cos * 16384
 		.db	$40, $3F, $3F, $3F, $3F, $3F, $3F, $3F, $3E, $3E, $3E, $3D, $3D, $3C, $3C, $3B,\
 			$3B, $3A, $39, $39, $38, $37, $36, $36, $35, $34, $33, $32, $31, $30, $2F, $2E,\
 			$2D, $2C, $2A, $29, $28, $27, $26, $24, $23, $22, $20, $1F, $1E, $1C, $1B, $19,\
@@ -5068,6 +6145,7 @@ cosDataHigh:
 
 ;----------------------------
 cosDataLow:
+;cos * 16384
 		.db	$00, $FB, $EC, $D4, $B1, $85, $4F, $0F, $C5, $72, $15, $AF, $3F, $C5, $42, $B6,\
 			$21, $82, $DB, $2B, $71, $B0, $E5, $12, $37, $53, $68, $74, $79, $76, $6C, $5A,\
 			$41, $21, $FB, $CE, $9A, $60, $20, $DA, $8E, $3D, $E7, $8C, $2B, $C6, $5D, $EF,\
@@ -5084,6 +6162,24 @@ cosDataLow:
 			$7E, $EF, $5D, $C6, $2B, $8C, $E7, $3D, $8E, $DA, $20, $60, $9A, $CE, $FB, $21,\
 			$41, $5A, $6C, $76, $79, $74, $68, $53, $37, $12, $E5, $B0, $71, $2B, $DB, $82,\
 			$21, $B6, $42, $C5, $3F, $AF, $15, $72, $C5, $0F, $4F, $85, $B1, $D4, $EC, $FB
+
+
+;----------------------------
+tanDataHigh:
+;tan * 1024
+		.db	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01,\
+			$01, $01, $01, $02, $02, $02, $02, $02, $02, $02, $02, $03, $03, $03, $03, $03,\
+			$04, $04, $04, $04, $04, $05, $05, $05, $05, $06, $06, $07, $07, $07, $08, $09,\
+			$09, $0A, $0B, $0C, $0D, $0E, $0F, $11, $14, $17, $1A, $20, $28, $36, $51, $A2
+
+
+;----------------------------
+tanDataLow:
+;tan * 1024
+		.db	$00, $19, $32, $4C, $65, $7E, $98, $B2, $CC, $E6, $00, $1B, $37, $52, $6E, $8B,\
+			$A8, $C6, $E4, $03, $23, $44, $66, $88, $AC, $D1, $F7, $1F, $48, $73, $A0, $CF,\
+			$00, $34, $6A, $A3, $E0, $20, $65, $AE, $FD, $51, $AC, $10, $7C, $F2, $75, $06,\
+			$A8, $5F, $2E, $1C, $30, $74, $F8, $D0, $1C, $0D, $F7, $6E, $9D, $3A, $6C, $F1
 
 
 ;////////////////////////////
