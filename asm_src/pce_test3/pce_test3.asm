@@ -1,50 +1,3 @@
-;         TOP
-;         +Y
-; LEFT -X  | +Z BACK
-;        \ | /
-;         \|/
-;         /|\
-;        / | \
-;FRONT -Z  | +X RIGHT
-;         -Y
-;        BOTTOM
-
-;direction of rotation
-;counterclockwise(A to B)
-;+Y
-; |  
-; | B/--
-; |  \  \
-; |      \
-; |       |
-; |       |
-; |       A
-; |
-;-|-------+X
-;
-;+Y
-; |  
-; | B/--
-; |  \  \
-; |      \
-; |       |
-; |       |
-; |       A
-; |
-;-|-------+Z
-;
-;+Z
-; |  
-; | B/--
-; |  \  \
-; |      \
-; |       |
-; |       |
-; |       A
-; |
-;-|-------+X
-
-
 ;VRAM
 ;0000-03FF	BG0	 1KWORD
 ;0400-07FF	BG1	 1KWORD
@@ -3004,7 +2957,6 @@ setEnemy:
 ;
 		lda	enemyTimer
 		inc	a
-		;;;and	#$7F
 		and	#$3F
 		sta	enemyTimer
 		bne	.setEnemyEnd
