@@ -791,6 +791,10 @@ ansAngleY		.ds	1
 angleShift		.ds	2
 
 ;---------------------
+shipShiftX		.ds	2
+shipShiftY		.ds	2
+
+;---------------------
 			.rsset	$0
 OBJ_NO			.rs	1
 OBJ_COLOR		.rs	1
@@ -886,8 +890,8 @@ objReg_ZWork		.ds	2
 			.rsset	$0
 STAR_X			.rs	2
 STAR_Y			.rs	2
-STAR_Z			.rs	4
-STAR_Z_SHIFT		.rs	4
+STAR_Z			.rs	2
+STAR_Z_SHIFT		.rs	2
 STAR_STRUCT_SIZE	.rs	0
 
 STAR_MAX		.equ	8
@@ -2255,7 +2259,7 @@ main:
 ;set eye rotation order
 		mov	<eyeRotationSelect, #ROTATIONXYZ
 
-;set ship data
+;initialize ship data
 		stzw	shipTranslationX
 		stzw	shipTranslationY
 		stzw	shipTranslationZ
@@ -2263,6 +2267,9 @@ main:
 		stz	shipRotationX
 		stz	shipRotationY
 		stz	shipRotationZ
+
+		stzw	shipShiftX
+		stzw	shipShiftY
 
 ;initialize
 		jsr	initShotTable
@@ -2345,39 +2352,130 @@ main:
 ;----------------------------
 checkGamePad:
 ;check pad
-		movw	starShiftX, #$0000
-		movw	starShiftY, #$0000
-.checkPadUp00:
-		bbr4	<padnow, .checkPadDown00
-		addw	shipTranslationY, #$20
-		movw	starShiftY, #$FFE0
+.checkPadUpDown:
+		lda	<padnow
+		and	#%01010000
+		bne	.checkPadUp
 
-.checkPadDown00:
-		bbr6	<padnow, .checkPadLeft00
-		subw	shipTranslationY, #$20
-		movw	starShiftY, #$0020
+		lda	shipShiftY
+		beq	.checkPadUpDownEnd
+		bmi	.checkPadUpJump
+		bra	.checkPadDownJump
 
-.checkPadLeft00:
-		bbr7	<padnow, .checkPadRight00
-		subw	shipTranslationX, #$20
-		movw	starShiftX, #$0020
+.checkPadUp:
+		bbr4	<padnow, .checkPadDown
 
-.checkPadRight00:
-		bbr5	<padnow, .checkPadRun00
-		addw	shipTranslationX, #$20
-		movw	starShiftX, #$FFE0
+		lda	shipShiftY
+		cmp	#$40
+		bpl	.checkPadUpDownEnd
 
-.checkPadRun00:
-		bbr3	<padnow, .checkPadSelect00
-.checkPadSelect00:
-		bbr2	<padnow, .checkPadB00
-.checkPadB00:
-		bbr1	<padnow, .checkPadA00
-.checkPadA00:
-		bbr0	<padnow, .checkPadEnd00
+;shipShiftY <= 63
+.checkPadUpJump:
+		clc
+		adc	#$08
+		sta	shipShiftY
+		lda	shipShiftY+1
+		adc	#$00
+		sta	shipShiftY+1
+		bra	.checkPadUpDownEnd
+
+.checkPadDown:
+		bbr6	<padnow, .checkPadUpDown
+
+		lda	shipShiftY
+		cmp	#$C1
+		bmi	.checkPadUpDownEnd
+
+;shipShiftY >= -63
+.checkPadDownJump:
+		sec
+		sbc	#$08
+		sta	shipShiftY
+		lda	shipShiftY+1
+		sbc	#$00
+		sta	shipShiftY+1
+
+.checkPadUpDownEnd:
+		addw	shipTranslationY, shipShiftY
+
+.checkPadLeftRight:
+		lda	<padnow
+		and	#%10100000
+		bne	.checkPadLeft
+
+		lda	shipShiftX
+		beq	.checkPadLeftRightEnd
+		bmi	.checkPadRightJump
+		bra	.checkPadLeftJump
+
+.checkPadLeft:
+		bbr7	<padnow, .checkPadRight
+
+		lda	shipShiftX
+		cmp	#$C1
+		bmi	.checkPadLeftRightEnd
+
+;shipShiftX >= -63
+.checkPadLeftJump:
+		sec
+		sbc	#$08
+		sta	shipShiftX
+		lda	shipShiftX+1
+		sbc	#$00
+		sta	shipShiftX+1
+		bra	.checkPadLeftRightEnd
+
+.checkPadRight:
+		bbr5	<padnow, .checkPadDown
+
+		lda	shipShiftX
+		cmp	#$40
+		bpl	.checkPadLeftRightEnd
+
+;shipShiftX <= 63
+.checkPadRightJump:
+		clc
+		adc	#$08
+		sta	shipShiftX
+		lda	shipShiftX+1
+		adc	#$00
+		sta	shipShiftX+1
+
+.checkPadLeftRightEnd:
+		addw	shipTranslationX, shipShiftX
+
+.checkPadRun:
+		bbr3	<padnow, .checkPadSelect
+.checkPadSelect:
+		bbr2	<padnow, .checkPadB
+.checkPadB:
+		bbr1	<padnow, .checkPadA
+.checkPadA:
+		bbr0	<padnow, .checkPadEnd
 
 		jsr	setShotTable
-.checkPadEnd00:
+.checkPadEnd:
+
+		clc
+		lda	shipShiftX
+		eor	#$FF
+		adc	#$01
+		sta	starShiftX
+		lda	shipShiftX+1
+		eor	#$FF
+		adc	#$00
+		sta	starShiftX+1
+
+		clc
+		lda	shipShiftY
+		eor	#$FF
+		adc	#$01
+		sta	starShiftY
+		lda	shipShiftY+1
+		eor	#$FF
+		adc	#$00
+		sta	starShiftY+1
+
 		rts
 
 
@@ -2416,9 +2514,9 @@ setStarSprite
 		lda	starTable+STAR_X+1,x
 		sta	<mul16c+1
 
-		lda	starTable+STAR_Z+2,x
+		lda	starTable+STAR_Z,x
 		sta	<mul16a
-		lda	starTable+STAR_Z+3,x
+		lda	starTable+STAR_Z+1,x
 		sta	<mul16a+1
 
 		jsr	transform2DProc
@@ -2443,9 +2541,9 @@ setStarSprite
 		lda	starTable+STAR_Y+1,x
 		sta	<mul16c+1
 
-		lda	starTable+STAR_Z+2,x
+		lda	starTable+STAR_Z,x
 		sta	<mul16a
-		lda	starTable+STAR_Z+3,x
+		lda	starTable+STAR_Z+1,x
 		sta	<mul16a+1
 
 		jsr	transform2DProc
@@ -2464,6 +2562,16 @@ setStarSprite
 		lda	spriteStar+SPRITE_Y+1,y
 		adc	#0
 		sta	spriteStar+SPRITE_Y+1,y
+
+		sec
+		lda	spriteStar+SPRITE_Y,y
+		sbc	#192+64-8
+		lda	spriteStar+SPRITE_Y+1,y
+		sbc	#0
+		bcc	.jp00
+		lda	#$FF
+		sta	spriteStar+SPRITE_Y+1,y
+.jp00:
 
 		lda	#$42
 		sta	spriteStar+SPRITE_NO,y
@@ -2528,18 +2636,10 @@ moveStarTable:
 		sbc	starTable+STAR_Z_SHIFT+1,x
 		sta	starTable+STAR_Z+1,x
 
-		lda	starTable+STAR_Z+2,x
-		sbc	starTable+STAR_Z_SHIFT+2,x
-		sta	starTable+STAR_Z+2,x
-
-		lda	starTable+STAR_Z+3,x
-		sbc	starTable+STAR_Z_SHIFT+3,x
-		sta	starTable+STAR_Z+3,x
-
 		bmi	.jp00
 		bne	.jp01
 
-		lda	starTable+STAR_Z+2,x
+		lda	starTable+STAR_Z,x
 		cmp	#128
 		bcs	.jp01
 
@@ -2607,23 +2707,15 @@ setStarTable:
 
 		lda	#$00
 		sta	starTable+STAR_Z,x
-		lda	#$00
-		sta	starTable+STAR_Z+1,x
-		lda	#$00
-		sta	starTable+STAR_Z+2,x
 		lda	#$10
-		sta	starTable+STAR_Z+3,x
+		sta	starTable+STAR_Z+1,x
 
-		lda	#$00
-		sta	starTable+STAR_Z_SHIFT,x
-		lda	#$00
-		sta	starTable+STAR_Z_SHIFT+1,x
 		jsr	getRandom
 		and	#$7F
 		ora	#$20
-		sta	starTable+STAR_Z_SHIFT+2,x
+		sta	starTable+STAR_Z_SHIFT,x
 		lda	#$00
-		sta	starTable+STAR_Z_SHIFT+3,x
+		sta	starTable+STAR_Z_SHIFT+1,x
 
 		rts
 
