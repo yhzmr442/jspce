@@ -197,6 +197,19 @@ addw		.macro
 
 
 ;----------------------------
+addwb		.macro
+;\1(word) = \1(word) + \2(byte)
+		clc
+		lda	\1
+		adc	\2
+		sta	\1
+		bcc	.jp0\@
+		inc	\1+1
+.jp0\@
+		.endm
+
+
+;----------------------------
 subw		.macro
 ;\1 = \2 - \3
 ;\1 = \1 - \2
@@ -644,6 +657,9 @@ lineX1			.ds	2
 lineY1			.ds	2
 
 clip2DFlag		.ds	1
+
+;---------------------
+transform2DScale	.ds	1
 
 ;---------------------
 wireBGAddr		.ds	1
@@ -1665,25 +1681,16 @@ smul16:
 ;----------------------------
 umul16:
 ;mul16d:mul16c = mul16a * mul16b
-;push x y
-		phx
+;push y
 		phy
 
-		lda	<mul16b
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
+		ldy	<mul16b
+		lda	umul16Bank, y
 
-		clc
-		adc	#muldatBank
 		sta	<mulbank
 		tam	#$02
 
-		lda	<mul16b
-		and	#$1F
-		ora	#$40
+		lda	umul16Address, y
 		stz	<muladdr
 		sta	<muladdr+1
 
@@ -1696,8 +1703,8 @@ umul16:
 		sta	<mul16c+1
 
 
-		lda	<mulbank
 		clc
+		lda	<mulbank
 		adc	#8
 		tam	#$02
 
@@ -1713,22 +1720,13 @@ umul16:
 		sta	<mul16d
 
 
-		lda	<mul16b+1
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
+		ldy	<mul16b+1
+		lda	umul16Bank, y
 
-		clc
-		adc	#muldatBank
 		sta	<mulbank
 		tam	#$02
 
-		lda	<mul16b+1
-		and	#$1F
-		ora	#$40
-		stz	<muladdr
+		lda	umul16Address, y
 		sta	<muladdr+1
 
 		clc
@@ -1762,10 +1760,8 @@ umul16:
 		adc	<mul16d+1
 		sta	<mul16d+1
 
-;pull y x
-.end000:
+;pull y
 		ply
-		plx
 		rts
 
 
@@ -2186,6 +2182,101 @@ _nmi:
 
 
 ;----------------------------
+umul16Bank
+		.db	$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank,\
+			$00+muldatBank, $00+muldatBank, $00+muldatBank, $00+muldatBank
+
+		.db	$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank,\
+			$01+muldatBank, $01+muldatBank, $01+muldatBank, $01+muldatBank
+
+		.db	$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank,\
+			$02+muldatBank, $02+muldatBank, $02+muldatBank, $02+muldatBank
+
+		.db	$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank,\
+			$03+muldatBank, $03+muldatBank, $03+muldatBank, $03+muldatBank
+
+		.db	$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank,\
+			$04+muldatBank, $04+muldatBank, $04+muldatBank, $04+muldatBank
+
+		.db	$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank,\
+			$05+muldatBank, $05+muldatBank, $05+muldatBank, $05+muldatBank
+
+		.db	$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank,\
+			$06+muldatBank, $06+muldatBank, $06+muldatBank, $06+muldatBank
+
+		.db	$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank,\
+			$07+muldatBank, $07+muldatBank, $07+muldatBank, $07+muldatBank
+
+
+;----------------------------
+umul16Address
+		.db	$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
+			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
+			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F
+
+
+;----------------------------
 ;interrupt vectors
 		.org	$FFF6
 
@@ -2199,6 +2290,7 @@ _nmi:
 ;**********************************
 		.bank	1
 		.org	$A000
+
 ;----------------------------
 main:
 		mov	frameCount,#60
@@ -2245,6 +2337,9 @@ main:
 ;set screen center
 		movw	<centerX, #128
 		movw	<centerY, #96
+
+;set screen scale
+		stz	<transform2DScale
 
 ;set eye position
 		stzw	<eyeTranslationX
@@ -2593,10 +2688,8 @@ setStarSprite
 		adc	#STAR_STRUCT_SIZE
 		tax
 		cpx	#STARTABLE_SIZE
-		beq	.loopEnd
-		jmp	.loop
+		jne	.loop
 
-.loopEnd
 		ply
 		plx
 		rts
@@ -2729,10 +2822,8 @@ checkShotEnemy:
 		clx
 .shotLoop:
 		lda	shotTable+OBJ_STATE,x
-		bne	.shotJump1
-		jmp	.shotJump0
+		jeq	.shotJump0
 
-.shotJump1:
 		sec
 		lda	shotTable+OBJ_X+2,x
 		sbc	#200
@@ -2784,19 +2875,15 @@ checkShotEnemy:
 		cly
 .enemyLoop:
 		lda	enemyTable+OBJ_STATE,y
-		bne	.enemyJump1
-		jmp	.enemyJump0
+		jeq	.enemyJump0
 
-.enemyJump1:
 		sec
 		lda	hitCheckX0
 		sbc	enemyTable+OBJ_X+2,y
 		lda	hitCheckX0+1
 		sbc	enemyTable+OBJ_X+3,y
-		bmi	.enemyJump2
-		jmp	.enemyJump0
+		jpl	.enemyJump0
 
-.enemyJump2:
 		sec
 		lda	hitCheckX1
 		sbc	enemyTable+OBJ_X+2,y
@@ -2864,8 +2951,7 @@ checkShotEnemy:
 		adc	#ENEMY_SIZE
 		tay
 		cpy	#ENEMYTABLE_SIZE
-		beq	.shotJump0
-		jmp	.enemyLoop
+		jne	.enemyLoop
 
 .shotJump0:
 		clc
@@ -2873,10 +2959,8 @@ checkShotEnemy:
 		adc	#SHOT_SIZE
 		tax
 		cpx	#SHOTTABLE_SIZE
-		beq	.shotLoopEnd
-		jmp	.shotLoop
+		jne	.shotLoop
 
-.shotLoopEnd:
 		ply
 		plx
 		rts
@@ -2891,10 +2975,8 @@ checkShotEshot:
 		clx
 .shotLoop:
 		lda	shotTable+OBJ_STATE,x
-		bne	.shotJump1
-		jmp	.shotJump0
+		jeq	.shotJump0
 
-.shotJump1:
 		sec
 		lda	shotTable+OBJ_X+2,x
 		sbc	#100
@@ -2946,19 +3028,15 @@ checkShotEshot:
 		cly
 .eshotLoop:
 		lda	eshotTable+OBJ_STATE,y
-		bne	.eshotJump1
-		jmp	.eshotJump0
+		jeq	.eshotJump0
 
-.eshotJump1:
 		sec
 		lda	hitCheckX0
 		sbc	eshotTable+OBJ_X+2,y
 		lda	hitCheckX0+1
 		sbc	eshotTable+OBJ_X+3,y
-		bmi	.eshotJump2
-		jmp	.eshotJump0
+		jpl	.eshotJump0
 
-.eshotJump2:
 		sec
 		lda	hitCheckX1
 		sbc	eshotTable+OBJ_X+2,y
@@ -3026,8 +3104,7 @@ checkShotEshot:
 		adc	#ESHOT_SIZE
 		tay
 		cpy	#ESHOTTABLE_SIZE
-		beq	.shotJump0
-		jmp	.eshotLoop
+		jne	.eshotLoop
 
 .shotJump0:
 		clc
@@ -3035,10 +3112,8 @@ checkShotEshot:
 		adc	#SHOT_SIZE
 		tax
 		cpx	#SHOTTABLE_SIZE
-		beq	.shotLoopEnd
-		jmp	.shotLoop
+		jne	.shotLoop
 
-.shotLoopEnd:
 		ply
 		plx
 		rts
@@ -3216,10 +3291,8 @@ moveEnemyTable:
 		adc	#ENEMY_SIZE
 		tax
 		cpx	#ENEMYTABLE_SIZE
-		beq	.moveEnemyTableEnd
-		jmp	.moveEnemyTableLoop
+		bne	.moveEnemyTableLoop
 
-.moveEnemyTableEnd:
 		plx
 		rts
 
@@ -3384,10 +3457,8 @@ moveEffectTable:
 		adc	#EFFECT_SIZE
 		tax
 		cpx	#EFFECTTABLE_SIZE
-		beq	.moveEffectTableEnd
-		jmp	.moveEffectTableLoop
+		bne	.moveEffectTableLoop
 
-.moveEffectTableEnd:
 		plx
 		rts
 
@@ -3566,10 +3637,8 @@ moveShotTable:
 		adc	#SHOT_SIZE
 		tax
 		cpx	#SHOTTABLE_SIZE
-		beq	.moveShotTableEnd
-		jmp	.moveShotTableLoop
+		bne	.moveShotTableLoop
 
-.moveShotTableEnd:
 		plx
 		rts
 
@@ -3640,10 +3709,8 @@ setEshotTable:
 		clx
 .setEshotTableLoop:
 		lda	eshotTable+OBJ_STATE,x
-		beq	.setEshotTableJump1
-		jmp	.setEshotTableJump0
+		jne	.setEshotTableJump0
 
-.setEshotTableJump1:
 		lda	#$01
 		sta	eshotTable+OBJ_STATE,x
 
@@ -3722,8 +3789,7 @@ setEshotTable:
 		adc	#ESHOT_SIZE
 		tax
 		cpx	#ESHOTTABLE_SIZE
-		beq	.setEshotTableEnd
-		jmp	.setEshotTableLoop
+		jne	.setEshotTableLoop
 
 .setEshotTableEnd:
 		plx
@@ -3738,10 +3804,8 @@ moveEshotTable:
 		clx
 .moveEshotTableLoop:
 		lda	eshotTable+OBJ_STATE,x
-		bne	.moveEshotTableJump1
-		jmp	.moveEshotTableJump0
+		jeq	.moveEshotTableJump0
 
-.moveEshotTableJump1:
 		clc
 		lda	eshotTable+OBJ_RX,x
 		adc	#8
@@ -3813,10 +3877,8 @@ moveEshotTable:
 		adc	#ESHOT_SIZE
 		tax
 		cpx	#ESHOTTABLE_SIZE
-		beq	.moveEshotTableEnd
-		jmp	.moveEshotTableLoop
+		jne	.moveEshotTableLoop
 
-.moveEshotTableEnd:
 		plx
 		rts
 
@@ -4257,6 +4319,7 @@ vdpdataend:
 
 		rts
 
+
 ;----------------------------
 modelData
 		.dw	0			;0
@@ -4278,6 +4341,7 @@ modelData
 		.dw	modelEffect1_2Data	;28
 		.dw	modelEffect1_3Data	;30
 
+
 ;----------------------------
 modelEffect0_0Data
 		.dw	modelEffect0_0DataWire
@@ -4287,13 +4351,13 @@ modelEffect0_0Data
 
 modelEffect0_0DataWire
 		.db	 0*6, 1*6	;0
-		.db	 2*6, 3*6	;0
-		.db	 4*6, 5*6	;0
-		.db	 6*6, 7*6	;0
-		.db	 8*6, 9*6	;0
-		.db	10*6,11*6	;0
-		.db	12*6,13*6	;0
-		.db	14*6,15*6	;0
+		.db	 2*6, 3*6	;1
+		.db	 4*6, 5*6	;2
+		.db	 6*6, 7*6	;3
+		.db	 8*6, 9*6	;4
+		.db	10*6,11*6	;5
+		.db	12*6,13*6	;6
+		.db	14*6,15*6	;7
 
 modelEffect0_0DataVertex
 		.dw	  -43,  -25,   -7;0
@@ -4609,11 +4673,11 @@ modelShotDataWire
 
 modelShotDataVertex
 		.dw	 -100,    0,  100;0
-		.dw	 -100,   25, -100;1
-		.dw	 -100,  -25, -100;2
+		.dw	 -100,   20, -100;1
+		.dw	 -100,  -20,  -50;2
 		.dw	  100,    0,  100;3
-		.dw	  100,   25, -100;4
-		.dw	  100,  -25, -100;5
+		.dw	  100,   20, -100;4
+		.dw	  100,  -20,  -50;5
 
 
 ;----------------------------
@@ -5122,42 +5186,39 @@ drawModelProc:
 ;clip front
 		jsr	clipFront
 
+		phy
+		ldy	<transform2DScale
+.scaleLoop:
+		beq	.scaleLoopEnd
+		asl	<clipFrontX
+		rol	<clipFrontX+1
+		asl	<clipFrontY
+		rol	<clipFrontY+1
+		dey
+		bra	.scaleLoop
+.scaleLoopEnd:
+		ply
+
+;clipFrontX+centerX
+		addw	<clipFrontX, <centerX
+;centerY-clipFrontY
+		subw	<clipFrontY, <centerY, <clipFrontY
+
 		bbr0	<frontClipFlag, .drawModelJump4
-
-		lda	<clipFrontX
-		sta	<lineX0
-
-		lda	<clipFrontX+1
-		sta	<lineX0+1
-
-		lda	<clipFrontY
-		sta	<lineY0
-
-		lda	<clipFrontY+1
-		sta	<lineY0+1
-
+		movw	<lineX0, <clipFrontX
+		movw	<lineY0, <clipFrontY
 		bra	.drawModelJump3
 
 .drawModelJump4:
-		lda	<clipFrontX
-		sta	<lineX1
-
-		lda	<clipFrontX+1
-		sta	<lineX1+1
-
-		lda	<clipFrontY
-		sta	<lineY1
-
-		lda	<clipFrontY+1
-		sta	<lineY1+1
+		movw	<lineX1, <clipFrontX
+		movw	<lineY1, <clipFrontY
 
 .drawModelJump3:
 		jsr	drawLineClip2D
 
 .drawModelJump0:
 		dec	<modelWireCount
-		bne	.drawModelLoop0
-
+		jne	.drawModelLoop0
 		rts
 
 
@@ -5207,13 +5268,10 @@ clipFront:
 		clc
 		lda	<mul16a
 		adc	transform2DWork1+0,x
-		sta	<mul16a
+		sta	<clipFrontX
 		lda	<mul16a+1
 		adc	transform2DWork1+1,x
-		sta	<mul16a+1
-
-;mul16a+centerX
-		addw	<clipFrontX, <mul16a, <centerX
+		sta	<clipFrontX+1
 
 ;(128-Z0) to mul16a
 		sec
@@ -5252,13 +5310,10 @@ clipFront:
 		clc
 		lda	<mul16a
 		adc	transform2DWork1+2,x
-		sta	<mul16a
+		sta	<clipFrontY
 		lda	<mul16a+1
 		adc	transform2DWork1+3,x
-		sta	<mul16a+1
-
-;centerY-mul16a
-		subw	<clipFrontY, <centerY, <mul16a
+		sta	<clipFrontY+1
 
 		ply
 		plx
@@ -5820,7 +5875,7 @@ transform2D2:
 
 ;----------------------------
 transform2DProc:
-;mul16a(rough value) = mul16c(-32768_32767) * 128 / mul16a(1_32767)
+;mul16a(rough value) = (mul16c(-32768_32767) * 128 / mul16a(1_32767)) << transform2DScale
 
 		phy
 ;c sign
@@ -6007,10 +6062,19 @@ transform2DProc:
 		sta	<sqrt64b+3
 
 .jp01:
-		lda	<sqrt64b+2
-		sta	<mul16a
-		lda	<sqrt64b+3
-		sta	<mul16a+1
+		movw	<mul16a, <sqrt64b+2
+		lda	<sqrt64b+1
+
+		ldy	<transform2DScale
+.scaleLoop:
+		beq	.scaleLoopEnd
+		asl	a
+		rol	<mul16a
+		rol	<mul16a+1
+
+		dey
+		bra	.scaleLoop
+.scaleLoopEnd:
 
 		ply
 		rts
@@ -6574,12 +6638,7 @@ setLineColor:
 initLineBuffer:
 ;
 		stz	<lineBufferCount
-
-		lda	#LOW(lineBuffer)
-		sta	lineBufferAddr
-		lda	#HIGH(lineBuffer)
-		sta	lineBufferAddr+1
-
+		movw	lineBufferAddr, #lineBuffer
 		rts
 
 
@@ -6589,10 +6648,7 @@ putLineBuffer:
 		lda	<lineBufferCount
 		beq	.putLineBufferEnd
 
-		lda	#LOW(lineBuffer)
-		sta	lineBufferAddr
-		lda	#HIGH(lineBuffer)
-		sta	lineBufferAddr+1
+		movw	lineBufferAddr, #lineBuffer
 
 .putLineBufferLoop:
 
@@ -6618,13 +6674,7 @@ putLineBuffer:
 
 		jsr	calcEdge
 
-		clc
-		lda	lineBufferAddr
-		adc	#$05
-		sta	lineBufferAddr
-		lda	lineBufferAddr+1
-		adc	#$00
-		sta	lineBufferAddr+1
+		addwb	lineBufferAddr, #$05
 
 		dec	<lineBufferCount
 		bne	.putLineBufferLoop
@@ -6657,13 +6707,7 @@ setLineBuffer:
 		lda	<lineColor
 		sta	[lineBufferAddr],y
 
-		clc
-		lda	lineBufferAddr
-		adc	#$05
-		sta	lineBufferAddr
-		lda	lineBufferAddr+1
-		adc	#$00
-		sta	lineBufferAddr+1
+		addwb	lineBufferAddr, #$05
 
 		inc	<lineBufferCount
 
@@ -7178,8 +7222,24 @@ calcEdge:
 
 .edgeJump4:
 ;edgeSlopeY >= edgeSlopeX
-;edgeSlopeTemp initialize
+;set mask
+		lda	<edgeX0
+		and	#$07
+		tax
+		lda	wireLinePixelDatas,x
+		sta	<CHMask
+		lda	wireLinePixelMasks,x
+		sta	<CHNegMask
 
+		lda	<CH0Data
+		and	<CHMask
+		sta	<CH0
+
+		lda	<CH1Data
+		and	<CHMask
+		sta	<CH1
+
+;edgeSlopeTemp initialize
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
@@ -7191,8 +7251,6 @@ calcEdge:
 		bbs7	<edgeSignX, .edgeYLoop4Jump2
 
 ;edgeSignX plus
-		bra	.edgeYLoop0Jump1
-
 .edgeYLoop0:
 		jsr	putPixelEdge
 
@@ -7206,28 +7264,22 @@ calcEdge:
 		sbc	<edgeSlopeY
 		inx
 
-.edgeYLoop0Jump1:
 		pha
 
-		phx
-		txa
-		and	#$07
-		tax
-		lda	wireLinePixelDatas,x
-		sta	<CHMask
-		lda	wireLinePixelMasks,x
-		sta	<CHNegMask
-		plx
+		lda	<CHNegMask
+		lsr	a
+		ror	<CHNegMask
 
-		lda	<CH0Data
-		and	<CHMask
-		sta	<CH0
+		lda	<CH0
+		lsr	a
+		ror	<CH0
 
-		lda	<CH1Data
-		and	<CHMask
-		sta	<CH1
+		lda	<CH1
+		lsr	a
+		ror	<CH1
 
 		pla
+
 		bra	.edgeYLoop0
 
 .edgeYLoop0Jump0:
@@ -7235,7 +7287,6 @@ calcEdge:
 
 .edgeYLoop4Jump2:
 ;edgeSignX minus
-		bra	.edgeYLoop4Jump1
 .edgeYLoop4:
 		jsr	putPixelEdge
 
@@ -7249,28 +7300,22 @@ calcEdge:
 		sbc	<edgeSlopeY
 		dex
 
-.edgeYLoop4Jump1:
 		pha
 
-		phx
-		txa
-		and	#$07
-		tax
-		lda	wireLinePixelDatas,x
-		sta	<CHMask
-		lda	wireLinePixelMasks,x
-		sta	<CHNegMask
-		plx
+		lda	<CHNegMask
+		asl	a
+		rol	<CHNegMask
 
-		lda	<CH0Data
-		and	<CHMask
-		sta	<CH0
+		lda	<CH0
+		asl	a
+		rol	<CH0
 
-		lda	<CH1Data
-		and	<CHMask
-		sta	<CH1
+		lda	<CH1
+		asl	a
+		rol	<CH1
 
 		pla
+
 		bra	.edgeYLoop4
 
 .edgeYLoop4Jump0:
