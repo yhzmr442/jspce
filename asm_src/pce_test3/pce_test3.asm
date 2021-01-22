@@ -7328,22 +7328,20 @@ putPixelEdge:
 		pha
 		phx
 
+;first addr
 		lda	wireLineAddrConvYLow0,y
 		ora	wireLineAddrConvXLow0,x
-		sta	<setVramChrAddr
+		pha
 
 		lda	wireLineAddrConvYHigh0,y
 		ora	wireLineAddrConvXHigh0,x
 		clc
 		adc	<wireBGAddr
-		sta	<setVramChrAddr+1
+		tax
+		pla
 
 ;put pixel
 		sei
-
-;first addr
-		lda	<setVramChrAddr
-		ldx	<setVramChrAddr+1
 
 ;set write first addr
 		st0	#$00
@@ -7532,18 +7530,12 @@ putHorizontalLine:
 ;----------------------------
 putHorizontalLine01Left:
 ;put left horizontal line
-		movw	<setVramChrAddr, <wireLineLeftAddr
-
-		mov	<CHMask, <wireLineLeftData
-
-		mov	<CHNegMask, <wireLineLeftMask
+;first addr
+		lda	<wireLineLeftAddr
+		ldx	<wireLineLeftAddr+1
 
 ;put pixel
 		sei
-
-;first addr
-		lda	<setVramChrAddr
-		ldx	<setVramChrAddr+1
 
 ;set write first addr
 		st0	#$00
@@ -7559,20 +7551,20 @@ putHorizontalLine01Left:
 		st0	#$02
 
 		lda	VDC_2
-		and	<CHNegMask
+		and	<wireLineLeftMask
 		sta	<CH0
 
 		lda	<CH0Data
-		and	<CHMask
+		and	<wireLineLeftData
 		ora	<CH0
 		tax
 
 		lda	VDC_3
-		and	<CHNegMask
+		and	<wireLineLeftMask
 		sta	<CH1
 
 		lda	<CH1Data
-		and	<CHMask
+		and	<wireLineLeftData
 		ora	<CH1
 
 ;write
@@ -7587,18 +7579,12 @@ putHorizontalLine01Left:
 ;----------------------------
 putHorizontalLine01Right:
 ;put right horizontal line
-		movw	<setVramChrAddr, <wireLineRightAddr
-
-		mov	<CHMask, <wireLineRightData
-
-		mov	<CHNegMask, <wireLineRightMask
+;first addr
+		lda	<wireLineRightAddr
+		ldx	<wireLineRightAddr+1
 
 ;put pixel
 		sei
-
-;first addr
-		lda	<setVramChrAddr
-		ldx	<setVramChrAddr+1
 
 ;set write first addr
 		st0	#$00
@@ -7614,20 +7600,20 @@ putHorizontalLine01Right:
 		st0	#$02
 
 		lda	VDC_2
-		and	<CHNegMask
+		and	<wireLineRightMask
 		sta	<CH0
 
 		lda	<CH0Data
-		and	<CHMask
+		and	<wireLineRightData
 		ora	<CH0
 		tax
 
 		lda	VDC_3
-		and	<CHNegMask
+		and	<wireLineRightMask
 		sta	<CH1
 
 		lda	<CH1Data
-		and	<CHMask
+		and	<wireLineRightData
 		ora	<CH1
 
 ;write
