@@ -3,8 +3,10 @@
 ;0400-07FF	BG1	 1KWORD
 ;0800-0FFF		 2KWORD	SPCHR SATB
 ;1000-1FFF	CHR	 4KWORD	0-255CHR
-;2000-4FFF	CHRBG	12KWORD	32*24CHR(256*192 2bpp*2)
-;5000-7FFF
+;2000-37FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp*2)
+;3800-3FFF
+;4000-57FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp*2)
+;5800-7FFF
 
 ;MEMORY
 ;0000	I/O
@@ -19,7 +21,7 @@
 
 ;//////////////////////////////////
 CHRBG0Addr		.equ	$20
-CHRBG1Addr		.equ	$38
+CHRBG1Addr		.equ	$40
 
 chardatBank		.equ	3
 muldatBank		.equ	4
@@ -781,7 +783,37 @@ transform2DWork0	.ds	256
 transform2DWork1	.ds	256
 
 ;---------------------
-lineBuffer		.ds	1024
+			.rsset	$0
+LINEBUFFER_X0		.rs	1
+LINEBUFFER_Y0		.rs	1
+LINEBUFFER_X1		.rs	1
+LINEBUFFER_Y1		.rs	1
+LINEBUFFER_COLOR	.rs	1
+LINEBUFFER_SIZE		.rs	0
+LINEBUFFER_MAX		.equ	200
+
+lineBuffer		.ds	LINEBUFFER_SIZE*LINEBUFFER_MAX
+
+;---------------------
+			.rsset	$0
+MODELDATA_WIREADDR	.rs	2
+MODELDATA_WIRECOUNT	.rs	1
+MODELDATA_VERTEXADDR	.rs	2
+MODELDATA_VERTEXCOUNT	.rs	1
+MODELDATA_SIZE		.rs	0
+
+;---------------------
+			.rsset	$0
+MODELDATAWIRE_0		.rs	1
+MODELDATAWIRE_1		.rs	1
+MODELDATAWIRE_SIZE	.rs	0
+
+;---------------------
+			.rsset	$0
+MODELDATAVERTEX_X	.rs	2
+MODELDATAVERTEX_Y	.rs	2
+MODELDATAVERTEX_Z	.rs	2
+MODELDATAVERTEX_SIZE	.rs	0
 
 ;---------------------
 ;---------------------
@@ -4961,14 +4993,14 @@ drawModel:
 		phy
 
 ;rotation
-		ldy	#$05
+		ldy	#MODELDATA_VERTEXCOUNT
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
 
-		ldy	#$03
+		ldy	#MODELDATA_VERTEXADDR
 		lda	[modelAddr],y		;vertex data address
 		sta	<vertex0Addr
-		ldy	#$04
+		iny
 		lda	[modelAddr],y
 		sta	<vertex0Addr+1
 
@@ -4977,7 +5009,7 @@ drawModel:
 		jsr	vertexMultiply
 
 ;translation
-		ldy	#$05
+		ldy	#MODELDATA_VERTEXCOUNT
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
 
@@ -4996,7 +5028,7 @@ drawModel:
 ;eye rotation
 		jsr	moveEyeMatrixToMatrix2
 
-		ldy	#$05
+		ldy	#MODELDATA_VERTEXCOUNT
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
 
@@ -5007,14 +5039,14 @@ drawModel:
 		jsr	vertexMultiply
 
 ;move transform2DWork0 to transform2DWork1
-		ldy	#$05
+		ldy	#MODELDATA_VERTEXCOUNT
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
 
 		jsr	copy2DWork0To2DWork1
 
 ;transform2D
-		ldy	#$05
+		ldy	#MODELDATA_VERTEXCOUNT
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
 
@@ -5039,14 +5071,14 @@ drawModel2:
 		phy
 
 ;rotation
-		ldy	#$05
+		ldy	#MODELDATA_VERTEXCOUNT
 		lda	[modelAddr],y		;vertex count
 		sta	<vertexCount
 
-		ldy	#$03
+		ldy	#MODELDATA_VERTEXADDR
 		lda	[modelAddr],y		;vertex data address
 		sta	<vertex0Addr
-		ldy	#$04
+		iny
 		lda	[modelAddr],y
 		sta	<vertex0Addr+1
 
@@ -5115,14 +5147,14 @@ drawModel2:
 ;----------------------------
 drawModelProc:
 ;
-		ldy	#$00
+		ldy	#MODELDATA_WIREADDR
 		lda	[modelAddr],y
 		sta	<modelAddrWork		;ModelData Wire Addr
 		iny
 		lda	[modelAddr],y
 		sta	<modelAddrWork+1
 
-		ldy	#$02
+		ldy	#MODELDATA_WIRECOUNT
 		lda	[modelAddr],y		;Wire Count
 		sta	<modelWireCount
 
@@ -6651,7 +6683,6 @@ putLineBuffer:
 		movw	lineBufferAddr, #lineBuffer
 
 .putLineBufferLoop:
-
 		cly
 		lda	[lineBufferAddr],y
 		sta	<edgeX0
@@ -6674,7 +6705,7 @@ putLineBuffer:
 
 		jsr	calcEdge
 
-		addwb	lineBufferAddr, #$05
+		addwb	lineBufferAddr, #LINEBUFFER_SIZE
 
 		dec	<lineBufferCount
 		bne	.putLineBufferLoop
@@ -6707,7 +6738,7 @@ setLineBuffer:
 		lda	<lineColor
 		sta	[lineBufferAddr],y
 
-		addwb	lineBufferAddr, #$05
+		addwb	lineBufferAddr, #LINEBUFFER_SIZE
 
 		inc	<lineBufferCount
 
@@ -7247,12 +7278,14 @@ calcEdge:
 		ldx	<edgeX0
 		ldy	<edgeY0
 
+		stz	<wireLineCount
+
 ;check edgeSignX
 		bbs7	<edgeSignX, .edgeYLoop4Jump2
 
 ;edgeSignX plus
 .edgeYLoop0:
-		jsr	putPixelEdge
+		inc	<wireLineCount
 
 		cpy	<edgeY1
 		beq	.edgeYLoop0Jump0
@@ -7263,6 +7296,11 @@ calcEdge:
 
 		sbc	<edgeSlopeY
 		inx
+
+		jsr	putVerticalLine
+
+		stx	<edgeX0
+		sty	<edgeY0
 
 		pha
 
@@ -7283,12 +7321,13 @@ calcEdge:
 		bra	.edgeYLoop0
 
 .edgeYLoop0Jump0:
+		jsr	putVerticalLine
 		rts
 
 .edgeYLoop4Jump2:
 ;edgeSignX minus
 .edgeYLoop4:
-		jsr	putPixelEdge
+		inc	<wireLineCount
 
 		cpy	<edgeY1
 		beq	.edgeYLoop4Jump0
@@ -7299,6 +7338,11 @@ calcEdge:
 
 		sbc	<edgeSlopeY
 		dex
+
+		jsr	putVerticalLine
+
+		stx	<edgeX0
+		sty	<edgeY0
 
 		pha
 
@@ -7319,40 +7363,49 @@ calcEdge:
 		bra	.edgeYLoop4
 
 .edgeYLoop4Jump0:
+		jsr	putVerticalLine
 		rts
 
 
 ;----------------------------
-putPixelEdge:
+putVerticalLine:
 ;
 		pha
 		phx
+		phy
 
-;first addr
-		lda	wireLineAddrConvYLow0,y
-		ora	wireLineAddrConvXLow0,x
+		ldx	<edgeX0
+		ldy	<edgeY0
+
+		lda	wireLineAddrConvXLow0,x
+		sta	<setVramChrAddr
+		ora	wireLineAddrConvYLow0,y
 		pha
 
-		lda	wireLineAddrConvYHigh0,y
-		ora	wireLineAddrConvXHigh0,x
-		clc
-		adc	<wireBGAddr
+		lda	wireLineAddrConvXHigh0,x
+		ora	<wireBGAddr
+		sta	<setVramChrAddr+1
+		ora	wireLineAddrConvYHigh0,y
 		tax
+
+		tya
+		and	#$07
+		tay
 		pla
 
-;put pixel
 		sei
-
-;set write first addr
+.jp00:
+;set write addr
 		st0	#$00
 		sta	VDC_2
 		stx	VDC_3
 
-;set read first addr
+;set read addr
 		st0	#$01
 		sta	VDC_2
 		stx	VDC_3
 
+.loop00:
 ;read
 		st0	#$02
 
@@ -7369,10 +7422,37 @@ putPixelEdge:
 		stx	VDC_2
 		sta	VDC_3
 
+		dec	<wireLineCount
+		beq	.jpEnd
+
+		inc	<edgeY0
+
+		iny
+		cpy	#$08
+		bne	.loop00
+
+		ldy	<edgeY0
+
+		lda	wireLineAddrConvYLow0,y
+		ora	<setVramChrAddr
+		pha
+
+		lda	wireLineAddrConvYHigh0,y
+		ora	<setVramChrAddr+1
+		tax
+		pla
+
+		cly
+
+		bra	.jp00
+
+.jpEnd:
 		cli
 
+		ply
 		plx
 		pla
+
 		rts
 
 
@@ -7387,8 +7467,7 @@ putPixel:
 
 		lda	wireLineAddrConvYHigh0,y
 		ora	wireLineAddrConvXHigh0,x
-		clc
-		adc	<wireBGAddr
+		ora	<wireBGAddr
 		sta	<setVramChrAddr+1
 
 		txa
@@ -7462,8 +7541,7 @@ putHorizontalLine:
 
 		lda	wireLineAddrConvYHigh0,y
 		ora	wireLineAddrConvXHigh0,x
-		clc
-		adc	<wireBGAddr
+		ora	<wireBGAddr
 		sta	<wireLineLeftAddr+1
 
 		lda	wireLineAddrConvX,x
@@ -7485,8 +7563,7 @@ putHorizontalLine:
 
 		lda	wireLineAddrConvYHigh0,y
 		ora	wireLineAddrConvXHigh0,x
-		clc
-		adc	<wireBGAddr
+		ora	<wireBGAddr
 		sta	<wireLineRightAddr+1
 
 		sec
@@ -7505,9 +7582,9 @@ putHorizontalLine:
 		lda	<wireLineCount
 		beq	.wireLineJump03
 
-		jsr	putHorizontalLine00
-		jsr	putHorizontalLine01Left
-		jsr	putHorizontalLine01Right
+		jsr	putHorizontalLineProc
+		jsr	putHorizontalLineProcLeft
+		jsr	putHorizontalLineProcRight
 
 		bra	.wireLineJump04
 
@@ -7518,7 +7595,7 @@ putHorizontalLine:
 		eor	#$FF
 		sta	<wireLineLeftMask
 
-		jsr	putHorizontalLine01Left
+		jsr	putHorizontalLineProcLeft
 
 .wireLineJump04:
 		plx
@@ -7528,7 +7605,7 @@ putHorizontalLine:
 
 
 ;----------------------------
-putHorizontalLine01Left:
+putHorizontalLineProcLeft:
 ;put left horizontal line
 ;first addr
 		lda	<wireLineLeftAddr
@@ -7577,7 +7654,7 @@ putHorizontalLine01Left:
 
 
 ;----------------------------
-putHorizontalLine01Right:
+putHorizontalLineProcRight:
 ;put right horizontal line
 ;first addr
 		lda	<wireLineRightAddr
@@ -7626,22 +7703,22 @@ putHorizontalLine01Right:
 
 
 ;----------------------------
-putHorizontalLine00:
+putHorizontalLineProc:
 ;put left to right horizontal line
 		add	<setVramChrAddr, <wireLineLeftAddr, #$10
 
 		lda	<wireLineLeftAddr+1
-		bcc	.putHorizontalLine00Jump0
+		bcc	.putHorizontalLineProcJump
 		inc	a
 
-.putHorizontalLine00Jump0:
+.putHorizontalLineProcJump:
 		sta	<setVramChrAddr+1
 
 		ldx	<wireLineCount
 
-.putHorizontalLine00Loop:
+.putHorizontalLineProcLoop:
 		dex
-		beq	.putHorizontalLine00Jump
+		beq	.putHorizontalLineProcEnd
 
 ;put pixel
 		sei
@@ -7661,11 +7738,11 @@ putHorizontalLine00:
 
 		add	<setVramChrAddr, #$10
 
-		bcc	.putHorizontalLine00Loop
+		bcc	.putHorizontalLineProcLoop
 		inc	<setVramChrAddr+1
-		bra	.putHorizontalLine00Loop
+		bra	.putHorizontalLineProcLoop
 
-.putHorizontalLine00Jump:
+.putHorizontalLineProcEnd:
 		rts
 
 
@@ -7681,6 +7758,7 @@ clearBG:
 .clearbatloop8:
 		ldx	#32
 .clearbatloop9:
+;set char$00
 		st1	#$00
 		st2	#$01
 
@@ -7690,7 +7768,8 @@ clearBG:
 		bne	.clearbatloop8
 
 ;clear BG0 BAT
-		movw	<clearBGWork, #$2200
+;y<96
+		movw	<clearBGWork, #$2000+CHRBG0Addr*16
 
 		st0	#$00
 		st1	#$00
@@ -7710,7 +7789,8 @@ clearBG:
 		dey
 		bne	.clearbatloop0
 
-		movw	<clearBGWork, #$3200
+;y>=96
+		movw	<clearBGWork, #$3000+CHRBG0Addr*16
 
 		st0	#$00
 		st1	#$80
@@ -7731,7 +7811,8 @@ clearBG:
 		bne	.clearbatloop0B
 
 ;clear BG1 BAT
-		movw	<clearBGWork, #$2380
+;y<96
+		movw	<clearBGWork, #$2000+CHRBG1Addr*16
 
 		st0	#$00
 		st1	#$00
@@ -7751,8 +7832,8 @@ clearBG:
 		dey
 		bne	.clearbatloop2
 
-;clear BG1 BAT
-		movw	<clearBGWork, #$3380
+;y>=96
+		movw	<clearBGWork, #$3000+CHRBG1Addr*16
 
 		st0	#$00
 		st1	#$80
