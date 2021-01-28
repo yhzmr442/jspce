@@ -453,20 +453,20 @@ cmpzw		.macro
 			sec
 			lda	\1
 			sbc	#LOW(\2)
-			sta	$2100,x
+			sta	$2100, x
 			lda	\1+1
 			sbc	#HIGH(\2)
 		.else
 			sec
 			lda	\1
 			sbc	\2
-			sta	$2100,x
+			sta	$2100, x
 			lda	\1+1
 			sbc	\2+1
 		.endif
 
 		php
-		ora	$2100,x
+		ora	$2100, x
 		bne	.jp0\@
 
 		pla
@@ -524,36 +524,36 @@ cmpzq		.macro
 			sec
 			lda	\1
 			sbc	#LOW(\3)
-			sta	$2100,x
+			sta	$2100, x
 			lda	\1+1
 			sbc	#HIGH(\3)
-			ora	$2100,x
-			sta	$2100,x
+			ora	$2100, x
+			sta	$2100, x
 			lda	\1+2
 			sbc	#LOW(\2)
-			ora	$2100,x
-			sta	$2100,x
+			ora	$2100, x
+			sta	$2100, x
 			lda	\1+3
 			sbc	#HIGH(\2)
 		.else
 			sec
 			lda	\1
 			sbc	\2
-			sta	$2100,x
+			sta	$2100, x
 			lda	\1+1
 			sbc	\2+1
-			ora	$2100,x
-			sta	$2100,x
+			ora	$2100, x
+			sta	$2100, x
 			lda	\1+2
 			sbc	\2+2
-			ora	$2100,x
-			sta	$2100,x
+			ora	$2100, x
+			sta	$2100, x
 			lda	\1+3
 			sbc	\2+3
 		.endif
 
 		php
-		ora	$2100,x
+		ora	$2100, x
 		bne	.jp0\@
 
 		pla
@@ -633,6 +633,8 @@ clearBGWork		.ds	2
 
 CH0			.ds	1
 CH1			.ds	1
+CH0Work			.ds	1
+CH1Work			.ds	1
 getVramChrAddr		.ds	2
 setVramChrAddr		.ds	2
 
@@ -1002,24 +1004,20 @@ sdiv32:
 
 ;d neg
 		sec
-		lda	<div16c
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16c
 		sta	<div16c
 
-		lda	<div16c+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16c+1
 		sta	<div16c+1
 
-		lda	<div16d
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16d
 		sta	<div16d
 
-		lda	<div16d+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16d+1
 		sta	<div16d+1
 
 .sdiv32jp00:
@@ -1028,14 +1026,12 @@ sdiv32:
 
 ;a neg
 		sec
-		lda	<div16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a
 		sta	<div16a
 
-		lda	<div16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a+1
 		sta	<div16a+1
 
 .sdiv32jp01:
@@ -1047,14 +1043,12 @@ sdiv32:
 
 ;anser neg
 		sec
-		lda	<div16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a
 		sta	<div16a
 
-		lda	<div16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a+1
 		sta	<div16a+1
 
 .sdiv32jp02:
@@ -1064,14 +1058,12 @@ sdiv32:
 
 ;remainder neg
 		sec
-		lda	<div16b
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16b
 		sta	<div16b
 
-		lda	<div16b+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16b+1
 		sta	<div16b+1
 
 .sdiv32jp03:
@@ -1178,7 +1170,7 @@ sqrt64:
 ;push x
 		phx
 
-		bbr7	<sqrt64a+7,.sqrtjump3
+		bbr7	<sqrt64a+7, .sqrtjump3
 
 		lda	#$FF
 		sta	<sqrt64b
@@ -1358,44 +1350,36 @@ sdiv64:
 
 ;64a neg
 		sec
-		lda	<div64a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a
 		sta	<div64a
 
-		lda	<div64a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+1
 		sta	<div64a+1
 
-		lda	<div64a+2
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+2
 		sta	<div64a+2
 
-		lda	<div64a+3
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+3
 		sta	<div64a+3
 
-		lda	<div64a+4
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+4
 		sta	<div64a+4
 
-		lda	<div64a+5
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+5
 		sta	<div64a+5
 
-		lda	<div64a+6
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+6
 		sta	<div64a+6
 
-		lda	<div64a+7
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div64a+7
 		sta	<div64a+7
 
 .sdiv64jp00:
@@ -1404,24 +1388,20 @@ sdiv64:
 
 ;b:a neg
 		sec
-		lda	<div16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a
 		sta	<div16a
 
-		lda	<div16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a+1
 		sta	<div16a+1
 
-		lda	<div16b
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16b
 		sta	<div16b
 
-		lda	<div16b+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16b+1
 		sta	<div16b+1
 
 .sdiv64jp01:
@@ -1433,24 +1413,20 @@ sdiv64:
 
 ;anser neg
 		sec
-		lda	<div16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a
 		sta	<div16a
 
-		lda	<div16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16a+1
 		sta	<div16a+1
 
-		lda	<div16b
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16b
 		sta	<div16b
 
-		lda	<div16b+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16b+1
 		sta	<div16b+1
 
 .sdiv64jp02:
@@ -1460,24 +1436,20 @@ sdiv64:
 
 ;remainder neg
 		sec
-		lda	<div16c
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16c
 		sta	<div16c
 
-		lda	<div16c+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16c+1
 		sta	<div16c+1
 
-		lda	<div16d
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16d
 		sta	<div16d
 
-		lda	<div16d+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<div16d+1
 		sta	<div16d+1
 
 .sdiv64jp03:
@@ -1651,14 +1623,12 @@ smul16:
 
 ;a neg
 		sec
-		lda	<mul16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16a
 		sta	<mul16a
 
-		lda	<mul16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16a+1
 		sta	<mul16a+1
 
 .smul16jp00:
@@ -1667,14 +1637,12 @@ smul16:
 
 ;b neg
 		sec
-		lda	<mul16b
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16b
 		sta	<mul16b
 
-		lda	<mul16b+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16b+1
 		sta	<mul16b+1
 
 .smul16jp01:
@@ -1686,24 +1654,20 @@ smul16:
 
 ;anser neg
 		sec
-		lda	<mul16c
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c
 		sta	<mul16c
 
-		lda	<mul16c+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c+1
 		sta	<mul16c+1
 
-		lda	<mul16d
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16d
 		sta	<mul16d
 
-		lda	<mul16d+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16d+1
 		sta	<mul16d+1
 
 .smul16jp02:
@@ -1716,6 +1680,8 @@ umul16:
 ;push y
 		phy
 
+		stz	<muladdr
+
 		ldy	<mul16b
 		lda	umul16Bank, y
 
@@ -1723,32 +1689,29 @@ umul16:
 		tam	#$02
 
 		lda	umul16Address, y
-		stz	<muladdr
 		sta	<muladdr+1
 
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<mul16c
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<mul16c+1
-
 
 		clc
 		lda	<mulbank
-		adc	#8
+		adc	#8		;carry clear
 		tam	#$02
 
-		clc
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16c+1
 		sta	<mul16c+1
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
-		adc	#0
+		lda	[muladdr], y
+		adc	#0		;carry clear
 		sta	<mul16d
 
 
@@ -1761,34 +1724,31 @@ umul16:
 		lda	umul16Address, y
 		sta	<muladdr+1
 
-		clc
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16c+1
 		sta	<mul16c+1
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16d
 		sta	<mul16d
 
 		cla
-		adc	#0
+		adc	#0		;carry clear
 		sta	<mul16d+1
 
 		lda	<mulbank
-		clc
-		adc	#8
+		adc	#8		;carry clear
 		tam	#$02
 
-		clc
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16d
 		sta	<mul16d
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16d+1
 		sta	<mul16d+1
 
@@ -1810,24 +1770,20 @@ smul32:
 
 ;b neg
 		sec
-		lda	<mul16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16a
 		sta	<mul16a
 
-		lda	<mul16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16a+1
 		sta	<mul16a+1
 
-		lda	<mul16b
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16b
 		sta	<mul16b
 
-		lda	<mul16b+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16b+1
 		sta	<mul16b+1
 
 .smul32jp00:
@@ -1836,24 +1792,20 @@ smul32:
 
 ;d neg
 		sec
-		lda	<mul16c
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c
 		sta	<mul16c
 
-		lda	<mul16c+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c+1
 		sta	<mul16c+1
 
-		lda	<mul16d
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16d
 		sta	<mul16d
 
-		lda	<mul16d+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16d+1
 		sta	<mul16d+1
 
 .smul32jp01:
@@ -1865,44 +1817,36 @@ smul32:
 
 ;anser neg
 		sec
-		lda	<mul16a
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16a
 		sta	<mul16a
 
-		lda	<mul16a+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16a+1
 		sta	<mul16a+1
 
-		lda	<mul16b
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16b
 		sta	<mul16b
 
-		lda	<mul16b+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16b+1
 		sta	<mul16b+1
 
-		lda	<mul16c
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c
 		sta	<mul16c
 
-		lda	<mul16c+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c+1
 		sta	<mul16c+1
 
-		lda	<mul16d
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16d
 		sta	<mul16d
 
-		lda	<mul16d+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16d+1
 		sta	<mul16d+1
 
 .smul32jp02:
@@ -2198,10 +2142,10 @@ _reset:
 ;RAM page1
 		lda	#$F8
 		tam	#$01
+
 ;jump main
 		lda	#$01
 		tam	#$05
-
 		jmp	main
 
 
@@ -2325,7 +2269,7 @@ umul16Address
 
 ;----------------------------
 main:
-		mov	frameCount,#60
+		mov	frameCount, #60
 		stz	drawCount
 		stz	drawCountWork
 
@@ -2341,17 +2285,17 @@ main:
 		st2	#$08
 
 		st0	#$02
-		tia	spriteSightsData,VDC_2,128
-		tia	spriteStarData,VDC_2,128
+		tia	spriteSightsData, VDC_2, 128
+		tia	spriteStarData, VDC_2, 128
 
 ;initialize sprite table
 		stz	spriteAttrTable
-		tii	spriteAttrTable,spriteAttrTable+1,511
+		tii	spriteAttrTable, spriteAttrTable+1, 511
 
-		movw	spriteAttrTable+SPRITE_Y,#96-8+64
-		movw	spriteAttrTable+SPRITE_X,#128-8+32
-		movw	spriteAttrTable+SPRITE_NO,#$0040
-		movw	spriteAttrTable+SPRITE_ATTR,#$0080
+		movw	spriteAttrTable+SPRITE_Y, #96-8+64
+		movw	spriteAttrTable+SPRITE_X, #128-8+32
+		movw	spriteAttrTable+SPRITE_NO, #$0040
+		movw	spriteAttrTable+SPRITE_ATTR, #$0080
 
 ;initialize random
 		jsr	initRandom
@@ -2443,13 +2387,13 @@ main:
 		jsr	regEffectTable
 
 ;set line buffer process
-		movw	<eyeTranslationX,shipTranslationX
-		movw	<eyeTranslationY,shipTranslationY
-		movw	<eyeTranslationZ,shipTranslationZ
+		movw	<eyeTranslationX, shipTranslationX
+		movw	<eyeTranslationY, shipTranslationY
+		movw	<eyeTranslationZ, shipTranslationZ
 
-		mov	<eyeRotationX,shipRotationX
-		mov	<eyeRotationY,shipRotationY
-		mov	<eyeRotationZ,shipRotationZ
+		mov	<eyeRotationX, shipRotationX
+		mov	<eyeRotationY, shipRotationY
+		mov	<eyeRotationZ, shipRotationZ
 
 		jsr	drawObjRegTable
 
@@ -2616,7 +2560,7 @@ setSpriteAttrTable:
 		st2	#$0F
 
 		st0	#$02
-		tia	spriteAttrTable,VDC_2,SPRITE_STRUCT_SIZE*(STAR_MAX+1)
+		tia	spriteAttrTable, VDC_2, SPRITE_STRUCT_SIZE*(STAR_MAX+1)
 
 		st0	#$13
 		st1	#$00
@@ -2636,79 +2580,79 @@ setStarSprite
 		cly
 
 .loop:
-		lda	starTable+STAR_X,x
+		lda	starTable+STAR_X, x
 		sta	<mul16c
-		lda	starTable+STAR_X+1,x
+		lda	starTable+STAR_X+1, x
 		sta	<mul16c+1
 
-		lda	starTable+STAR_Z,x
+		lda	starTable+STAR_Z, x
 		sta	<mul16a
-		lda	starTable+STAR_Z+1,x
+		lda	starTable+STAR_Z+1, x
 		sta	<mul16a+1
 
 		jsr	transform2DProc
 		clc
 		lda	<mul16a
 		adc	<centerX
-		sta	spriteStar+SPRITE_X,y
+		sta	spriteStar+SPRITE_X, y
 		lda	<mul16a+1
 		adc	<centerX+1
-		sta	spriteStar+SPRITE_X+1,y
+		sta	spriteStar+SPRITE_X+1, y
 
 		clc
-		lda	spriteStar+SPRITE_X,y
+		lda	spriteStar+SPRITE_X, y
 		adc	#32-8
-		sta	spriteStar+SPRITE_X,y
-		lda	spriteStar+SPRITE_X+1,y
+		sta	spriteStar+SPRITE_X, y
+		lda	spriteStar+SPRITE_X+1, y
 		adc	#0
-		sta	spriteStar+SPRITE_X+1,y
+		sta	spriteStar+SPRITE_X+1, y
 
-		lda	starTable+STAR_Y,x
+		lda	starTable+STAR_Y, x
 		sta	<mul16c
-		lda	starTable+STAR_Y+1,x
+		lda	starTable+STAR_Y+1, x
 		sta	<mul16c+1
 
-		lda	starTable+STAR_Z,x
+		lda	starTable+STAR_Z, x
 		sta	<mul16a
-		lda	starTable+STAR_Z+1,x
+		lda	starTable+STAR_Z+1, x
 		sta	<mul16a+1
 
 		jsr	transform2DProc
 		sec
 		lda	<centerY
 		sbc	<mul16a
-		sta	spriteStar+SPRITE_Y,y
+		sta	spriteStar+SPRITE_Y, y
 		lda	<centerY+1
 		sbc	<mul16a+1
-		sta	spriteStar+SPRITE_Y+1,y
+		sta	spriteStar+SPRITE_Y+1, y
 
 		clc
-		lda	spriteStar+SPRITE_Y,y
+		lda	spriteStar+SPRITE_Y, y
 		adc	#64-8
-		sta	spriteStar+SPRITE_Y,y
-		lda	spriteStar+SPRITE_Y+1,y
+		sta	spriteStar+SPRITE_Y, y
+		lda	spriteStar+SPRITE_Y+1, y
 		adc	#0
-		sta	spriteStar+SPRITE_Y+1,y
+		sta	spriteStar+SPRITE_Y+1, y
 
 		sec
-		lda	spriteStar+SPRITE_Y,y
+		lda	spriteStar+SPRITE_Y, y
 		sbc	#192+64-8
-		lda	spriteStar+SPRITE_Y+1,y
+		lda	spriteStar+SPRITE_Y+1, y
 		sbc	#0
 		bcc	.jp00
 		lda	#$FF
-		sta	spriteStar+SPRITE_Y+1,y
+		sta	spriteStar+SPRITE_Y+1, y
 .jp00:
 
 		lda	#$42
-		sta	spriteStar+SPRITE_NO,y
+		sta	spriteStar+SPRITE_NO, y
 		lda	#$00
-		sta	spriteStar+SPRITE_NO+1,y
+		sta	spriteStar+SPRITE_NO+1, y
 
 		lda	#$00
-		sta	spriteStar+SPRITE_ATTR,y
+		sta	spriteStar+SPRITE_ATTR, y
 		lda	#$00
-		sta	spriteStar+SPRITE_ATTR+1,y
+		sta	spriteStar+SPRITE_ATTR+1, y
 
 		clc
 		tya
@@ -2735,36 +2679,36 @@ moveStarTable:
 		clx
 .loop:
 		clc
-		lda	starTable+STAR_X,x
+		lda	starTable+STAR_X, x
 		adc	starShiftX
-		sta	starTable+STAR_X,x
+		sta	starTable+STAR_X, x
 
-		lda	starTable+STAR_X+1,x
+		lda	starTable+STAR_X+1, x
 		adc	starShiftX+1
-		sta	starTable+STAR_X+1,x
+		sta	starTable+STAR_X+1, x
 
 		clc
-		lda	starTable+STAR_Y,x
+		lda	starTable+STAR_Y, x
 		adc	starShiftY
-		sta	starTable+STAR_Y,x
+		sta	starTable+STAR_Y, x
 
-		lda	starTable+STAR_Y+1,x
+		lda	starTable+STAR_Y+1, x
 		adc	starShiftY+1
-		sta	starTable+STAR_Y+1,x
+		sta	starTable+STAR_Y+1, x
 
 		sec
-		lda	starTable+STAR_Z,x
-		sbc	starTable+STAR_Z_SHIFT,x
-		sta	starTable+STAR_Z,x
+		lda	starTable+STAR_Z, x
+		sbc	starTable+STAR_Z_SHIFT, x
+		sta	starTable+STAR_Z, x
 
-		lda	starTable+STAR_Z+1,x
-		sbc	starTable+STAR_Z_SHIFT+1,x
-		sta	starTable+STAR_Z+1,x
+		lda	starTable+STAR_Z+1, x
+		sbc	starTable+STAR_Z_SHIFT+1, x
+		sta	starTable+STAR_Z+1, x
 
 		bmi	.jp00
 		bne	.jp01
 
-		lda	starTable+STAR_Z,x
+		lda	starTable+STAR_Z, x
 		cmp	#128
 		bcs	.jp01
 
@@ -2807,7 +2751,7 @@ initStarTable:
 setStarTable:
 ;
 		jsr	getRandom
-		sta	starTable+STAR_X,x
+		sta	starTable+STAR_X, x
 		jsr	getRandom
 		cmp	#$00
 		bmi	.jp00
@@ -2816,10 +2760,10 @@ setStarTable:
 .jp00:
 		ora	#$FC
 .jp01:
-		sta	starTable+STAR_X+1,x
+		sta	starTable+STAR_X+1, x
 
 		jsr	getRandom
-		sta	starTable+STAR_Y,x
+		sta	starTable+STAR_Y, x
 		jsr	getRandom
 		cmp	#$00
 		bmi	.jp02
@@ -2828,19 +2772,19 @@ setStarTable:
 .jp02:
 		ora	#$FC
 .jp03:
-		sta	starTable+STAR_Y+1,x
+		sta	starTable+STAR_Y+1, x
 
 		lda	#$00
-		sta	starTable+STAR_Z,x
+		sta	starTable+STAR_Z, x
 		lda	#$10
-		sta	starTable+STAR_Z+1,x
+		sta	starTable+STAR_Z+1, x
 
 		jsr	getRandom
 		and	#$7F
 		ora	#$20
-		sta	starTable+STAR_Z_SHIFT,x
+		sta	starTable+STAR_Z_SHIFT, x
 		lda	#$00
-		sta	starTable+STAR_Z_SHIFT+1,x
+		sta	starTable+STAR_Z_SHIFT+1, x
 
 		rts
 
@@ -2853,121 +2797,121 @@ checkShotEnemy:
 
 		clx
 .shotLoop:
-		lda	shotTable+OBJ_STATE,x
+		lda	shotTable+OBJ_STATE, x
 		jeq	.shotJump0
 
 		sec
-		lda	shotTable+OBJ_X+2,x
+		lda	shotTable+OBJ_X+2, x
 		sbc	#200
 		sta	hitCheckX0
-		lda	shotTable+OBJ_X+3,x
+		lda	shotTable+OBJ_X+3, x
 		sbc	#0
 		sta	hitCheckX0+1
 
 		clc
-		lda	shotTable+OBJ_X+2,x
+		lda	shotTable+OBJ_X+2, x
 		adc	#200
 		sta	hitCheckX1
-		lda	shotTable+OBJ_X+3,x
+		lda	shotTable+OBJ_X+3, x
 		adc	#0
 		sta	hitCheckX1+1
 
 		sec
-		lda	shotTable+OBJ_Y+2,x
+		lda	shotTable+OBJ_Y+2, x
 		sbc	#200
 		sta	hitCheckY0
-		lda	shotTable+OBJ_Y+3,x
+		lda	shotTable+OBJ_Y+3, x
 		sbc	#0
 		sta	hitCheckY0+1
 
 		clc
-		lda	shotTable+OBJ_Y+2,x
+		lda	shotTable+OBJ_Y+2, x
 		adc	#200
 		sta	hitCheckY1
-		lda	shotTable+OBJ_Y+3,x
+		lda	shotTable+OBJ_Y+3, x
 		adc	#0
 		sta	hitCheckY1+1
 
 		sec
-		lda	shotTable+OBJ_Z+2,x
+		lda	shotTable+OBJ_Z+2, x
 		sbc	#200
 		sta	hitCheckZ0
-		lda	shotTable+OBJ_Z+3,x
+		lda	shotTable+OBJ_Z+3, x
 		sbc	#0
 		sta	hitCheckZ0+1
 
 		clc
-		lda	shotTable+OBJ_Z+2,x
+		lda	shotTable+OBJ_Z+2, x
 		adc	#200
 		sta	hitCheckZ1
-		lda	shotTable+OBJ_Z+3,x
+		lda	shotTable+OBJ_Z+3, x
 		adc	#0
 		sta	hitCheckZ1+1
 
 		cly
 .enemyLoop:
-		lda	enemyTable+OBJ_STATE,y
+		lda	enemyTable+OBJ_STATE, y
 		jeq	.enemyJump0
 
 		sec
 		lda	hitCheckX0
-		sbc	enemyTable+OBJ_X+2,y
+		sbc	enemyTable+OBJ_X+2, y
 		lda	hitCheckX0+1
-		sbc	enemyTable+OBJ_X+3,y
+		sbc	enemyTable+OBJ_X+3, y
 		jpl	.enemyJump0
 
 		sec
 		lda	hitCheckX1
-		sbc	enemyTable+OBJ_X+2,y
+		sbc	enemyTable+OBJ_X+2, y
 		lda	hitCheckX1+1
-		sbc	enemyTable+OBJ_X+3,y
+		sbc	enemyTable+OBJ_X+3, y
 		bmi	.enemyJump0
 
 		sec
 		lda	hitCheckY0
-		sbc	enemyTable+OBJ_Y+2,y
+		sbc	enemyTable+OBJ_Y+2, y
 		lda	hitCheckY0+1
-		sbc	enemyTable+OBJ_Y+3,y
+		sbc	enemyTable+OBJ_Y+3, y
 		bpl	.enemyJump0
 
 		sec
 		lda	hitCheckY1
-		sbc	enemyTable+OBJ_Y+2,y
+		sbc	enemyTable+OBJ_Y+2, y
 		lda	hitCheckY1+1
-		sbc	enemyTable+OBJ_Y+3,y
+		sbc	enemyTable+OBJ_Y+3, y
 		bmi	.enemyJump0
 
 		sec
 		lda	hitCheckZ0
-		sbc	enemyTable+OBJ_Z+2,y
+		sbc	enemyTable+OBJ_Z+2, y
 		lda	hitCheckZ0+1
-		sbc	enemyTable+OBJ_Z+3,y
+		sbc	enemyTable+OBJ_Z+3, y
 		bpl	.enemyJump0
 
 		sec
 		lda	hitCheckZ1
-		sbc	enemyTable+OBJ_Z+2,y
+		sbc	enemyTable+OBJ_Z+2, y
 		lda	hitCheckZ1+1
-		sbc	enemyTable+OBJ_Z+3,y
+		sbc	enemyTable+OBJ_Z+3, y
 		bmi	.enemyJump0
 
 		cla
-		sta	shotTable+OBJ_STATE,x
-		sta	enemyTable+OBJ_STATE,y
+		sta	shotTable+OBJ_STATE, x
+		sta	enemyTable+OBJ_STATE, y
 
-		lda	enemyTable+OBJ_X+2,y
+		lda	enemyTable+OBJ_X+2, y
 		sta	effect_X
-		lda	enemyTable+OBJ_X+3,y
+		lda	enemyTable+OBJ_X+3, y
 		sta	effect_X+1
 
-		lda	enemyTable+OBJ_Y+2,y
+		lda	enemyTable+OBJ_Y+2, y
 		sta	effect_Y
-		lda	enemyTable+OBJ_Y+3,y
+		lda	enemyTable+OBJ_Y+3, y
 		sta	effect_Y+1
 
-		lda	enemyTable+OBJ_Z+2,y
+		lda	enemyTable+OBJ_Z+2, y
 		sta	effect_Z
-		lda	enemyTable+OBJ_Z+3,y
+		lda	enemyTable+OBJ_Z+3, y
 		sta	effect_Z+1
 
 		lda	#EFFECT_TYPE_0
@@ -3006,121 +2950,121 @@ checkShotEshot:
 
 		clx
 .shotLoop:
-		lda	shotTable+OBJ_STATE,x
+		lda	shotTable+OBJ_STATE, x
 		jeq	.shotJump0
 
 		sec
-		lda	shotTable+OBJ_X+2,x
+		lda	shotTable+OBJ_X+2, x
 		sbc	#100
 		sta	hitCheckX0
-		lda	shotTable+OBJ_X+3,x
+		lda	shotTable+OBJ_X+3, x
 		sbc	#0
 		sta	hitCheckX0+1
 
 		clc
-		lda	shotTable+OBJ_X+2,x
+		lda	shotTable+OBJ_X+2, x
 		adc	#100
 		sta	hitCheckX1
-		lda	shotTable+OBJ_X+3,x
+		lda	shotTable+OBJ_X+3, x
 		adc	#0
 		sta	hitCheckX1+1
 
 		sec
-		lda	shotTable+OBJ_Y+2,x
+		lda	shotTable+OBJ_Y+2, x
 		sbc	#100
 		sta	hitCheckY0
-		lda	shotTable+OBJ_Y+3,x
+		lda	shotTable+OBJ_Y+3, x
 		sbc	#0
 		sta	hitCheckY0+1
 
 		clc
-		lda	shotTable+OBJ_Y+2,x
+		lda	shotTable+OBJ_Y+2, x
 		adc	#100
 		sta	hitCheckY1
-		lda	shotTable+OBJ_Y+3,x
+		lda	shotTable+OBJ_Y+3, x
 		adc	#0
 		sta	hitCheckY1+1
 
 		sec
-		lda	shotTable+OBJ_Z+2,x
+		lda	shotTable+OBJ_Z+2, x
 		sbc	#100
 		sta	hitCheckZ0
-		lda	shotTable+OBJ_Z+3,x
+		lda	shotTable+OBJ_Z+3, x
 		sbc	#0
 		sta	hitCheckZ0+1
 
 		clc
-		lda	shotTable+OBJ_Z+2,x
+		lda	shotTable+OBJ_Z+2, x
 		adc	#100
 		sta	hitCheckZ1
-		lda	shotTable+OBJ_Z+3,x
+		lda	shotTable+OBJ_Z+3, x
 		adc	#0
 		sta	hitCheckZ1+1
 
 		cly
 .eshotLoop:
-		lda	eshotTable+OBJ_STATE,y
+		lda	eshotTable+OBJ_STATE, y
 		jeq	.eshotJump0
 
 		sec
 		lda	hitCheckX0
-		sbc	eshotTable+OBJ_X+2,y
+		sbc	eshotTable+OBJ_X+2, y
 		lda	hitCheckX0+1
-		sbc	eshotTable+OBJ_X+3,y
+		sbc	eshotTable+OBJ_X+3, y
 		jpl	.eshotJump0
 
 		sec
 		lda	hitCheckX1
-		sbc	eshotTable+OBJ_X+2,y
+		sbc	eshotTable+OBJ_X+2, y
 		lda	hitCheckX1+1
-		sbc	eshotTable+OBJ_X+3,y
+		sbc	eshotTable+OBJ_X+3, y
 		bmi	.eshotJump0
 
 		sec
 		lda	hitCheckY0
-		sbc	eshotTable+OBJ_Y+2,y
+		sbc	eshotTable+OBJ_Y+2, y
 		lda	hitCheckY0+1
-		sbc	eshotTable+OBJ_Y+3,y
+		sbc	eshotTable+OBJ_Y+3, y
 		bpl	.eshotJump0
 
 		sec
 		lda	hitCheckY1
-		sbc	eshotTable+OBJ_Y+2,y
+		sbc	eshotTable+OBJ_Y+2, y
 		lda	hitCheckY1+1
-		sbc	eshotTable+OBJ_Y+3,y
+		sbc	eshotTable+OBJ_Y+3, y
 		bmi	.eshotJump0
 
 		sec
 		lda	hitCheckZ0
-		sbc	eshotTable+OBJ_Z+2,y
+		sbc	eshotTable+OBJ_Z+2, y
 		lda	hitCheckZ0+1
-		sbc	eshotTable+OBJ_Z+3,y
+		sbc	eshotTable+OBJ_Z+3, y
 		bpl	.eshotJump0
 
 		sec
 		lda	hitCheckZ1
-		sbc	eshotTable+OBJ_Z+2,y
+		sbc	eshotTable+OBJ_Z+2, y
 		lda	hitCheckZ1+1
-		sbc	eshotTable+OBJ_Z+3,y
+		sbc	eshotTable+OBJ_Z+3, y
 		bmi	.eshotJump0
 
 		cla
-		sta	shotTable+OBJ_STATE,x
-		sta	eshotTable+OBJ_STATE,y
+		sta	shotTable+OBJ_STATE, x
+		sta	eshotTable+OBJ_STATE, y
 
-		lda	eshotTable+OBJ_X+2,y
+		lda	eshotTable+OBJ_X+2, y
 		sta	effect_X
-		lda	eshotTable+OBJ_X+3,y
+		lda	eshotTable+OBJ_X+3, y
 		sta	effect_X+1
 
-		lda	eshotTable+OBJ_Y+2,y
+		lda	eshotTable+OBJ_Y+2, y
 		sta	effect_Y
-		lda	eshotTable+OBJ_Y+3,y
+		lda	eshotTable+OBJ_Y+3, y
 		sta	effect_Y+1
 
-		lda	eshotTable+OBJ_Z+2,y
+		lda	eshotTable+OBJ_Z+2, y
 		sta	effect_Z
-		lda	eshotTable+OBJ_Z+3,y
+		lda	eshotTable+OBJ_Z+3, y
 		sta	effect_Z+1
 
 		lda	#EFFECT_TYPE_1
@@ -3178,7 +3122,7 @@ setEnemy:
 		asl	enemy_Y
 		rol	enemy_Y+1
 
-		movw	enemy_Z,#$1000
+		movw	enemy_Z, #$1000
 		jsr	setEnemyTable
 .setEnemyEnd:
 		rts
@@ -3192,8 +3136,8 @@ initEnemyTable:
 		clx
 .initEnemyTableLoop:
 		lda	#OBJ_NO_ENEMY0
-		sta	enemyTable+OBJ_NO,x
-		stz	enemyTable+OBJ_STATE,x
+		sta	enemyTable+OBJ_NO, x
+		stz	enemyTable+OBJ_STATE, x
 		clc
 		txa
 		adc	#ENEMY_SIZE
@@ -3212,41 +3156,41 @@ setEnemyTable:
 
 		clx
 .setEnemyTableLoop:
-		lda	enemyTable+OBJ_STATE,x
+		lda	enemyTable+OBJ_STATE, x
 		bne	.setEnemyTableJump0
 
 		lda	#$01
-		sta	enemyTable+OBJ_STATE,x
+		sta	enemyTable+OBJ_STATE, x
 
 		lda	#$02
-		sta	enemyTable+OBJ_COLOR,x
+		sta	enemyTable+OBJ_COLOR, x
 
-		stz	enemyTable+OBJ_X,x
-		stz	enemyTable+OBJ_X+1,x
+		stz	enemyTable+OBJ_X, x
+		stz	enemyTable+OBJ_X+1, x
 		lda	enemy_X
-		sta	enemyTable+OBJ_X+2,x
+		sta	enemyTable+OBJ_X+2, x
 		lda	enemy_X+1
-		sta	enemyTable+OBJ_X+3,x
+		sta	enemyTable+OBJ_X+3, x
 
-		stz	enemyTable+OBJ_Y,x
-		stz	enemyTable+OBJ_Y+1,x
+		stz	enemyTable+OBJ_Y, x
+		stz	enemyTable+OBJ_Y+1, x
 		lda	enemy_Y
-		sta	enemyTable+OBJ_Y+2,x
+		sta	enemyTable+OBJ_Y+2, x
 		lda	enemy_Y+1
-		sta	enemyTable+OBJ_Y+3,x
+		sta	enemyTable+OBJ_Y+3, x
 
-		stz	enemyTable+OBJ_Z,x
-		stz	enemyTable+OBJ_Z+1,x
+		stz	enemyTable+OBJ_Z, x
+		stz	enemyTable+OBJ_Z+1, x
 		lda	enemy_Z
-		sta	enemyTable+OBJ_Z+2,x
+		sta	enemyTable+OBJ_Z+2, x
 		lda	enemy_Z+1
-		sta	enemyTable+OBJ_Z+3,x
+		sta	enemyTable+OBJ_Z+3, x
 
-		stz	enemyTable+OBJ_RX,x
-		stz	enemyTable+OBJ_RY,x
-		stz	enemyTable+OBJ_RZ,x
+		stz	enemyTable+OBJ_RX, x
+		stz	enemyTable+OBJ_RY, x
+		stz	enemyTable+OBJ_RZ, x
 
-		stz	enemyTable+ENEMY_TIME,x
+		stz	enemyTable+ENEMY_TIME, x
 
 		bra	.setEnemyTableEnd
 
@@ -3270,44 +3214,44 @@ moveEnemyTable:
 
 		clx
 .moveEnemyTableLoop:
-		lda	enemyTable+OBJ_STATE,x
+		lda	enemyTable+OBJ_STATE, x
 		beq	.moveEnemyTableJump0
 
 		clc
-		lda	enemyTable+OBJ_RY,x
+		lda	enemyTable+OBJ_RY, x
 		adc	#$04
-		sta	enemyTable+OBJ_RY,x
+		sta	enemyTable+OBJ_RY, x
 
 		clc
-		lda	enemyTable+OBJ_Z+2,x
+		lda	enemyTable+OBJ_Z+2, x
 		adc	#LOW(ENEMY0_Z_SHIFT)
-		sta	enemyTable+OBJ_Z+2,x
+		sta	enemyTable+OBJ_Z+2, x
 
-		lda	enemyTable+OBJ_Z+3,x
+		lda	enemyTable+OBJ_Z+3, x
 		adc	#HIGH(ENEMY0_Z_SHIFT)
-		sta	enemyTable+OBJ_Z+3,x
+		sta	enemyTable+OBJ_Z+3, x
 		bmi	.moveEnemyTableJump1
 		beq	.moveEnemyTableJump0
 
-		lda	enemyTable+ENEMY_TIME,x
+		lda	enemyTable+ENEMY_TIME, x
 		inc	a
 		and	#$1F
-		sta	enemyTable+ENEMY_TIME,x
+		sta	enemyTable+ENEMY_TIME, x
 		bne	.moveEnemyTableJump0
 
-		lda	enemyTable+OBJ_X+2,x
+		lda	enemyTable+OBJ_X+2, x
 		sta	eshot_X
-		lda	enemyTable+OBJ_X+3,x
+		lda	enemyTable+OBJ_X+3, x
 		sta	eshot_X+1
 
-		lda	enemyTable+OBJ_Y+2,x
+		lda	enemyTable+OBJ_Y+2, x
 		sta	eshot_Y
-		lda	enemyTable+OBJ_Y+3,x
+		lda	enemyTable+OBJ_Y+3, x
 		sta	eshot_Y+1
 
-		lda	enemyTable+OBJ_Z+2,x
+		lda	enemyTable+OBJ_Z+2, x
 		sta	eshot_Z
-		lda	enemyTable+OBJ_Z+3,x
+		lda	enemyTable+OBJ_Z+3, x
 		sta	eshot_Z+1
 
 		jsr	setEshotTable
@@ -3315,7 +3259,7 @@ moveEnemyTable:
 		bra	.moveEnemyTableJump0
 
 .moveEnemyTableJump1:
-		stz	enemyTable+OBJ_STATE,x
+		stz	enemyTable+OBJ_STATE, x
 
 .moveEnemyTableJump0:
 		clc
@@ -3336,7 +3280,7 @@ regEnemyTable:
 
 		clx
 .regEnemyTableLoop:
-		lda	enemyTable+OBJ_STATE,x
+		lda	enemyTable+OBJ_STATE, x
 		beq	.regEnemyTableJump0
 
 		clc
@@ -3347,9 +3291,9 @@ regEnemyTable:
 		adc	#HIGH(enemyTable)
 		sta	objReg_AddrWork+1
 
-		lda	enemyTable+OBJ_Z+2,x
+		lda	enemyTable+OBJ_Z+2, x
 		sta	objReg_ZWork
-		lda	enemyTable+OBJ_Z+3,x
+		lda	enemyTable+OBJ_Z+3, x
 		sta	objReg_ZWork+1
 
 		jsr	setObjRegTable
@@ -3373,8 +3317,8 @@ initEffectTable:
 
 		clx
 .initEffectTableLoop:
-		stz	effectTable+OBJ_NO,x
-		stz	effectTable+OBJ_STATE,x
+		stz	effectTable+OBJ_NO, x
+		stz	effectTable+OBJ_STATE, x
 		clc
 		txa
 		adc	#EFFECT_SIZE
@@ -3393,41 +3337,41 @@ setEffectTable:
 
 		clx
 .setEffectTableLoop:
-		lda	effectTable+OBJ_STATE,x
+		lda	effectTable+OBJ_STATE, x
 		bne	.setEffectTableJump0
 
 		lda	#$01
-		sta	effectTable+OBJ_STATE,x
+		sta	effectTable+OBJ_STATE, x
 
-		stz	effectTable+OBJ_X,x
-		stz	effectTable+OBJ_X+1,x
+		stz	effectTable+OBJ_X, x
+		stz	effectTable+OBJ_X+1, x
 		lda	effect_X
-		sta	effectTable+OBJ_X+2,x
+		sta	effectTable+OBJ_X+2, x
 		lda	effect_X+1
-		sta	effectTable+OBJ_X+3,x
+		sta	effectTable+OBJ_X+3, x
 
-		stz	effectTable+OBJ_Y,x
-		stz	effectTable+OBJ_Y+1,x
+		stz	effectTable+OBJ_Y, x
+		stz	effectTable+OBJ_Y+1, x
 		lda	effect_Y
-		sta	effectTable+OBJ_Y+2,x
+		sta	effectTable+OBJ_Y+2, x
 		lda	effect_Y+1
-		sta	effectTable+OBJ_Y+3,x
+		sta	effectTable+OBJ_Y+3, x
 
-		stz	effectTable+OBJ_Z,x
-		stz	effectTable+OBJ_Z+1,x
+		stz	effectTable+OBJ_Z, x
+		stz	effectTable+OBJ_Z+1, x
 		lda	effect_Z
-		sta	effectTable+OBJ_Z+2,x
+		sta	effectTable+OBJ_Z+2, x
 		lda	effect_Z+1
-		sta	effectTable+OBJ_Z+3,x
+		sta	effectTable+OBJ_Z+3, x
 
 		lda	effect_Type
-		sta	effectTable+EFFECT_TYPE,x
+		sta	effectTable+EFFECT_TYPE, x
 
-		stz	effectTable+EFFECT_TIME,x
+		stz	effectTable+EFFECT_TIME, x
 
-		stz	effectTable+OBJ_RX,x
-		stz	effectTable+OBJ_RY,x
-		stz	effectTable+OBJ_RZ,x
+		stz	effectTable+OBJ_RX, x
+		stz	effectTable+OBJ_RY, x
+		stz	effectTable+OBJ_RZ, x
 
 		bra	.setEffectTableEnd
 
@@ -3451,37 +3395,37 @@ moveEffectTable:
 
 		clx
 .moveEffectTableLoop:
-		lda	effectTable+OBJ_STATE,x
+		lda	effectTable+OBJ_STATE, x
 		beq	.moveEffectTableJump0
 
-		lda	effectTable+EFFECT_TYPE,x
+		lda	effectTable+EFFECT_TYPE, x
 		bne	.moveEffectTableJump2
 
 ;EFFECT_TYPE_0
-		lda	effectTable+EFFECT_TIME,x
+		lda	effectTable+EFFECT_TIME, x
 		cmp	#7
 		bne	.moveEffectTableJump1
 
-		stz	effectTable+OBJ_STATE,x
+		stz	effectTable+OBJ_STATE, x
 		bra	.moveEffectTableJump0
 
 .moveEffectTableJump1:
 		inc	a
-		sta	effectTable+EFFECT_TIME,x
+		sta	effectTable+EFFECT_TIME, x
 		bra	.moveEffectTableJump0
 
 ;EFFECT_TYPE_1
 .moveEffectTableJump2:
-		lda	effectTable+EFFECT_TIME,x
+		lda	effectTable+EFFECT_TIME, x
 		cmp	#3
 		bne	.moveEffectTableJump3
 
-		stz	effectTable+OBJ_STATE,x
+		stz	effectTable+OBJ_STATE, x
 		bra	.moveEffectTableJump0
 
 .moveEffectTableJump3:
 		inc	a
-		sta	effectTable+EFFECT_TIME,x
+		sta	effectTable+EFFECT_TIME, x
 
 .moveEffectTableJump0:
 		clc
@@ -3502,7 +3446,7 @@ regEffectTable:
 
 		clx
 .regEffectTableLoop:
-		lda	effectTable+OBJ_STATE,x
+		lda	effectTable+OBJ_STATE, x
 		beq	.regEffectTableJump0
 
 		clc
@@ -3513,36 +3457,36 @@ regEffectTable:
 		adc	#HIGH(effectTable)
 		sta	objReg_AddrWork+1
 
-		lda	effectTable+OBJ_Z+2,x
+		lda	effectTable+OBJ_Z+2, x
 		sta	objReg_ZWork
-		lda	effectTable+OBJ_Z+3,x
+		lda	effectTable+OBJ_Z+3, x
 		sta	objReg_ZWork+1
 
-		lda	effectTable+EFFECT_TIME,x
+		lda	effectTable+EFFECT_TIME, x
 		and	#$01
 		inc	a
-		sta	effectTable+OBJ_COLOR,x
+		sta	effectTable+OBJ_COLOR, x
 
 
-		lda	effectTable+EFFECT_TYPE,x
+		lda	effectTable+EFFECT_TYPE, x
 		bne	.regEffectTableJump1
 
 ;EFFECT_TYPE_0
-		lda	effectTable+EFFECT_TIME,x
+		lda	effectTable+EFFECT_TIME, x
 		asl	a
 		clc
 		adc	#OBJ_NO_EFFECT0
-		sta	effectTable+OBJ_NO,x
+		sta	effectTable+OBJ_NO, x
 
 		bra	.regEffectTableJump2
 
 ;EFFECT_TYPE_1
 .regEffectTableJump1:
-		lda	effectTable+EFFECT_TIME,x
+		lda	effectTable+EFFECT_TIME, x
 		asl	a
 		clc
 		adc	#OBJ_NO_EFFECT1
-		sta	effectTable+OBJ_NO,x
+		sta	effectTable+OBJ_NO, x
 
 .regEffectTableJump2:
 		jsr	setObjRegTable
@@ -3567,8 +3511,8 @@ initShotTable:
 		clx
 .initShotTableLoop:
 		lda	#OBJ_NO_SHOT
-		sta	shotTable+OBJ_NO,x
-		stz	shotTable+OBJ_STATE,x
+		sta	shotTable+OBJ_NO, x
+		stz	shotTable+OBJ_STATE, x
 		clc
 		txa
 		adc	#SHOT_SIZE
@@ -3587,37 +3531,37 @@ setShotTable:
 
 		clx
 .setShotTableLoop:
-		lda	shotTable+OBJ_STATE,x
+		lda	shotTable+OBJ_STATE, x
 		bne	.setShotTableJump0
 
 		lda	#$01
-		sta	shotTable+OBJ_STATE,x
+		sta	shotTable+OBJ_STATE, x
 
 		lda	#$03
-		sta	shotTable+OBJ_COLOR,x
+		sta	shotTable+OBJ_COLOR, x
 
-		stz	shotTable+OBJ_X,x
-		stz	shotTable+OBJ_X+1,x
+		stz	shotTable+OBJ_X, x
+		stz	shotTable+OBJ_X+1, x
 		lda	shipTranslationX
-		sta	shotTable+OBJ_X+2,x
+		sta	shotTable+OBJ_X+2, x
 		lda	shipTranslationX+1
-		sta	shotTable+OBJ_X+3,x
+		sta	shotTable+OBJ_X+3, x
 
-		stz	shotTable+OBJ_Y,x
-		stz	shotTable+OBJ_Y+1,x
+		stz	shotTable+OBJ_Y, x
+		stz	shotTable+OBJ_Y+1, x
 		lda	shipTranslationY
-		sta	shotTable+OBJ_Y+2,x
+		sta	shotTable+OBJ_Y+2, x
 		lda	shipTranslationY+1
-		sta	shotTable+OBJ_Y+3,x
+		sta	shotTable+OBJ_Y+3, x
 
-		stz	shotTable+OBJ_Z,x
-		stz	shotTable+OBJ_Z+1,x
-		stz	shotTable+OBJ_Z+2,x
-		stz	shotTable+OBJ_Z+3,x
+		stz	shotTable+OBJ_Z, x
+		stz	shotTable+OBJ_Z+1, x
+		stz	shotTable+OBJ_Z+2, x
+		stz	shotTable+OBJ_Z+3, x
 
-		stz	shotTable+OBJ_RX,x
-		stz	shotTable+OBJ_RY,x
-		stz	shotTable+OBJ_RZ,x
+		stz	shotTable+OBJ_RX, x
+		stz	shotTable+OBJ_RY, x
+		stz	shotTable+OBJ_RZ, x
 
 		bra	.setShotTableEnd
 
@@ -3641,27 +3585,27 @@ moveShotTable:
 
 		clx
 .moveShotTableLoop:
-		lda	shotTable+OBJ_STATE,x
+		lda	shotTable+OBJ_STATE, x
 		beq	.moveShotTableJump0
 
 		clc
-		lda	shotTable+OBJ_RZ,x
+		lda	shotTable+OBJ_RZ, x
 		adc	#$08
-		sta	shotTable+OBJ_RZ,x
+		sta	shotTable+OBJ_RZ, x
 
 		clc
-		lda	shotTable+OBJ_Z+2,x
+		lda	shotTable+OBJ_Z+2, x
 		adc	#LOW(SHOT_Z_SHIFT)
-		sta	shotTable+OBJ_Z+2,x
+		sta	shotTable+OBJ_Z+2, x
 
-		lda	shotTable+OBJ_Z+3,x
+		lda	shotTable+OBJ_Z+3, x
 		adc	#HIGH(SHOT_Z_SHIFT)
-		sta	shotTable+OBJ_Z+3,x
+		sta	shotTable+OBJ_Z+3, x
 
 		cmp	#SHOT_Z_MAX
 		bmi	.moveShotTableJump0
 
-		stz	shotTable+OBJ_STATE,x
+		stz	shotTable+OBJ_STATE, x
 
 .moveShotTableJump0:
 		clc
@@ -3682,7 +3626,7 @@ regShotTable:
 
 		clx
 .regShotTableLoop:
-		lda	shotTable+OBJ_STATE,x
+		lda	shotTable+OBJ_STATE, x
 		beq	.regShotTableJump0
 
 		clc
@@ -3693,9 +3637,9 @@ regShotTable:
 		adc	#HIGH(shotTable)
 		sta	objReg_AddrWork+1
 
-		lda	shotTable+OBJ_Z+2,x
+		lda	shotTable+OBJ_Z+2, x
 		sta	objReg_ZWork
-		lda	shotTable+OBJ_Z+3,x
+		lda	shotTable+OBJ_Z+3, x
 		sta	objReg_ZWork+1
 
 		jsr	setObjRegTable
@@ -3720,8 +3664,8 @@ initEshotTable:
 		clx
 .initEshotTableLoop:
 		lda	#OBJ_NO_ESHOT
-		sta	eshotTable+OBJ_NO,x
-		stz	eshotTable+OBJ_STATE,x
+		sta	eshotTable+OBJ_NO, x
+		stz	eshotTable+OBJ_STATE, x
 		clc
 		txa
 		adc	#ESHOT_SIZE
@@ -3740,78 +3684,78 @@ setEshotTable:
 
 		clx
 .setEshotTableLoop:
-		lda	eshotTable+OBJ_STATE,x
+		lda	eshotTable+OBJ_STATE, x
 		jne	.setEshotTableJump0
 
 		lda	#$01
-		sta	eshotTable+OBJ_STATE,x
+		sta	eshotTable+OBJ_STATE, x
 
 		lda	#$01
-		sta	eshotTable+OBJ_COLOR,x
+		sta	eshotTable+OBJ_COLOR, x
 
-		stz	eshotTable+OBJ_X,x
-		stz	eshotTable+OBJ_X+1,x
+		stz	eshotTable+OBJ_X, x
+		stz	eshotTable+OBJ_X+1, x
 		lda	eshot_X
-		sta	eshotTable+OBJ_X+2,x
+		sta	eshotTable+OBJ_X+2, x
 		lda	eshot_X+1
-		sta	eshotTable+OBJ_X+3,x
+		sta	eshotTable+OBJ_X+3, x
 
-		stz	eshotTable+OBJ_Y,x
-		stz	eshotTable+OBJ_Y+1,x
+		stz	eshotTable+OBJ_Y, x
+		stz	eshotTable+OBJ_Y+1, x
 		lda	eshot_Y
-		sta	eshotTable+OBJ_Y+2,x
+		sta	eshotTable+OBJ_Y+2, x
 		lda	eshot_Y+1
-		sta	eshotTable+OBJ_Y+3,x
+		sta	eshotTable+OBJ_Y+3, x
 
-		stz	eshotTable+OBJ_Z,x
-		stz	eshotTable+OBJ_Z+1,x
+		stz	eshotTable+OBJ_Z, x
+		stz	eshotTable+OBJ_Z+1, x
 		lda	eshot_Z
-		sta	eshotTable+OBJ_Z+2,x
+		sta	eshotTable+OBJ_Z+2, x
 		lda	eshot_Z+1
-		sta	eshotTable+OBJ_Z+3,x
+		sta	eshotTable+OBJ_Z+3, x
 
-		stz	eshotTable+OBJ_RX,x
-		stz	eshotTable+OBJ_RY,x
-		stz	eshotTable+OBJ_RZ,x
+		stz	eshotTable+OBJ_RX, x
+		stz	eshotTable+OBJ_RY, x
+		stz	eshotTable+OBJ_RZ, x
 
-		movw	angleX0,eshot_X
-		movw	angleY0,eshot_Y
-		movw	angleZ0,eshot_Z
+		movw	angleX0, eshot_X
+		movw	angleY0, eshot_Y
+		movw	angleZ0, eshot_Z
 
-		movw	angleX1,shipTranslationX
-		movw	angleY1,shipTranslationY
-		movw	angleZ1,shipTranslationZ
+		movw	angleX1, shipTranslationX
+		movw	angleY1, shipTranslationY
+		movw	angleZ1, shipTranslationZ
 
-		movw	angleShift,#ESHOT_SHIFT
+		movw	angleShift, #ESHOT_SHIFT
 
 		jsr	getAngleShift
 
 		lda	angleX0
-		sta	eshotTable+ESHOT_SHIFTX,x
+		sta	eshotTable+ESHOT_SHIFTX, x
 		lda	angleX0+1
-		sta	eshotTable+ESHOT_SHIFTX+1,x
+		sta	eshotTable+ESHOT_SHIFTX+1, x
 		lda	angleX0+2
-		sta	eshotTable+ESHOT_SHIFTX+2,x
+		sta	eshotTable+ESHOT_SHIFTX+2, x
 		lda	angleX0+3
-		sta	eshotTable+ESHOT_SHIFTX+3,x
+		sta	eshotTable+ESHOT_SHIFTX+3, x
 
 		lda	angleY0
-		sta	eshotTable+ESHOT_SHIFTY,x
+		sta	eshotTable+ESHOT_SHIFTY, x
 		lda	angleY0+1
-		sta	eshotTable+ESHOT_SHIFTY+1,x
+		sta	eshotTable+ESHOT_SHIFTY+1, x
 		lda	angleY0+2
-		sta	eshotTable+ESHOT_SHIFTY+2,x
+		sta	eshotTable+ESHOT_SHIFTY+2, x
 		lda	angleY0+3
-		sta	eshotTable+ESHOT_SHIFTY+3,x
+		sta	eshotTable+ESHOT_SHIFTY+3, x
 
 		lda	angleZ0
-		sta	eshotTable+ESHOT_SHIFTZ,x
+		sta	eshotTable+ESHOT_SHIFTZ, x
 		lda	angleZ0+1
-		sta	eshotTable+ESHOT_SHIFTZ+1,x
+		sta	eshotTable+ESHOT_SHIFTZ+1, x
 		lda	angleZ0+2
-		sta	eshotTable+ESHOT_SHIFTZ+2,x
+		sta	eshotTable+ESHOT_SHIFTZ+2, x
 		lda	angleZ0+3
-		sta	eshotTable+ESHOT_SHIFTZ+3,x
+		sta	eshotTable+ESHOT_SHIFTZ+3, x
 
 		bra	.setEshotTableEnd
 
@@ -3835,73 +3779,73 @@ moveEshotTable:
 
 		clx
 .moveEshotTableLoop:
-		lda	eshotTable+OBJ_STATE,x
+		lda	eshotTable+OBJ_STATE, x
 		jeq	.moveEshotTableJump0
 
 		clc
-		lda	eshotTable+OBJ_RX,x
+		lda	eshotTable+OBJ_RX, x
 		adc	#8
-		sta	eshotTable+OBJ_RX,x
+		sta	eshotTable+OBJ_RX, x
 
 		clc
-		lda	eshotTable+OBJ_RY,x
+		lda	eshotTable+OBJ_RY, x
 		adc	#8
-		sta	eshotTable+OBJ_RY,x
+		sta	eshotTable+OBJ_RY, x
 
 		clc
-		lda	eshotTable+OBJ_X,x
-		adc	eshotTable+ESHOT_SHIFTX,x
-		sta	eshotTable+OBJ_X,x
+		lda	eshotTable+OBJ_X, x
+		adc	eshotTable+ESHOT_SHIFTX, x
+		sta	eshotTable+OBJ_X, x
 
-		lda	eshotTable+OBJ_X+1,x
-		adc	eshotTable+ESHOT_SHIFTX+1,x
-		sta	eshotTable+OBJ_X+1,x
+		lda	eshotTable+OBJ_X+1, x
+		adc	eshotTable+ESHOT_SHIFTX+1, x
+		sta	eshotTable+OBJ_X+1, x
 
-		lda	eshotTable+OBJ_X+2,x
-		adc	eshotTable+ESHOT_SHIFTX+2,x
-		sta	eshotTable+OBJ_X+2,x
+		lda	eshotTable+OBJ_X+2, x
+		adc	eshotTable+ESHOT_SHIFTX+2, x
+		sta	eshotTable+OBJ_X+2, x
 
-		lda	eshotTable+OBJ_X+3,x
-		adc	eshotTable+ESHOT_SHIFTX+3,x
-		sta	eshotTable+OBJ_X+3,x
-
-		clc
-		lda	eshotTable+OBJ_Y,x
-		adc	eshotTable+ESHOT_SHIFTY,x
-		sta	eshotTable+OBJ_Y,x
-
-		lda	eshotTable+OBJ_Y+1,x
-		adc	eshotTable+ESHOT_SHIFTY+1,x
-		sta	eshotTable+OBJ_Y+1,x
-
-		lda	eshotTable+OBJ_Y+2,x
-		adc	eshotTable+ESHOT_SHIFTY+2,x
-		sta	eshotTable+OBJ_Y+2,x
-
-		lda	eshotTable+OBJ_Y+3,x
-		adc	eshotTable+ESHOT_SHIFTY+3,x
-		sta	eshotTable+OBJ_Y+3,x
+		lda	eshotTable+OBJ_X+3, x
+		adc	eshotTable+ESHOT_SHIFTX+3, x
+		sta	eshotTable+OBJ_X+3, x
 
 		clc
-		lda	eshotTable+OBJ_Z,x
-		adc	eshotTable+ESHOT_SHIFTZ,x
-		sta	eshotTable+OBJ_Z,x
+		lda	eshotTable+OBJ_Y, x
+		adc	eshotTable+ESHOT_SHIFTY, x
+		sta	eshotTable+OBJ_Y, x
 
-		lda	eshotTable+OBJ_Z+1,x
-		adc	eshotTable+ESHOT_SHIFTZ+1,x
-		sta	eshotTable+OBJ_Z+1,x
+		lda	eshotTable+OBJ_Y+1, x
+		adc	eshotTable+ESHOT_SHIFTY+1, x
+		sta	eshotTable+OBJ_Y+1, x
 
-		lda	eshotTable+OBJ_Z+2,x
-		adc	eshotTable+ESHOT_SHIFTZ+2,x
-		sta	eshotTable+OBJ_Z+2,x
+		lda	eshotTable+OBJ_Y+2, x
+		adc	eshotTable+ESHOT_SHIFTY+2, x
+		sta	eshotTable+OBJ_Y+2, x
 
-		lda	eshotTable+OBJ_Z+3,x
-		adc	eshotTable+ESHOT_SHIFTZ+3,x
-		sta	eshotTable+OBJ_Z+3,x
+		lda	eshotTable+OBJ_Y+3, x
+		adc	eshotTable+ESHOT_SHIFTY+3, x
+		sta	eshotTable+OBJ_Y+3, x
+
+		clc
+		lda	eshotTable+OBJ_Z, x
+		adc	eshotTable+ESHOT_SHIFTZ, x
+		sta	eshotTable+OBJ_Z, x
+
+		lda	eshotTable+OBJ_Z+1, x
+		adc	eshotTable+ESHOT_SHIFTZ+1, x
+		sta	eshotTable+OBJ_Z+1, x
+
+		lda	eshotTable+OBJ_Z+2, x
+		adc	eshotTable+ESHOT_SHIFTZ+2, x
+		sta	eshotTable+OBJ_Z+2, x
+
+		lda	eshotTable+OBJ_Z+3, x
+		adc	eshotTable+ESHOT_SHIFTZ+3, x
+		sta	eshotTable+OBJ_Z+3, x
 
 		bpl	.moveEshotTableJump0
 
-		stz	eshotTable+OBJ_STATE,x
+		stz	eshotTable+OBJ_STATE, x
 
 .moveEshotTableJump0:
 		clc
@@ -3922,7 +3866,7 @@ regEshotTable:
 
 		clx
 .regEshotTableLoop:
-		lda	eshotTable+OBJ_STATE,x
+		lda	eshotTable+OBJ_STATE, x
 		beq	.regEshotTableJump0
 
 		clc
@@ -3933,9 +3877,9 @@ regEshotTable:
 		adc	#HIGH(eshotTable)
 		sta	objReg_AddrWork+1
 
-		lda	eshotTable+OBJ_Z+2,x
+		lda	eshotTable+OBJ_Z+2, x
 		sta	objReg_ZWork
-		lda	eshotTable+OBJ_Z+3,x
+		lda	eshotTable+OBJ_Z+3, x
 		sta	objReg_ZWork+1
 
 		jsr	setObjRegTable
@@ -3955,8 +3899,8 @@ regEshotTable:
 ;----------------------------
 initObjRegTable:
 ;
-		movw	objRegTable+OBJREG_Z,#$4000
-		mov	objRegTable_index,#OBJREG_SIZE
+		movw	objRegTable+OBJREG_Z, #$4000
+		mov	objRegTable_index, #OBJREG_SIZE
 		rts
 
 
@@ -3973,53 +3917,53 @@ setObjRegTable:
 		sta	objRegTable_index
 
 		lda	objReg_AddrWork
-		sta	objRegTable+OBJREG_ADDR,x
+		sta	objRegTable+OBJREG_ADDR, x
 		lda	objReg_AddrWork+1
-		sta	objRegTable+OBJREG_ADDR+1,x
+		sta	objRegTable+OBJREG_ADDR+1, x
 
 		lda	objReg_ZWork
-		sta	objRegTable+OBJREG_Z,x
+		sta	objRegTable+OBJREG_Z, x
 		lda	objReg_ZWork+1
-		sta	objRegTable+OBJREG_Z+1,x
+		sta	objRegTable+OBJREG_Z+1, x
 
 .setObjRegTableLoop:
 		sec
-		lda	objRegTable-OBJREG_SIZE+OBJREG_Z,x
-		sbc	objRegTable+OBJREG_Z,x
-		lda	objRegTable-OBJREG_SIZE+OBJREG_Z+1,x
-		sbc	objRegTable+OBJREG_Z+1,x
+		lda	objRegTable-OBJREG_SIZE+OBJREG_Z, x
+		sbc	objRegTable+OBJREG_Z, x
+		lda	objRegTable-OBJREG_SIZE+OBJREG_Z+1, x
+		sbc	objRegTable+OBJREG_Z+1, x
 
 		bpl	.setObjRegTableEnd
 
-		lda	objRegTable-OBJREG_SIZE+OBJREG_ADDR,x
+		lda	objRegTable-OBJREG_SIZE+OBJREG_ADDR, x
 		sta	objReg_AddrWork
-		lda	objRegTable-OBJREG_SIZE+OBJREG_ADDR+1,x
+		lda	objRegTable-OBJREG_SIZE+OBJREG_ADDR+1, x
 		sta	objReg_AddrWork+1
 
-		lda	objRegTable+OBJREG_ADDR,x
-		sta	objRegTable-OBJREG_SIZE+OBJREG_ADDR,x
-		lda	objRegTable+OBJREG_ADDR+1,x
-		sta	objRegTable-OBJREG_SIZE+OBJREG_ADDR+1,x
+		lda	objRegTable+OBJREG_ADDR, x
+		sta	objRegTable-OBJREG_SIZE+OBJREG_ADDR, x
+		lda	objRegTable+OBJREG_ADDR+1, x
+		sta	objRegTable-OBJREG_SIZE+OBJREG_ADDR+1, x
 
 		lda	objReg_AddrWork
-		sta	objRegTable+OBJREG_ADDR,x
+		sta	objRegTable+OBJREG_ADDR, x
 		lda	objReg_AddrWork+1
-		sta	objRegTable+OBJREG_ADDR+1,x
+		sta	objRegTable+OBJREG_ADDR+1, x
 
-		lda	objRegTable-OBJREG_SIZE+OBJREG_Z,x
+		lda	objRegTable-OBJREG_SIZE+OBJREG_Z, x
 		sta	objReg_ZWork
-		lda	objRegTable-OBJREG_SIZE+OBJREG_Z+1,x
+		lda	objRegTable-OBJREG_SIZE+OBJREG_Z+1, x
 		sta	objReg_ZWork+1
 
-		lda	objRegTable+OBJREG_Z,x
-		sta	objRegTable-OBJREG_SIZE+OBJREG_Z,x
-		lda	objRegTable+OBJREG_Z+1,x
-		sta	objRegTable-OBJREG_SIZE+OBJREG_Z+1,x
+		lda	objRegTable+OBJREG_Z, x
+		sta	objRegTable-OBJREG_SIZE+OBJREG_Z, x
+		lda	objRegTable+OBJREG_Z+1, x
+		sta	objRegTable-OBJREG_SIZE+OBJREG_Z+1 ,x
 
 		lda	objReg_ZWork
-		sta	objRegTable+OBJREG_Z,x
+		sta	objRegTable+OBJREG_Z, x
 		lda	objReg_ZWork+1
-		sta	objRegTable+OBJREG_Z+1,x
+		sta	objRegTable+OBJREG_Z+1, x
 
 		sec
 		txa
@@ -4044,54 +3988,54 @@ drawObjRegTable:
 		cpx	objRegTable_index
 		beq	.drawObjRegTableEnd
 
-		lda	objRegTable+OBJREG_ADDR,x
+		lda	objRegTable+OBJREG_ADDR, x
 		sta	<objRegTable_AddrWork
-		lda	objRegTable+OBJREG_ADDR+1,x
+		lda	objRegTable+OBJREG_ADDR+1, x
 		sta	<objRegTable_AddrWork+1
 
 		ldy	#OBJ_X+2
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<translationX
 		iny
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<translationX+1
 
 		ldy	#OBJ_Y+2
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<translationY
 		iny
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<translationY+1
 
 		ldy	#OBJ_Z+2
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<translationZ
 		iny
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<translationZ+1
 
 		ldy	#OBJ_RX
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<rotationX
 
 		ldy	#OBJ_RY
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<rotationY
 
 		ldy	#OBJ_RZ
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		sta	<rotationZ
 
 		ldy	#OBJ_NO
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		tay
-		lda	modelData,y
+		lda	modelData, y
 		sta	<modelAddr
-		lda	modelData+1,y
+		lda	modelData+1, y
 		sta	<modelAddr+1
 
 		ldy	#OBJ_COLOR
-		lda	[objRegTable_AddrWork],y
+		lda	[objRegTable_AddrWork], y
 		jsr	setLineColor
 
 		lda	#ROTATIONZXY
@@ -4121,30 +4065,30 @@ getAngleShift:
 
 ;x=x		y=zsinA+ycosA	z=zcosA-ysinA
 		ldy	ansAngleX
-		lda	sinDataLow,y
+		lda	sinDataLow, y
 		sta	angleY0
-		lda	sinDataHigh,y
+		lda	sinDataHigh, y
 		sta	angleY0+1
 
 		ldy	ansAngleX
-		lda	cosDataLow,y
+		lda	cosDataLow, y
 		sta	angleZ0
-		lda	cosDataHigh,y
+		lda	cosDataHigh, y
 		sta	angleZ0+1
 
 ;x=xcosA-zsinA	y=y		z=xsinA+zcosA
 		ldy	ansAngleY
 		clc
-		lda	sinDataLow,y
+		lda	sinDataLow, y
 		eor	#$FF
 		adc	#$01
 		sta	<mul16a
-		lda	sinDataHigh,y
+		lda	sinDataHigh, y
 		eor	#$FF
 		adc	#$00
 		sta	<mul16a+1
 
-		movw	<mul16b,angleZ0
+		movw	<mul16b, angleZ0
 
 		jsr	smul16
 
@@ -4158,16 +4102,16 @@ getAngleShift:
 		rol	<mul16d
 		rol	<mul16d+1
 
-		movw	angleX0,<mul16d
+		movw	angleX0, <mul16d
 
 ;--------------------------------
 		ldy	ansAngleY
-		lda	cosDataLow,y
+		lda	cosDataLow, y
 		sta	<mul16a
-		lda	cosDataHigh,y
+		lda	cosDataHigh, y
 		sta	<mul16a+1
 
-		movw	<mul16b,angleZ0
+		movw	<mul16b, angleZ0
 
 		jsr	smul16
 
@@ -4181,11 +4125,11 @@ getAngleShift:
 		rol	<mul16d
 		rol	<mul16d+1
 
-		movw	angleZ0,<mul16d
+		movw	angleZ0, <mul16d
 
 ;--------------------------------
-		movw	<mul16a,angleX0
-		movw	<mul16b,angleShift
+		movw	<mul16a, angleX0
+		movw	<mul16b, angleShift
 		jsr	smul16
 
 		asl	<mul16c
@@ -4198,11 +4142,11 @@ getAngleShift:
 		rol	<mul16d
 		rol	<mul16d+1
 
-		movq	angleX0,<mul16c
+		movq	angleX0, <mul16c
 
 ;--------------------------------
-		movw	<mul16a,angleY0
-		movw	<mul16b,angleShift
+		movw	<mul16a, angleY0
+		movw	<mul16b, angleShift
 		jsr	smul16
 
 		asl	<mul16c
@@ -4215,11 +4159,11 @@ getAngleShift:
 		rol	<mul16d
 		rol	<mul16d+1
 
-		movq	angleY0,<mul16c
+		movq	angleY0, <mul16c
 
 ;--------------------------------
-		movw	<mul16a,angleZ0
-		movw	<mul16b,angleShift
+		movw	<mul16a, angleZ0
+		movw	<mul16b, angleShift
 		jsr	smul16
 
 		asl	<mul16c
@@ -4232,7 +4176,7 @@ getAngleShift:
 		rol	<mul16d
 		rol	<mul16d+1
 
-		movq	angleZ0,<mul16c
+		movq	angleZ0, <mul16c
 
 		ply
 		plx
@@ -4243,8 +4187,8 @@ getAngleShift:
 getAngle:
 		phx
 
-		subw	<mul16a,angleZ1,angleZ0
-		subw	<mul16b,angleX1,angleX0
+		subw	<mul16a, angleZ1, angleZ0
+		subw	<mul16b, angleX1, angleX0
 		jsr	atan
 
 		tax
@@ -4252,14 +4196,14 @@ getAngle:
 		inc	a
 		sta	ansAngleY
 
-		subw	transform2DWork0,  angleX1,angleX0
-		subw	transform2DWork0+2,angleY1,angleY0
-		subw	transform2DWork0+4,angleZ1,angleZ0
-		mov	vertexCount,#1
+		subw	transform2DWork0, angleX1, angleX0
+		subw	transform2DWork0+2, angleY1, angleY0
+		subw	transform2DWork0+4, angleZ1, angleZ0
+		mov	vertexCount, #1
 		jsr	vertexRotationY
 
-		movw	<mul16a,transform2DWork0+4
-		movw	<mul16b,transform2DWork0+2
+		movw	<mul16a, transform2DWork0+4
+		movw	<mul16b, transform2DWork0+2
 		jsr	atan
 		sta	ansAngleX
 
@@ -4276,8 +4220,8 @@ mainIrqProc:
 
 		dec	frameCount
 		bne	.irqEnd
-		mov	drawCountWork,drawCount
-		mov	frameCount,#60
+		mov	drawCountWork, drawCount
+		mov	frameCount, #60
 		stz	drawCount
 
 .irqEnd:
@@ -4847,10 +4791,10 @@ setLineColorData:
 
 		tax
 
-		lda	wireLineColorData0,x
+		lda	wireLineColorData0, x
 		sta	<CH0Data
 
-		lda	wireLineColorData1,x
+		lda	wireLineColorData1, x
 		sta	<CH1Data
 
 		plx
@@ -4994,14 +4938,14 @@ drawModel:
 
 ;rotation
 		ldy	#MODELDATA_VERTEXCOUNT
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		ldy	#MODELDATA_VERTEXADDR
-		lda	[modelAddr],y		;vertex data address
+		lda	[modelAddr], y		;vertex data address
 		sta	<vertex0Addr
 		iny
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<vertex0Addr+1
 
 		movw	<vertex1Addr, #transform2DWork0
@@ -5010,7 +4954,7 @@ drawModel:
 
 ;translation
 		ldy	#MODELDATA_VERTEXCOUNT
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		movw	<vertex0Addr, #transform2DWork0
@@ -5029,7 +4973,7 @@ drawModel:
 		jsr	moveEyeMatrixToMatrix2
 
 		ldy	#MODELDATA_VERTEXCOUNT
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		movw	<vertex0Addr, #transform2DWork1
@@ -5040,14 +4984,14 @@ drawModel:
 
 ;move transform2DWork0 to transform2DWork1
 		ldy	#MODELDATA_VERTEXCOUNT
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		jsr	copy2DWork0To2DWork1
 
 ;transform2D
 		ldy	#MODELDATA_VERTEXCOUNT
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		movw	<vertex0Addr, #transform2DWork1
@@ -5072,14 +5016,14 @@ drawModel2:
 
 ;rotation
 		ldy	#MODELDATA_VERTEXCOUNT
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		ldy	#MODELDATA_VERTEXADDR
-		lda	[modelAddr],y		;vertex data address
+		lda	[modelAddr], y		;vertex data address
 		sta	<vertex0Addr
 		iny
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<vertex0Addr+1
 
 		jsr	moveToTransform2DWork0
@@ -5148,14 +5092,14 @@ drawModel2:
 drawModelProc:
 ;
 		ldy	#MODELDATA_WIREADDR
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<modelAddrWork		;ModelData Wire Addr
 		iny
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<modelAddrWork+1
 
 		ldy	#MODELDATA_WIRECOUNT
-		lda	[modelAddr],y		;Wire Count
+		lda	[modelAddr], y		;Wire Count
 		sta	<modelWireCount
 
 		cly
@@ -5168,19 +5112,19 @@ drawModelProc:
 
 		iny
 
-		lda	transform2DWork0,x
+		lda	transform2DWork0, x
 		sta	<lineX0
 
-		lda	transform2DWork0+1,x
+		lda	transform2DWork0+1, x
 		sta	<lineX0+1
 
-		lda	transform2DWork0+2,x
+		lda	transform2DWork0+2, x
 		sta	<lineY0
 
-		lda	transform2DWork0+3,x
+		lda	transform2DWork0+3, x
 		sta	<lineY0+1
 
-		lda	transform2DWork0+5,x
+		lda	transform2DWork0+5, x
 		bpl	.drawModelJump1
 
 		smb0	<frontClipFlag
@@ -5192,19 +5136,19 @@ drawModelProc:
 
 		iny
 
-		lda	transform2DWork0,x
+		lda	transform2DWork0, x
 		sta	<lineX1
 
-		lda	transform2DWork0+1,x
+		lda	transform2DWork0+1, x
 		sta	<lineX1+1
 
-		lda	transform2DWork0+2,x
+		lda	transform2DWork0+2, x
 		sta	<lineY1
 
-		lda	transform2DWork0+3,x
+		lda	transform2DWork0+3, x
 		sta	<lineY1+1
 
-		lda	transform2DWork0+5,x
+		lda	transform2DWork0+5, x
 		bpl	.drawModelJump2
 
 		smb1	<frontClipFlag
@@ -5266,19 +5210,19 @@ clipFront:
 ;(128-Z0) to mul16a
 		sec
 		lda	#SCREENZ
-		sbc	transform2DWork1+4,x
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
 		lda	#0
-		sbc	transform2DWork1+5,x
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(X1-X0) to mul16b
 		sec
-		lda	transform2DWork1+0,y
-		sbc	transform2DWork1+0,x
+		lda	transform2DWork1+0, y
+		sbc	transform2DWork1+0, x
 		sta	<mul16b
-		lda	transform2DWork1+1,y
-		sbc	transform2DWork1+1,x
+		lda	transform2DWork1+1, y
+		sbc	transform2DWork1+1, x
 		sta	<mul16b+1
 
 ;(128-Z0)*(X1-X0) to mul16d:mul16c
@@ -5286,11 +5230,11 @@ clipFront:
 
 ;(Z1-Z0) to mul16a
 		sec
-		lda	transform2DWork1+4,y
-		sbc	transform2DWork1+4,x
+		lda	transform2DWork1+4, y
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
-		lda	transform2DWork1+5,y
-		sbc	transform2DWork1+5,x
+		lda	transform2DWork1+5, y
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(128-Z0)*(X1-X0)/(Z1-Z0)
@@ -5299,28 +5243,28 @@ clipFront:
 ;(128-Z0)*(X1-X0)/(Z1-Z0)+X0
 		clc
 		lda	<mul16a
-		adc	transform2DWork1+0,x
+		adc	transform2DWork1+0, x
 		sta	<clipFrontX
 		lda	<mul16a+1
-		adc	transform2DWork1+1,x
+		adc	transform2DWork1+1, x
 		sta	<clipFrontX+1
 
 ;(128-Z0) to mul16a
 		sec
 		lda	#SCREENZ
-		sbc	transform2DWork1+4,x
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
 		lda	#0
-		sbc	transform2DWork1+5,x
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(Y1-Y0) to mul16b
 		sec
-		lda	transform2DWork1+2,y
-		sbc	transform2DWork1+2,x
+		lda	transform2DWork1+2, y
+		sbc	transform2DWork1+2, x
 		sta	<mul16b
-		lda	transform2DWork1+3,y
-		sbc	transform2DWork1+3,x
+		lda	transform2DWork1+3, y
+		sbc	transform2DWork1+3, x
 		sta	<mul16b+1
 
 ;(128-Z0)*(Y1-Y0) to mul16d:mul16c
@@ -5328,11 +5272,11 @@ clipFront:
 
 ;(Z1-Z0) to mul16a
 		sec
-		lda	transform2DWork1+4,y
-		sbc	transform2DWork1+4,x
+		lda	transform2DWork1+4, y
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
-		lda	transform2DWork1+5,y
-		sbc	transform2DWork1+5,x
+		lda	transform2DWork1+5, y
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(128-Z0)*(Y1-Y0)/(Z1-Z0)
@@ -5341,10 +5285,10 @@ clipFront:
 ;(128-Z0)*(Y1-Y0)/(Z1-Z0)+Y0
 		clc
 		lda	<mul16a
-		adc	transform2DWork1+2,x
+		adc	transform2DWork1+2, x
 		sta	<clipFrontY
 		lda	<mul16a+1
-		adc	transform2DWork1+3,x
+		adc	transform2DWork1+3, x
 		sta	<clipFrontY+1
 
 		ply
@@ -5359,28 +5303,28 @@ copy2DWork0To2DWork1:
 		cly
 
 .copy2DWork0To2DWork1Loop:
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 		iny
 
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 		iny
 
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 		iny
 
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 		iny
 
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 		iny
 
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 		iny
 
 		dex
@@ -5434,26 +5378,26 @@ vertexRotationZ:
 
 .vertexRotationZLoop:
 ;----------------
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0, y	;X0
 		sta	<mul16a
-		lda	transform2DWork0+1,y
+		lda	transform2DWork0+1, y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
+		lda	cosDataLow, x		;cos
 		sta	<mul16b
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;xcosA
 
 		movq	<div32ans, <mul16c
 
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2, y	;Y0
 		sta	<mul16a
-		lda	transform2DWork0+3,y
+		lda	transform2DWork0+3, y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
+		lda	sinDataLow, x		;sin
 		sta	<mul16b
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;ysinA
@@ -5473,26 +5417,26 @@ vertexRotationZ:
 		pha
 
 ;----------------
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0, y	;X0
 		sta	<mul16a
-		lda	transform2DWork0+1,y
+		lda	transform2DWork0+1, y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
+		lda	sinDataLow, x		;sin
 		sta	<mul16b
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;xsinA
 
 		movq	<div32ans, <mul16c
 
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2, y	;Y0
 		sta	<mul16a
-		lda	transform2DWork0+3,y
+		lda	transform2DWork0+3, y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
+		lda	cosDataLow, x		;cos
 		sta	<mul16b
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;ycosA
@@ -5507,15 +5451,15 @@ vertexRotationZ:
 		rol	<mul16d+1
 
 		lda	<mul16d
-		sta	transform2DWork0+2,y
+		sta	transform2DWork0+2, y
 		lda	<mul16d+1
-		sta	transform2DWork0+3,y
+		sta	transform2DWork0+3, y
 
 ;----------------
 		pla
-		sta	transform2DWork0,y
+		sta	transform2DWork0, y
 		pla
-		sta	transform2DWork0+1,y
+		sta	transform2DWork0+1, y
 
 ;----------------
 		clc
@@ -5547,26 +5491,26 @@ vertexRotationY:
 
 .vertexRotationYLoop:
 ;----------------
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
+		lda	sinDataLow, x		;sin
 		sta	<mul16b
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;zsinA
 
 		movq	<div32ans, <mul16c
 
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0, y	;X0
 		sta	<mul16a
-		lda	transform2DWork0+1,y
+		lda	transform2DWork0+1, y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
+		lda	cosDataLow, x		;cos
 		sta	<mul16b
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;xcosA
@@ -5586,26 +5530,26 @@ vertexRotationY:
 		pha
 
 ;----------------------------
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
+		lda	cosDataLow, x		;cos
 		sta	<mul16b
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;zcosA
 
 		movq	<div32ans, <mul16c
 
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0, y	;X0
 		sta	<mul16a
-		lda	transform2DWork0+1,y
+		lda	transform2DWork0+1, y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
+		lda	sinDataLow, x		;sin
 		sta	<mul16b
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;xsinA
@@ -5620,15 +5564,15 @@ vertexRotationY:
 		rol	<mul16d+1
 
 		lda	<mul16d
-		sta	transform2DWork0+4,y
+		sta	transform2DWork0+4, y
 		lda	<mul16d+1
-		sta	transform2DWork0+5,y
+		sta	transform2DWork0+5, y
 
 ;----------------
 		pla
-		sta	transform2DWork0,y
+		sta	transform2DWork0, y
 		pla
-		sta	transform2DWork0+1,y
+		sta	transform2DWork0+1, y
 
 ;----------------
 		clc
@@ -5660,26 +5604,26 @@ vertexRotationX:
 
 .vertexRotationXLoop:
 ;----------------
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2, y	;Y0
 		sta	<mul16a
-		lda	transform2DWork0+3,y
+		lda	transform2DWork0+3, y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
+		lda	cosDataLow, x		;cos
 		sta	<mul16b
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;ycosA
 
 		movq	<div32ans, <mul16c
 
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
+		lda	sinDataLow, x		;sin
 		sta	<mul16b
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;zsinA
@@ -5699,26 +5643,26 @@ vertexRotationX:
 		pha
 
 ;----------------
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2, y	;Y0
 		sta	<mul16a
-		lda	transform2DWork0+3,y
+		lda	transform2DWork0+3, y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
+		lda	sinDataLow, x		;sin
 		sta	<mul16b
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;ysinA
 
 		movq	<div32ans, <mul16c
 
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
+		lda	cosDataLow, x		;cos
 		sta	<mul16b
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	<mul16b+1
 
 		jsr	smul16			;zcosA
@@ -5733,15 +5677,15 @@ vertexRotationX:
 		rol	<mul16d+1
 
 		lda	<mul16d
-		sta	transform2DWork0+4,y
+		sta	transform2DWork0+4, y
 		lda	<mul16d+1
-		sta	transform2DWork0+5,y
+		sta	transform2DWork0+5, y
 
 ;----------------
 		pla
-		sta	transform2DWork0+2,y
+		sta	transform2DWork0+2, y
 		pla
-		sta	transform2DWork0+3,y
+		sta	transform2DWork0+3, y
 
 ;----------------
 		clc
@@ -5809,43 +5753,43 @@ transform2D2:
 		cly
 
 .transform2D2Loop0:
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
 
-		lda	transform2DWork0+1,y
-		sta	transform2DWork1+1,y
+		lda	transform2DWork0+1, y
+		sta	transform2DWork1+1, y
 
-		lda	transform2DWork0+2,y
-		sta	transform2DWork1+2,y
+		lda	transform2DWork0+2, y
+		sta	transform2DWork1+2, y
 
-		lda	transform2DWork0+3,y
-		sta	transform2DWork1+3,y
+		lda	transform2DWork0+3, y
+		sta	transform2DWork1+3, y
 
-		lda	transform2DWork0+4,y
-		sta	transform2DWork1+4,y
+		lda	transform2DWork0+4, y
+		sta	transform2DWork1+4, y
 
-		lda	transform2DWork0+5,y
-		sta	transform2DWork1+5,y
+		lda	transform2DWork0+5, y
+		sta	transform2DWork1+5, y
 
 ;Z0 < 128 check
 		sec
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sbc	#SCREENZ
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sbc	#00
 
 		bmi	.transform2D2Jump00
 
 ;X0*128/Z0
 ;screen z = 128
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0, y	;X0
 		sta	<mul16c
-		lda	transform2DWork0+1,y
+		lda	transform2DWork0+1, y
 		sta	<mul16c+1
 
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
 
 		jsr	transform2DProc
@@ -5855,21 +5799,21 @@ transform2D2:
 		clc
 		lda	<mul16a
 		adc	<centerX
-		sta	transform2DWork0,y	;X0
+		sta	transform2DWork0, y	;X0
 		lda	<mul16a+1
 		adc	<centerX+1
-		sta	transform2DWork0+1,y
+		sta	transform2DWork0+1, y
 
 ;Y0*128/Z0
 ;screen z = 128
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2, y	;Y0
 		sta	<mul16c
-		lda	transform2DWork0+3,y
+		lda	transform2DWork0+3, y
 		sta	<mul16c+1
 
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
 
 		jsr	transform2DProc
@@ -5879,19 +5823,19 @@ transform2D2:
 		sec
 		lda	<centerY
 		sbc	<mul16a
-		sta	transform2DWork0+2,y	;Y0
+		sta	transform2DWork0+2, y	;Y0
 		lda	<centerY+1
 		sbc	<mul16a+1
-		sta	transform2DWork0+3,y
+		sta	transform2DWork0+3, y
 
 		jmp	.transform2D2Jump01
 
 .transform2D2Jump00:
 ;Z0<128 flag set
 		lda	#$00
-		sta	transform2DWork0+4,y
+		sta	transform2DWork0+4, y
 		lda	#$80
-		sta	transform2DWork0+5,y
+		sta	transform2DWork0+5, y
 
 .transform2D2Jump01:
 		clc
@@ -5908,7 +5852,7 @@ transform2D2:
 ;----------------------------
 transform2DProc:
 ;mul16a(rough value) = (mul16c(-32768_32767) * 128 / mul16a(1_32767)) << transform2DScale
-
+;push y
 		phy
 ;c sign
 		lda	<mul16c+1
@@ -5916,184 +5860,126 @@ transform2DProc:
 		bpl	.jp00
 ;c neg
 		sec
-		lda	<mul16c
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c
 		sta	<mul16c
 
-		lda	<mul16c+1
-		eor	#$FF
-		adc	#0
+		cla
+		sbc	<mul16c+1
 		sta	<mul16c+1
-
 .jp00:
-;get div data
-		lda	<div16a+1
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
+		stz	<muladdr
 
+;get div data
+		ldy	<div16a+1
 		clc
-		adc	#divdatBank
+		lda	umul16Bank, y
+		adc	#divdatBank-muldatBank	;carry clear
 		sta	<mulbank
 		tam	#$02
 
-		lda	<div16a
-		sta	<muladdr
-		lda	<div16a+1
-		and	#$1F
-		ora	#$40
+		lda	umul16Address, y
 		sta	<muladdr+1
 
-		lda	[muladdr]
+		ldy	<div16a
+
+		lda	[muladdr], y
 		sta	<sqrt64a
 
-		clc
 		lda	<mulbank
-		adc	#4
+		adc	#4		;carry clear
 		tam	#$02
 
-		lda	[muladdr]
+		lda	[muladdr], y
 		sta	<sqrt64a+1
 
-		clc
 		lda	<mulbank
-		adc	#8
+		adc	#8		;carry clear
 		tam	#$02
 
-		lda	[muladdr]
+		lda	[muladdr], y
 		sta	<sqrt64a+2
 
 ;mul mul16c low byte
-		lda	<mul16c
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
+		ldy	<mul16c
+		lda	umul16Bank, y
 
-		clc
-		adc	#muldatBank
 		sta	<mulbank
 		tam	#$02
 
-		lda	<mul16c
-		and	#$1F
-		ora	#$40
-		stz	<muladdr
+		lda	umul16Address, y
 		sta	<muladdr+1
 
 		ldy	<sqrt64a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<sqrt64b
 
 		ldy	<sqrt64a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<sqrt64b+1
 
 		ldy	<sqrt64a+2
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<sqrt64b+2
 
 		lda	<mulbank
-		clc
-		adc	#8
+		adc	#8		;carry clear
 		tam	#$02
 
-		clc
 		ldy	<sqrt64a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<sqrt64b+1
 		sta	<sqrt64b+1
 
 		ldy	<sqrt64a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<sqrt64b+2
 		sta	<sqrt64b+2
 
 		ldy	<sqrt64a+2
-		lda	[muladdr],y
-		adc	#0
+		lda	[muladdr], y
+		adc	#0		;carry clear
 		sta	<sqrt64b+3
 
 ;mul mul16c high byte
-		lda	<mul16c+1
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
+		ldy	<mul16c+1
+		lda	umul16Bank, y
 
-		clc
-		adc	#muldatBank
 		sta	<mulbank
 		tam	#$02
 
-		lda	<mul16c+1
-		and	#$1F
-		ora	#$40
-		stz	<muladdr
+		lda	umul16Address, y
 		sta	<muladdr+1
 
-		clc
 		ldy	<sqrt64a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<sqrt64b+1
 		sta	<sqrt64b+1
 
 		ldy	<sqrt64a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<sqrt64b+2
 		sta	<sqrt64b+2
 
 		ldy	<sqrt64a+2
-		lda	[muladdr],y
-		adc	<sqrt64b+3
+		lda	[muladdr], y
+		adc	<sqrt64b+3	;carry clear
 		sta	<sqrt64b+3
 
 		lda	<mulbank
-		clc
-		adc	#8
+		adc	#8		;carry clear
 		tam	#$02
 
-		clc
 		ldy	<sqrt64a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<sqrt64b+2
 		sta	<sqrt64b+2
 
 		ldy	<sqrt64a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<sqrt64b+3
 		sta	<sqrt64b+3
 
-		pla
-		bpl	.jp01
-;ans neg
-		sec
-		lda	<sqrt64b
-		eor	#$FF
-		adc	#0
-		sta	<sqrt64b
-
-		lda	<sqrt64b+1
-		eor	#$FF
-		adc	#0
-		sta	<sqrt64b+1
-
-		lda	<sqrt64b+2
-		eor	#$FF
-		adc	#0
-		sta	<sqrt64b+2
-
-		lda	<sqrt64b+3
-		eor	#$FF
-		adc	#0
-		sta	<sqrt64b+3
-
-.jp01:
 		movw	<mul16a, <sqrt64b+2
 		lda	<sqrt64b+1
 
@@ -6108,6 +5994,19 @@ transform2DProc:
 		bra	.scaleLoop
 .scaleLoopEnd:
 
+		pla
+		bpl	.jp01
+;ans neg
+		sec
+		cla
+		sbc	<mul16a
+		sta	<mul16a
+
+		cla
+		sbc	<mul16a+1
+		sta	<mul16a+1
+.jp01:
+;pull y
 		ply
 		rts
 
@@ -6122,25 +6021,25 @@ moveToTransform2DWork0:
 		cly
 
 .moveToTransform2DWork0Loop:
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
 		iny
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
-		iny
-
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
-		iny
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
 		iny
 
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
 		iny
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
+		iny
+
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
+		iny
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
 		iny
 
 		dec	<vertexCountWork
@@ -6153,35 +6052,35 @@ moveToTransform2DWork0:
 ;----------------------------
 moveMatrix1ToMatrix0:
 ;
-		tii	matrix1,matrix0,18
+		tii	matrix1, matrix0, 18
 		rts
 
 
 ;----------------------------
 moveMatrix1ToMatrix2:
 ;
-		tii	matrix1,matrix2,18
+		tii	matrix1, matrix2, 18
 		rts
 
 
 ;----------------------------
 moveMatrix2ToMatrix0:
 ;
-		tii	matrix2,matrix0,18
+		tii	matrix2, matrix0, 18
 		rts
 
 
 ;----------------------------
 moveMatrix2ToEyeMatrix:
 ;
-		tii	matrix2,eyeMatrix,18
+		tii	matrix2, eyeMatrix, 18
 		rts
 
 
 ;----------------------------
 moveEyeMatrixToMatrix2:
 ;
-		tii	eyeMatrix,matrix2,18
+		tii	eyeMatrix, matrix2, 18
 		rts
 
 
@@ -6201,17 +6100,17 @@ setMatrix1RotationX:
 		stz	matrix1+6+0
 		stz	matrix1+6+1
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+6+2
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+6+3
 
 		clc
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		eor	#$FF
 		adc	#$01
 		sta	matrix1+6+4
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		eor	#$FF
 		adc	#$00
 		sta	matrix1+6+5
@@ -6219,14 +6118,14 @@ setMatrix1RotationX:
 		stz	matrix1+12+0
 		stz	matrix1+12+1
 
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		sta	matrix1+12+2
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	matrix1+12+3
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+12+4
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+12+5
 
 		rts
@@ -6235,17 +6134,17 @@ setMatrix1RotationX:
 ;----------------------------
 setMatrix1RotationY:
 ;
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+0+0
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+0+1
 
 		stz	matrix1+0+2
 		stz	matrix1+0+3
 
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		sta	matrix1+0+4
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	matrix1+0+5
 
 		stz	matrix1+6+0
@@ -6259,11 +6158,11 @@ setMatrix1RotationY:
 		stz	matrix1+6+5
 
 		clc
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		eor	#$FF
 		adc	#$01
 		sta	matrix1+12+0
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		eor	#$FF
 		adc	#$00
 		sta	matrix1+12+1
@@ -6271,9 +6170,9 @@ setMatrix1RotationY:
 		stz	matrix1+12+2
 		stz	matrix1+12+3
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+12+4
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+12+5
 
 		rts
@@ -6282,17 +6181,17 @@ setMatrix1RotationY:
 ;----------------------------
 setMatrix1RotationZ:
 ;
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+0+0
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+0+1
 
 		clc
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		eor	#$FF
 		adc	#$01
 		sta	matrix1+0+2
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		eor	#$FF
 		adc	#$00
 		sta	matrix1+0+3
@@ -6300,14 +6199,14 @@ setMatrix1RotationZ:
 		stz	matrix1+0+4
 		stz	matrix1+0+5
 
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		sta	matrix1+6+0
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	matrix1+6+1
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+6+2
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+6+3
 
 		stz	matrix1+6+4
@@ -6397,10 +6296,10 @@ vertexMultiply:
 		sta	<mul16a+1
 		iny
 
-		lda	matrix2,x
+		lda	matrix2, x
 		sta	<mul16b
 		inx
-		lda	matrix2,x
+		lda	matrix2, x
 		sta	<mul16b+1
 		inx
 
@@ -6459,14 +6358,14 @@ matrixMultiply:
 
 .matrixMultiplyLoop0:
 
-		lda	matrix0,x
+		lda	matrix0, x
 		sta	<mul16a
-		lda	matrix0+1,x
+		lda	matrix0+1, x
 		sta	<mul16a+1
 
-		lda	matrix1,y
+		lda	matrix1, y
 		sta	<mul16b
-		lda	matrix1+1,y
+		lda	matrix1+1, y
 		sta	<mul16b+1
 
 		jsr	smul16
@@ -6474,14 +6373,14 @@ matrixMultiply:
 		movq	<vertexWork, <mul16c
 
 ;----------------
-		lda	matrix0+6,x
+		lda	matrix0+6, x
 		sta	<mul16a
-		lda	matrix0+7,x
+		lda	matrix0+7, x
 		sta	<mul16a+1
 
-		lda	matrix1+2,y
+		lda	matrix1+2, y
 		sta	<mul16b
-		lda	matrix1+3,y
+		lda	matrix1+3, y
 		sta	<mul16b+1
 
 		jsr	smul16
@@ -6489,14 +6388,14 @@ matrixMultiply:
 		addq	<vertexWork, <mul16c, <vertexWork
 
 ;----------------
-		lda	matrix0+12,x
+		lda	matrix0+12, x
 		sta	<mul16a
-		lda	matrix0+13,x
+		lda	matrix0+13, x
 		sta	<mul16a+1
 
-		lda	matrix1+4,y
+		lda	matrix1+4, y
 		sta	<mul16b
-		lda	matrix1+5,y
+		lda	matrix1+5, y
 		sta	<mul16b+1
 
 		jsr	smul16
@@ -6515,10 +6414,10 @@ matrixMultiply:
 
 		phx
 		ldx	<vertex1Addr
-		sta	matrix2,x
+		sta	matrix2, x
 		inx
 		lda	<vertexWork+3
-		sta	matrix2,x
+		sta	matrix2, x
 		inx
 		stx	<vertex1Addr
 		plx
@@ -6547,10 +6446,10 @@ transform2D:
 ;Z0 < 128 check
 		ldy	#$04
 		sec
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sbc	#SCREENZ
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sbc	#00
 
 		bmi	.transform2DJump00
@@ -6559,17 +6458,17 @@ transform2D:
 ;screen z = 128
 .transform2DJump05:
 		ldy	#$00
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c+1
 
 		ldy	#$04
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a+1
 
 		jsr	transform2DProc
@@ -6580,26 +6479,26 @@ transform2D:
 		clc
 		lda	<mul16a
 		adc	<centerX
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 		iny
 		lda	<mul16a+1
 		adc	<centerX+1
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 
 ;Y0*128/Z0
 ;screen z = 128
 		ldy	#$02
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c+1
 
 		ldy	#$04
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a+1
 
 		jsr	transform2DProc
@@ -6610,20 +6509,20 @@ transform2D:
 		sec
 		lda	<centerY
 		sbc	<mul16a
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 		iny
 		lda	<centerY+1
 		sbc	<mul16a+1
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 
 ;Z0>=128 flag set
 ;Z0 set
 		iny
-		lda	[vertex0Addr],y
-		sta	[vertex1Addr],y
+		lda	[vertex0Addr], y
+		sta	[vertex1Addr], y
 		iny
-		lda	[vertex0Addr],y
-		sta	[vertex1Addr],y
+		lda	[vertex0Addr], y
+		sta	[vertex1Addr], y
 
 		jmp	.transform2DJump01
 
@@ -6631,10 +6530,10 @@ transform2D:
 ;Z0<128 flag set
 		ldy	#$04
 		lda	#$00
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 		iny
 		lda	#$80
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 
 .transform2DJump01:
 		clc
@@ -6684,23 +6583,23 @@ putLineBuffer:
 
 .putLineBufferLoop:
 		cly
-		lda	[lineBufferAddr],y
+		lda	[lineBufferAddr], y
 		sta	<edgeX0
 
 		iny
-		lda	[lineBufferAddr],y
+		lda	[lineBufferAddr], y
 		sta	<edgeY0
 
 		iny
-		lda	[lineBufferAddr],y
+		lda	[lineBufferAddr], y
 		sta	<edgeX1
 
 		iny
-		lda	[lineBufferAddr],y
+		lda	[lineBufferAddr], y
 		sta	<edgeY1
 
 		iny
-		lda	[lineBufferAddr],y
+		lda	[lineBufferAddr], y
 		jsr	setLineColorData
 
 		jsr	calcEdge
@@ -6720,23 +6619,23 @@ setLineBuffer:
 		cly
 
 		lda	<lineX0
-		sta	[lineBufferAddr],y
+		sta	[lineBufferAddr], y
 
 		iny
 		lda	<lineY0
-		sta	[lineBufferAddr],y
+		sta	[lineBufferAddr], y
 
 		iny
 		lda	<lineX1
-		sta	[lineBufferAddr],y
+		sta	[lineBufferAddr], y
 
 		iny
 		lda	<lineY1
-		sta	[lineBufferAddr],y
+		sta	[lineBufferAddr], y
 
 		iny
 		lda	<lineColor
-		sta	[lineBufferAddr],y
+		sta	[lineBufferAddr], y
 
 		addwb	lineBufferAddr, #LINEBUFFER_SIZE
 
@@ -6889,7 +6788,7 @@ clip2DX0:
 ;(0-X0)*(Y1-Y0)/(X1-X0)+Y0
 		addw	<mul16a, <lineY0
 
-		bbs1	<clip2DFlag,.clip2DX0Jump04
+		bbs1	<clip2DFlag, .clip2DX0Jump04
 ;X0<0 X1>=0
 		stzw	<lineX0
 
@@ -6956,7 +6855,7 @@ clip2DY255:
 ;(191-Y0)*(X1-X0)/(Y1-Y0)+X0
 		addw	<mul16a, <lineX0
 
-		bbs1	<clip2DFlag,.clip2DY255Jump04
+		bbs1	<clip2DFlag, .clip2DY255Jump04
 
 ;Y0>191 Y1<=191
 		movw	<lineX0, <mul16a
@@ -7024,7 +6923,7 @@ clip2DY0:
 ;(0-Y0)*(X1-X0)/(Y1-Y0)+X0
 		addw	<mul16a, <lineX0
 
-		bbs1	<clip2DFlag,.clip2DY0Jump04
+		bbs1	<clip2DFlag, .clip2DY0Jump04
 ;Y0<0 Y1>=0
 		movw	<lineX0, <mul16a
 
@@ -7257,9 +7156,9 @@ calcEdge:
 		lda	<edgeX0
 		and	#$07
 		tax
-		lda	wireLinePixelDatas,x
+		lda	wireLinePixelDatas, x
 		sta	<CHMask
-		lda	wireLinePixelMasks,x
+		lda	wireLinePixelMasks, x
 		sta	<CHNegMask
 
 		lda	<CH0Data
@@ -7284,6 +7183,18 @@ calcEdge:
 		bbs7	<edgeSignX, .edgeYLoop4Jump2
 
 ;edgeSignX plus
+		pha
+
+		lda	<CH0Data
+		and	#$80
+		sta	<CH0Work
+
+		lda	<CH1Data
+		and	#$80
+		sta	<CH1Work
+
+		pla
+
 .edgeYLoop0:
 		inc	<wireLineCount
 
@@ -7302,20 +7213,21 @@ calcEdge:
 		stx	<edgeX0
 		sty	<edgeY0
 
-		pha
-
-		lda	<CHNegMask
-		lsr	a
+		sec
 		ror	<CHNegMask
+		bcc	.edgeYLoop0Jump1
+		lsr	<CH0
+		lsr	<CH1
+		bra	.edgeYLoop0
 
-		lda	<CH0
-		lsr	a
-		ror	<CH0
-
-		lda	<CH1
-		lsr	a
-		ror	<CH1
-
+.edgeYLoop0Jump1:
+		pha
+		lda	#$7F
+		sta	<CHNegMask
+		lda	<CH0Work
+		sta	<CH0
+		lda	<CH1Work
+		sta	<CH1
 		pla
 
 		bra	.edgeYLoop0
@@ -7326,6 +7238,18 @@ calcEdge:
 
 .edgeYLoop4Jump2:
 ;edgeSignX minus
+		pha
+
+		lda	<CH0Data
+		and	#$01
+		sta	<CH0Work
+
+		lda	<CH1Data
+		and	#$01
+		sta	<CH1Work
+
+		pla
+
 .edgeYLoop4:
 		inc	<wireLineCount
 
@@ -7344,20 +7268,21 @@ calcEdge:
 		stx	<edgeX0
 		sty	<edgeY0
 
-		pha
-
-		lda	<CHNegMask
-		asl	a
+		sec
 		rol	<CHNegMask
+		bcc	.edgeYLoop4Jump1
+		asl	<CH0
+		asl	<CH1
+		bra	.edgeYLoop4
 
-		lda	<CH0
-		asl	a
-		rol	<CH0
-
-		lda	<CH1
-		asl	a
-		rol	<CH1
-
+.edgeYLoop4Jump1:
+		pha
+		lda	#$FE
+		sta	<CHNegMask
+		lda	<CH0Work
+		sta	<CH0
+		lda	<CH1Work
+		sta	<CH1
 		pla
 
 		bra	.edgeYLoop4
@@ -7377,20 +7302,24 @@ putVerticalLine:
 		ldx	<edgeX0
 		ldy	<edgeY0
 
-		lda	wireLineAddrConvXLow0,x
+		lda	wireLineAddrConvXLow0, x
 		sta	<setVramChrAddr
-		ora	wireLineAddrConvYLow0,y
+		ora	wireLineAddrConvYLow0, y
+
 		pha
 
-		lda	wireLineAddrConvXHigh0,x
+		lda	wireLineAddrConvXHigh0, x
 		ora	<wireBGAddr
 		sta	<setVramChrAddr+1
-		ora	wireLineAddrConvYHigh0,y
+		ora	wireLineAddrConvYHigh0, y
 		tax
 
 		tya
 		and	#$07
+		eor	#$07
+		inc	a
 		tay
+
 		pla
 
 		sei
@@ -7427,22 +7356,21 @@ putVerticalLine:
 
 		inc	<edgeY0
 
-		iny
-		cpy	#$08
+		dey
 		bne	.loop00
 
 		ldy	<edgeY0
 
-		lda	wireLineAddrConvYLow0,y
+		lda	wireLineAddrConvYLow0, y
 		ora	<setVramChrAddr
 		pha
 
-		lda	wireLineAddrConvYHigh0,y
+		lda	wireLineAddrConvYHigh0, y
 		ora	<setVramChrAddr+1
 		tax
 		pla
 
-		cly
+		ldy	#8
 
 		bra	.jp00
 
@@ -7461,21 +7389,21 @@ putPixel:
 ;
 		phx
 
-		lda	wireLineAddrConvYLow0,y
-		ora	wireLineAddrConvXLow0,x
+		lda	wireLineAddrConvYLow0, y
+		ora	wireLineAddrConvXLow0, x
 		sta	<setVramChrAddr
 
-		lda	wireLineAddrConvYHigh0,y
-		ora	wireLineAddrConvXHigh0,x
+		lda	wireLineAddrConvYHigh0, y
+		ora	wireLineAddrConvXHigh0, x
 		ora	<wireBGAddr
 		sta	<setVramChrAddr+1
 
 		txa
 		and	#$07
 		tax
-		lda	wireLinePixelDatas,x
+		lda	wireLinePixelDatas, x
 		sta	<CHMask
-		lda	wireLinePixelMasks,x
+		lda	wireLinePixelMasks, x
 		sta	<CHNegMask
 
 ;put pixel
@@ -7535,48 +7463,48 @@ putHorizontalLine:
 
 ;left
 		ldx	<wireLineX0
-		lda	wireLineAddrConvYLow0,y
-		ora	wireLineAddrConvXLow0,x
+		lda	wireLineAddrConvYLow0, y
+		ora	wireLineAddrConvXLow0, x
 		sta	<wireLineLeftAddr
 
-		lda	wireLineAddrConvYHigh0,y
-		ora	wireLineAddrConvXHigh0,x
+		lda	wireLineAddrConvYHigh0, y
+		ora	wireLineAddrConvXHigh0, x
 		ora	<wireBGAddr
 		sta	<wireLineLeftAddr+1
 
-		lda	wireLineAddrConvX,x
+		lda	wireLineAddrConvX, x
 		sta	<wireLineCount
 
 		txa
 		and	#$07
 		tax
-		lda	wireLineLeftDatas,x
+		lda	wireLineLeftDatas, x
 		sta	<wireLineLeftData
-		lda	wireLineLeftMasks,x
+		lda	wireLineLeftMasks, x
 		sta	<wireLineLeftMask
 
 ;right
 		ldx	<wireLineX1
-		lda	wireLineAddrConvYLow0,y
-		ora	wireLineAddrConvXLow0,x
+		lda	wireLineAddrConvYLow0, y
+		ora	wireLineAddrConvXLow0, x
 		sta	<wireLineRightAddr
 
-		lda	wireLineAddrConvYHigh0,y
-		ora	wireLineAddrConvXHigh0,x
+		lda	wireLineAddrConvYHigh0, y
+		ora	wireLineAddrConvXHigh0, x
 		ora	<wireBGAddr
 		sta	<wireLineRightAddr+1
 
 		sec
-		lda	wireLineAddrConvX,x
+		lda	wireLineAddrConvX, x
 		sbc	<wireLineCount
 		sta	<wireLineCount
 
 		txa
 		and	#$07
 		tax
-		lda	wireLineRightDatas,x
+		lda	wireLineRightDatas, x
 		sta	<wireLineRightData
-		lda	wireLineRightMasks,x
+		lda	wireLineRightMasks, x
 		sta	<wireLineRightMask
 
 		lda	<wireLineCount
@@ -7870,7 +7798,7 @@ calcUnitVector:
 
 		jsr	smul16
 
-		movq	sqrt64a+4,<mul16c
+		movq	sqrt64a+4, <mul16c
 
 ;sqrt64a+4 += unitVectorY * unitVectorY
 		lda	unitVectorY
@@ -7882,7 +7810,7 @@ calcUnitVector:
 
 		jsr	smul16
 
-		addq	sqrt64a+4,<mul16c
+		addq	sqrt64a+4, <mul16c
 
 ;sqrt64a+4 += unitVectorZ * unitVectorZ
 		lda	unitVectorZ
@@ -7895,7 +7823,7 @@ calcUnitVector:
 
 		jsr	smul16
 
-		addq	sqrt64a+4,<mul16c
+		addq	sqrt64a+4, <mul16c
 
 ;sqrt
 		stzq	sqrt64a
@@ -7908,15 +7836,15 @@ calcUnitVector:
 		lda	unitVectorX+1
 		sta	div64a+5
 		bpl	.calcUnitJump0
-		movw	div64a+6,#$FFFF
+		movw	div64a+6, #$FFFF
 		bra	.calcUnitJump1
 .calcUnitJump0:
 		stzw	div64a+6
 
 .calcUnitJump1:
-		movq	<div16a,<sqrt64ans
+		movq	<div16a, <sqrt64ans
 		jsr	sdiv64
-		movq	unitVectorX,<div16a
+		movq	unitVectorX, <div16a
 
 ;unitVectorY / sqrt
 		stzq	div64a
@@ -7925,15 +7853,15 @@ calcUnitVector:
 		lda	unitVectorY+1
 		sta	div64a+5
 		bpl	.calcUnitJump2
-		movw	div64a+6,#$FFFF
+		movw	div64a+6, #$FFFF
 		bra	.calcUnitJump3
 .calcUnitJump2:
 		stzw	div64a+6
 
 .calcUnitJump3:
-		movq	<div16a,<sqrt64ans
+		movq	<div16a, <sqrt64ans
 		jsr	sdiv64
-		movq	unitVectorY,<div16a
+		movq	unitVectorY, <div16a
 
 ;unitVectorZ / sqrt
 		stzq	div64a
@@ -7942,15 +7870,15 @@ calcUnitVector:
 		lda	unitVectorZ+1
 		sta	div64a+5
 		bpl	.calcUnitJump4
-		movw	div64a+6,#$FFFF
+		movw	div64a+6, #$FFFF
 		bra	.calcUnitJump5
 .calcUnitJump4:
 		stzw	div64a+6
 
 .calcUnitJump5:
-		movq	<div16a,<sqrt64ans
+		movq	<div16a, <sqrt64ans
 		jsr	sdiv64
-		movq	unitVectorZ,<div16a
+		movq	unitVectorZ, <div16a
 
 		rts
 
@@ -8050,9 +7978,9 @@ _atan:
 		clx
 .atanLoop:
 		sec
-		lda	atanDataLow,x
+		lda	atanDataLow, x
 		sbc	<div16a
-		lda	atanDataHigh,x
+		lda	atanDataHigh, x
 		sbc	<div16a+1
 		bcs	.atanJump1
 
