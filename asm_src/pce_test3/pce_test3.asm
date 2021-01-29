@@ -3,9 +3,9 @@
 ;0400-07FF	BG1	 1KWORD
 ;0800-0FFF		 2KWORD	SPCHR SATB
 ;1000-1FFF	CHR	 4KWORD	0-255CHR
-;2000-37FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp*2)
+;2000-37FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp)
 ;3800-3FFF
-;4000-57FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp*2)
+;4000-57FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp)
 ;5800-7FFF
 
 ;MEMORY
@@ -1035,7 +1035,7 @@ sdiv32:
 		sta	<div16a+1
 
 .sdiv32jp01:
-		jsr	udiv32
+		jsr	udiv32_2
 
 ;anser sign
 		pla
@@ -1160,6 +1160,87 @@ udiv32:
 
 ;pull y x
 		ply
+		plx
+		rts
+
+
+;----------------------------
+udiv32_2:
+;div16d:div16c(0_32767*32767) / div16a(1_32767) = div16a div16b
+;push x
+		phx
+
+		asl	<div16c
+		rol	<div16c+1
+
+		ldx	#$10
+
+.jpPl00:
+		rol	<div16d
+		rol	<div16d+1
+
+		sec
+		lda	<div16d
+		sbc	<div16a
+		sta	<div16d
+
+		lda	<div16d+1
+		sbc	<div16a+1
+		sta	<div16d+1
+
+		bcc	.jpMi01
+
+.jpPl01:
+		rol	<div16c
+		rol	<div16c+1
+
+		dex
+		bne	.jpPl00
+		bra	.jpEnd
+
+.jpMi00:
+		rol	<div16d
+		rol	<div16d+1
+
+		clc
+		lda	<div16d
+		adc	<div16a
+		sta	<div16d
+
+		lda	<div16d+1
+		adc	<div16a+1
+		sta	<div16d+1
+
+		bcs	.jpPl01
+
+.jpMi01:
+		rol	<div16c
+		rol	<div16c+1
+
+		dex
+		bne	.jpMi00
+
+		clc
+		lda	<div16d
+		adc	<div16a
+		sta	<div16d
+
+		lda	<div16d+1
+		adc	<div16a+1
+		sta	<div16d+1
+
+.jpEnd:
+		lda	<div16c
+		sta	<div16a
+		lda	<div16c+1
+		sta	<div16a+1
+
+		lda	<div16d
+		sta	<div16b
+		lda	<div16d+1
+		sta	<div16b+1
+
+;pull x
 		plx
 		rts
 
