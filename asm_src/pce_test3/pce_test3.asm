@@ -3,9 +3,9 @@
 ;0400-07FF	BG1	 1KWORD
 ;0800-0FFF		 2KWORD	SPCHR SATB
 ;1000-1FFF	CHR	 4KWORD	0-255CHR
-;2000-37FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp)
+;2000-37FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp*2)
 ;3800-3FFF
-;4000-57FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp)
+;4000-57FF	CHRBG	 6KWORD	32*12CHR(256*192 2bpp*2)
 ;5800-7FFF
 
 ;MEMORY
@@ -663,9 +663,6 @@ lineY1			.ds	2
 clip2DFlag		.ds	1
 
 ;---------------------
-transform2DScale	.ds	1
-
-;---------------------
 wireBGAddr		.ds	1
 
 wireLineX0		.ds	1
@@ -990,7 +987,7 @@ drawCountWork		.ds	1
 		.org	$E000
 ;----------------------------
 sdiv32:
-;div16d:div16c / div16a = div16a div16b
+;div16a div16b = div16d:div16c / div16a
 ;d sign
 		lda	<div16d+1
 		pha
@@ -1072,7 +1069,7 @@ sdiv32:
 
 ;----------------------------
 udiv32:
-;div16d:div16c / div16a = div16a div16b
+;div16a div16b = div16d:div16c / div16a
 ;push x y
 		phx
 		phy
@@ -1166,20 +1163,26 @@ udiv32:
 
 ;----------------------------
 udiv32_2:
-;div16d:div16c(0_32767*32767) / div16a(1_32767) = div16a div16b
+;div16a(0_32767) div16b = div16d:div16c(0_32767*32767) / div16a(1_32767)
 ;push x
 		phx
 
+;dec div16a
+		lda	<div16a
+		bne	.jp00
+		dec	<div16a+1
+.jp00:
+		dec	<div16a
+
+		ldx	#$10
 		asl	<div16c
 		rol	<div16c+1
 
-		ldx	#$10
-
 .jpPl00:
+;div16d MSB 0
 		rol	<div16d
 		rol	<div16d+1
 
-		sec
 		lda	<div16d
 		sbc	<div16a
 		sta	<div16d
@@ -1188,7 +1191,7 @@ udiv32_2:
 		sbc	<div16a+1
 		sta	<div16d+1
 
-		bcc	.jpMi01
+		bmi	.jpMi01
 
 .jpPl01:
 		rol	<div16c
@@ -1196,40 +1199,7 @@ udiv32_2:
 
 		dex
 		bne	.jpPl00
-		bra	.jpEnd
 
-.jpMi00:
-		rol	<div16d
-		rol	<div16d+1
-
-		clc
-		lda	<div16d
-		adc	<div16a
-		sta	<div16d
-
-		lda	<div16d+1
-		adc	<div16a+1
-		sta	<div16d+1
-
-		bcs	.jpPl01
-
-.jpMi01:
-		rol	<div16c
-		rol	<div16c+1
-
-		dex
-		bne	.jpMi00
-
-		clc
-		lda	<div16d
-		adc	<div16a
-		sta	<div16d
-
-		lda	<div16d+1
-		adc	<div16a+1
-		sta	<div16d+1
-
-.jpEnd:
 		lda	<div16c
 		sta	<div16a
 		lda	<div16c+1
@@ -1239,6 +1209,46 @@ udiv32_2:
 		sta	<div16b
 		lda	<div16d+1
 		sta	<div16b+1
+
+;pull x
+		plx
+		rts
+
+.jpMi00:
+;div16d MSB 1
+		rol	<div16d
+		rol	<div16d+1
+
+		lda	<div16d
+		adc	<div16a
+		sta	<div16d
+
+		lda	<div16d+1
+		adc	<div16a+1
+		sta	<div16d+1
+
+		bpl	.jpPl01
+
+.jpMi01:
+		rol	<div16c
+		rol	<div16c+1
+
+		dex
+		bne	.jpMi00
+
+		sec
+		lda	<div16d
+		adc	<div16a
+		sta	<div16b
+
+		lda	<div16d+1
+		adc	<div16a+1
+		sta	<div16b+1
+
+		lda	<div16c
+		sta	<div16a
+		lda	<div16c+1
+		sta	<div16a+1
 
 ;pull x
 		plx
@@ -1417,7 +1427,7 @@ sqrt64:
 
 ;----------------------------
 sdiv64:
-;div64a / div16b:div16a = div16b:div16a div16d:div16c
+;div16b:div16a div16d:div16c = div64a / div16b:div16a
 ;64a sign
 		lda	<div64a+7
 		pha
@@ -1539,7 +1549,7 @@ sdiv64:
 
 ;----------------------------
 udiv64:
-;div64a / div16b:div16a = div16b:div16a div16d:div16c
+;div16b:div16a div16d:div16c = div64a / div16b:div16a
 ;push x
 		phx
 
@@ -2394,9 +2404,6 @@ main:
 ;set screen center
 		movw	<centerX, #128
 		movw	<centerY, #96
-
-;set screen scale
-		stz	<transform2DScale
 
 ;set eye position
 		stzw	<eyeTranslationX
@@ -5243,19 +5250,6 @@ drawModelProc:
 ;clip front
 		jsr	clipFront
 
-		phy
-		ldy	<transform2DScale
-.scaleLoop:
-		beq	.scaleLoopEnd
-		asl	<clipFrontX
-		rol	<clipFrontX+1
-		asl	<clipFrontY
-		rol	<clipFrontY+1
-		dey
-		bra	.scaleLoop
-.scaleLoopEnd:
-		ply
-
 ;clipFrontX+centerX
 		addw	<clipFrontX, <centerX
 ;centerY-clipFrontY
@@ -5932,7 +5926,7 @@ transform2D2:
 
 ;----------------------------
 transform2DProc:
-;mul16a(rough value) = (mul16c(-32768_32767) * 128 / mul16a(1_32767)) << transform2DScale
+;mul16a(rough value) = (mul16c(-32768_32767) * 128 / mul16a(1_32767))
 ;push y
 		phy
 ;c sign
@@ -6062,18 +6056,6 @@ transform2DProc:
 		sta	<sqrt64b+3
 
 		movw	<mul16a, <sqrt64b+2
-		lda	<sqrt64b+1
-
-		ldy	<transform2DScale
-.scaleLoop:
-		beq	.scaleLoopEnd
-		asl	a
-		rol	<mul16a
-		rol	<mul16a+1
-
-		dey
-		bra	.scaleLoop
-.scaleLoopEnd:
 
 		pla
 		bpl	.jp01
@@ -7966,7 +7948,7 @@ calcUnitVector:
 
 ;----------------------------
 atan:
-;mul16a=x(-32768_32767), mul16b=y(-32768_32767)
+;mul16a = x(-32768_32767), mul16b = y(-32768_32767)
 ;A(0_255) = atan(y/x)
 		phx
 
@@ -8025,7 +8007,7 @@ atan:
 
 ;----------------------------
 _atan:
-;mul16a=x(0_65535), mul16b=y(0_65535)
+;mul16a = x(0_65535), mul16b = y(0_65535)
 ;A(0_63) = atan(y/x)
 		phx
 
