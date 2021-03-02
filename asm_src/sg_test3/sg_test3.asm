@@ -1,9 +1,40 @@
+;SPRITE 2bpp TEST
+;set 2character patterns to the same VRAM address
+
+;VRAM
+;0000-03FF	BG0	 1KWORD
+;0400-04FF	SATB	256WORD
+;0500-07FF	SP	768WORD	  3CHR(32*32)
+;0800-0FFF	SP	 2KWORD	  8CHR(32*32)     ;0040 0078 No0_1 2 4 6 8 10 X X
+;1000-1FFF	CHR	 4KWORD	256CHR
+;2000-2FFF	SP	 4KWORD	 16CHR(32*32 2bpp);0100 0178 No0_1
+;3000-3FFF	SP	 4KWORD	 16CHR(32*32)     ;0180 01F8 No2
+;4000-4FFF	SP	 4KWORD	 16CHR(32*32)     ;0200 0278 No4
+;5000-5FFF	SP	 4KWORD	 16CHR(32*32)     ;0280 02F8 No6
+;6000-6FFF	SP	 4KWORD	 16CHR(32*32)     ;0300 0378 No8
+;7000-7FFF	SP	 4KWORD	 16CHR(32*32)     ;0380 03F8 No10
+
+;MEMORY
+;0000	I/O
+;2000	RAM
+;4000	mul data
+;6000
+;8000
+;A000
+;C000	main
+;E000	irq mul div
+
+
 ;//////////////////////////////////
 charDataBank		.equ	2
 mulDataBank		.equ	3
 spxyDataBank		.equ	19
 stage0DataBank		.equ	35
-sp00DataBank		.equ	43
+
+spLR00DataBank		.equ	43
+spL01DataBank		.equ	44
+spR01DataBank		.equ	45
+spLR32DataBank		.equ	46
 
 
 VDC_0			.equ	$0000
@@ -380,6 +411,38 @@ andmw		.macro
 
 
 ;----------------------------
+oram		.macro
+;\1 = \1 AND \2
+		lda	\1
+		ora	\2
+		sta	\1
+		.endm
+
+
+;----------------------------
+oramw		.macro
+;\1 = \1 AND \2
+		.if	(\?2 = 2);Immediate
+			lda	\1
+			ora	#LOW(\2)
+			sta	\1
+
+			lda	\1+1
+			ora	#HIGH(\2)
+			sta	\1+1
+		.else
+			lda	\1
+			ora	\2
+			sta	\1
+
+			lda	\1+1
+			ora	\2+1
+			sta	\1+1
+		.endif
+		.endm
+
+
+;----------------------------
 mov		.macro
 ;\1 = \2
 		lda	\2
@@ -608,6 +671,17 @@ aslq		.macro
 		.endm
 
 
+;----------------------------
+lsrq		.macro
+;\1 >> 1
+		lsr	\1+3
+		ror	\1+2
+		ror	\1+1
+		ror	\1
+
+		.endm
+
+
 ;//////////////////////////////////
 		.zp
 ;**********************************
@@ -702,6 +776,20 @@ checkHitX		.ds	2
 checkHitYPoint		.ds	2
 checkHitY		.ds	2
 
+;---------------------
+getSpAngle		.ds	1
+getSpNo			.ds	1
+getSpPalette		.ds	1
+spNoWork		.ds	2
+spAttrWork		.ds	2
+
+;---------------------
+setEnemyAngle		.ds	1
+setEnemyXPoint		.ds	2
+setEnemyX		.ds	2
+setEnemyYPoint		.ds	2
+setEnemyY		.ds	2
+
 
 ;//////////////////////////////////
 		.bss
@@ -709,8 +797,8 @@ checkHitY		.ds	2
 		.org 	$2100
 ;**********************************
 		.org 	$2200
-			.rsset	$0
 ;---------------------
+			.rsset	$0
 MYSHOT_ANGLE		.rs	1
 MYSHOT_XPOINT		.rs	2
 MYSHOT_X		.rs	2
@@ -719,6 +807,36 @@ MYSHOT_Y		.rs	2
 MYSHOT_STRUCT_SIZE	.rs	0
 MYSHOT_MAX		.equ	4
 myshotTable		.ds	MYSHOT_STRUCT_SIZE*MYSHOT_MAX
+
+;---------------------
+			.rsset	$0
+ENEMY_ANGLE		.rs	1
+ENEMY_XPOINT		.rs	2
+ENEMY_X			.rs	2
+ENEMY_YPOINT		.rs	2
+ENEMY_Y			.rs	2
+ENEMY_STRUCT_SIZE	.rs	0
+ENEMY_MAX		.equ	4
+enemyTable		.ds	ENEMY_STRUCT_SIZE*ENEMY_MAX
+
+;---------------------
+spNo0No_0		.ds	2
+spNo0Attr_0		.ds	2
+spNo0No_32		.ds	2
+spNo0Attr_32		.ds	2
+spNo0No_64		.ds	2
+spNo0Attr_64		.ds	2
+spNo0No_96		.ds	2
+spNo0Attr_96		.ds	2
+
+spNo1No_0		.ds	2
+spNo1Attr_0		.ds	2
+spNo1No_32		.ds	2
+spNo1Attr_32		.ds	2
+spNo1No_64		.ds	2
+spNo1Attr_64		.ds	2
+spNo1No_96		.ds	2
+spNo1Attr_96		.ds	2
 
 ;---------------------
 tiafunc			.ds	1
@@ -2142,9 +2260,59 @@ main:
 		sta	tiarts
 		sta	tiirts
 
+;left No0
+		lda	#spLR00DataBank
+		tam	#$02
+
+		mov	VDC1_0, #$00
+		movw	VDC1_2, #$2000
+
+		mov	VDC1_0, #$02
+
+		tia	$4000, VDC1_2, 8192
+
+;right No0
+		mov	VDC2_0, #$00
+		movw	VDC2_2, #$2000
+
+		mov	VDC2_0, #$02
+
+		tia	$4000, VDC2_2, 8192
+
+;left No2
+		lda	#spL01DataBank
+		tam	#$02
+
+		tia	$4000, VDC1_2, 8192
+
+;right No2
+		lda	#spR01DataBank
+		tam	#$02
+
+		tia	$4000, VDC2_2, 8192
+
+;left angle 32
+		lda	#spLR32DataBank
+		tam	#$02
+
+		mov	VDC1_0, #$00
+		movw	VDC1_2, #$0800
+
+		mov	VDC1_0, #$02
+
+		tia	$4000, VDC1_2, 4096
+
+;right angle 32
+		mov	VDC2_0, #$00
+		movw	VDC2_2, #$0800
+
+		mov	VDC2_0, #$02
+
+		tia	$5000, VDC2_2, 4096
+
 ;initialize
-		movq	<centerXPoint, #$0020, #$0000
-		movq	<centerYPoint, #$0020, #$0000
+		movq	<centerXPoint, #$0068, #$0000
+		movq	<centerYPoint, #$0088, #$0000
 
 		stzw	<centerXYWorkPoint
 		stzw	<centerXYWork
@@ -2161,6 +2329,28 @@ main:
 		stz	<bgCenterY
 
 		jsr	initMyshot
+
+		jsr	initEnemy
+
+		mov	<setEnemyAngle, #$00
+		movq	<setEnemyXPoint, #$0028, #$0000
+		movq	<setEnemyYPoint, #$0028, #$0000
+		jsr	setEnemy
+
+		mov	<setEnemyAngle, #$00
+		movq	<setEnemyXPoint, #$0088, #$0000
+		movq	<setEnemyYPoint, #$0028, #$0000
+		jsr	setEnemy
+
+		mov	<setEnemyAngle, #$00
+		movq	<setEnemyXPoint, #$01E8, #$0000
+		movq	<setEnemyYPoint, #$0028, #$0000
+		jsr	setEnemy
+
+		mov	<setEnemyAngle, #$00
+		movq	<setEnemyXPoint, #$01E8, #$0000
+		movq	<setEnemyYPoint, #$01E8, #$0000
+		jsr	setEnemy
 
 		jsr	showScreen
 
@@ -2251,20 +2441,23 @@ main:
 		subq	<checkHitYPoint, <centerXYWorkPoint
 		andm	<checkHitY+1, #$0F
 
+;check move x y
 		jsr	checkHit
-		cmp	#$00
+		cmp	#$80
 		beq	.checkHitJump00
 
+;check move x
 		movq	<centerXYWorkPoint, <checkHitXPoint
 		movq	<checkHitXPoint, <centerXPoint
 		jsr	checkHit
-		cmp	#$00
+		cmp	#$80
 		beq	.checkHitJump00
 
+;check move y
 		movq	<checkHitXPoint, <centerXYWorkPoint
 		movq	<checkHitYPoint, <centerYPoint
 		jsr	checkHit
-		cmp	#$00
+		cmp	#$80
 		bne	.checkHitJump01
 
 .checkHitJump00:
@@ -2282,43 +2475,7 @@ main:
 
 		jsr	moveMyshot
 
-;set wall
-		lda	<screenAngle
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		clc
-		adc	#sp00DataBank
-		tam	#$02
-
-		lda	<screenAngle
-		and	#$0F
-		asl	a
-		clc
-		adc	#$40
-		stz	tiasrc
-		sta	tiasrc+1
-
-		movw	tiadst, #VDC1_2
-		movw	tialen, #$0200
-
-		mov	VDC1_0, #$00
-		movw	VDC1_2, #$4000
-
-		mov	VDC1_0, #$02
-
-		jsr	tiafunc
-
-		movw	tiadst, #VDC2_2
-		movw	tialen, #$0200
-
-		mov	VDC2_0, #$00
-		movw	VDC2_2, #$4000
-
-		mov	VDC2_0, #$02
-
-		jsr	tiafunc
+		jsr	moveEnemy
 
 ;set adjust center
 		lda	<screenAngle
@@ -2378,11 +2535,12 @@ main:
 ;set myship sprite
 		movw	VDC1_2, #SCREEN_CENTERY+64-16
 		movw	VDC1_2, #SCREEN_CENTERX+32-16
-		movw	VDC1_2, #$0200
-		movw	VDC1_2, #$1180
+		movw	VDC1_2, #$0070
+		movw	VDC1_2, #$1182
 
 		dec	<spDataCount
 
+;set myshot sprite
 		jsr	setMyshotSp
 
 ;spData set bank
@@ -2402,6 +2560,59 @@ main:
 		adc	#$40
 		stz	<spDataAddr
 		sta	<spDataAddr+1
+
+;get sp no attr
+;angle 0
+		mov	<getSpAngle, <screenAngle
+
+		mov	<getSpNo, #$00
+		jsr	getSpNoAttr
+		movw	spNo0No_0, <spNoWork
+		movw	spNo0Attr_0, <spAttrWork
+
+		mov	<getSpNo, #$01
+		jsr	getSpNoAttr
+		movw	spNo1No_0, <spNoWork
+		movw	spNo1Attr_0, <spAttrWork
+
+;angle 32
+		add	<getSpAngle, <screenAngle, #32
+
+		mov	<getSpNo, #$00
+		jsr	getSpNoAttr
+		movw	spNo0No_32, <spNoWork
+		movw	spNo0Attr_32, <spAttrWork
+
+		mov	<getSpNo, #$01
+		jsr	getSpNoAttr
+		movw	spNo1No_32, <spNoWork
+		movw	spNo1Attr_32, <spAttrWork
+
+;angle 64
+		add	<getSpAngle, <screenAngle, #64
+
+		mov	<getSpNo, #$00
+		jsr	getSpNoAttr
+		movw	spNo0No_64, <spNoWork
+		movw	spNo0Attr_64, <spAttrWork
+
+		mov	<getSpNo, #$01
+		jsr	getSpNoAttr
+		movw	spNo1No_64, <spNoWork
+		movw	spNo1Attr_64, <spAttrWork
+
+;angle 96
+		add	<getSpAngle, <screenAngle, #96
+
+		mov	<getSpNo, #$00
+		jsr	getSpNoAttr
+		movw	spNo0No_96, <spNoWork
+		movw	spNo0Attr_96, <spAttrWork
+
+		mov	<getSpNo, #$01
+		jsr	getSpNoAttr
+		movw	spNo1No_96, <spNoWork
+		movw	spNo1Attr_96, <spAttrWork
 
 ;spData index clear
 		cly
@@ -2432,10 +2643,11 @@ main:
 		bne	.spLDataJump0
 		inc	<spDataAddr+1
 .spLDataJump0:
-
 		jsr	getStageData
-		cmp	#$00
+		cmp	#$80
 		beq	.spLDataLoop
+
+		tax
 
 		addw	<spDataWorkX, #32
 		subw	<spDataWorkX, <adjustCenterX
@@ -2444,8 +2656,15 @@ main:
 
 		movw	VDC1_2, <spDataWorkY
 		movw	VDC1_2, <spDataWorkX
-		movw	VDC1_2, #$0200
-		movw	VDC1_2, #$1180
+
+		lda	spNo0No_0, x
+		sta	VDC1_2
+		lda	spNo0No_0+1, x
+		sta	VDC1_2+1
+		lda	spNo0No_0+2, x
+		sta	VDC1_2
+		lda	spNo0No_0+3, x
+		sta	VDC1_2+1
 
 		dec	<spDataCount
 		jne	.spLDataLoop
@@ -2465,6 +2684,9 @@ main:
 
 ;set right sprite count
 		mov	spDataCount, #64
+
+;set enemy sprite
+		jsr	setEnemySp
 
 ;spData set bank
 		lda	<screenAngle
@@ -2515,8 +2737,10 @@ main:
 .spRDataJump0:
 
 		jsr	getStageData
-		cmp	#$00
+		cmp	#$80
 		beq	.spRDataLoop
+
+		tax
 
 		addw	<spDataWorkX, #32
 		subw	<spDataWorkX, <adjustCenterX
@@ -2525,8 +2749,15 @@ main:
 
 		movw	VDC2_2, <spDataWorkY
 		movw	VDC2_2, <spDataWorkX
-		movw	VDC2_2, #$0200
-		movw	VDC2_2, #$1180
+
+		lda	spNo0No_0, x
+		sta	VDC2_2
+		lda	spNo0No_0+1, x
+		sta	VDC2_2+1
+		lda	spNo0No_0+2, x
+		sta	VDC2_2
+		lda	spNo0No_0+3, x
+		sta	VDC2_2+1
 
 		dec	<spDataCount
 		jne	.spRDataLoop
@@ -2778,6 +3009,191 @@ main:
 		jsr	putHex
 
 
+;enemy0
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_ANGLE
+		ldx	#$00
+		ldy	#$0A
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_X+1
+		ldx	#$00
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_X
+		ldx	#$02
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_XPOINT+1
+		ldx	#$04
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_XPOINT
+		ldx	#$06
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_Y+1
+		ldx	#$00
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_Y
+		ldx	#$02
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_YPOINT+1
+		ldx	#$04
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_YPOINT
+		ldx	#$06
+		ldy	#$0C
+		jsr	putHex
+
+;enemy1
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_ANGLE
+		ldx	#$08
+		ldy	#$0A
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_X+1
+		ldx	#$08
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_X
+		ldx	#$0A
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_XPOINT+1
+		ldx	#$0C
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_XPOINT
+		ldx	#$0E
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_Y+1
+		ldx	#$08
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_Y
+		ldx	#$0A
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_YPOINT+1
+		ldx	#$0C
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_YPOINT
+		ldx	#$0E
+		ldy	#$0C
+		jsr	putHex
+
+;enemy2
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_ANGLE
+		ldx	#$10
+		ldy	#$0A
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_X+1
+		ldx	#$10
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_X
+		ldx	#$12
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_XPOINT+1
+		ldx	#$14
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_XPOINT
+		ldx	#$16
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_Y+1
+		ldx	#$10
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_Y
+		ldx	#$12
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_YPOINT+1
+		ldx	#$14
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_YPOINT
+		ldx	#$16
+		ldy	#$0C
+		jsr	putHex
+
+;enemy3
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_ANGLE
+		ldx	#$18
+		ldy	#$0A
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_X+1
+		ldx	#$18
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_X
+		ldx	#$1A
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_XPOINT+1
+		ldx	#$1C
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_XPOINT
+		ldx	#$1E
+		ldy	#$0B
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_Y+1
+		ldx	#$18
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_Y
+		ldx	#$1A
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_YPOINT+1
+		ldx	#$1C
+		ldy	#$0C
+		jsr	putHex
+
+		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_YPOINT
+		ldx	#$1E
+		ldy	#$0C
+		jsr	putHex
+
+
 ;++++++++++++++++++++++++++++
 ;set vsync flag
 		smb7	<vsyncFlag
@@ -2876,7 +3292,101 @@ mainIrqProc:
 
 
 ;----------------------------
+getSpNoAttr:
+;
+		phx
+		phy
+
+		lda	<getSpNo
+		and	#$FE
+		tax
+
+		lda	<getSpAngle
+
+		cpx	#$00
+		bne	.spNotNo0_1
+
+		add	#$10
+
+;No0,2,4,6,8,10
+.spNotNo0_1:
+		and	#$7E
+		tay
+
+		lda	spAttrData, y
+		sta	<spAttrWork
+		lda	spAttrData+1, y
+		sta	<spAttrWork+1
+
+		lda	spNoData, y
+		bmi	.attr32
+
+		ora	spBaseData, x
+		sta	<spNoWork
+		lda	spBaseData+1, x
+		sta	<spNoWork+1
+
+		bra	.attrChekNo0
+
+.attr32:
+		lda	spNo32Data, x
+		sta	<spNoWork
+		stz	<spNoWork+1
+
+.attrChekNo0:
+		lda	<getSpNo
+		beq	.noAttrEnd
+
+		cmp	#$01
+		beq	.spNo1
+
+;set palette
+		oram	<spAttrWork, <getSpPalette
+
+		bra	.noAttrEnd
+
+;set palette
+.spNo1:
+		oram	<spAttrWork, #$01
+
+.noAttrEnd:
+		ply
+		plx
+		rts
+
+
+;----------------------------
+checkScreenXY:
+;rotationAnsX rotationAnsY
+
+		;X < 128-16*6+32-32
+		cmpw	<rotationAnsX+1, #$0020
+		bcc	.outJump
+
+		;X >= 128+16*6+32
+		cmpw	<rotationAnsX+1, #$0100
+		bcs	.outJump
+
+		;Y < 0+64-32
+		cmpw	<rotationAnsY+1, #$0020
+		bcc	.outJump
+
+		;Y >= 240+64
+		cmpw	<rotationAnsY+1, #$0130
+		bcs	.outJump
+
+		clc
+		rts
+.outJump:
+		sec
+		rts
+
+
+;----------------------------
 checkHit:
+;checkHitX checkHitY
+		phx
+
 		clx
 
 .checkLoop:
@@ -2896,7 +3406,7 @@ checkHit:
 
 		jsr	getStageData2
 
-		cmp	#$00
+		cmp	#$80
 		bne	.checkLoopEnd
 
 		inx
@@ -2904,6 +3414,288 @@ checkHit:
 		bne	.checkLoop
 
 .checkLoopEnd:
+		plx
+
+		rts
+
+
+;----------------------------
+initEnemy:
+;initialize enemy
+		clx
+		ldy	#ENEMY_MAX
+.enemyInitLoop:
+		lda	#$80
+		sta	enemyTable+ENEMY_ANGLE, x
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		bne	.enemyInitLoop
+
+		rts
+
+
+;----------------------------
+setEnemy:
+;set enemy
+		clx
+		ldy	#ENEMY_MAX
+.enemySetLoop:
+		lda	enemyTable+ENEMY_ANGLE, x
+		cmp	#$80
+		bne	.enemySetJump
+
+		lda	<setEnemyAngle
+		sta	enemyTable+ENEMY_ANGLE, x
+
+		lda	<setEnemyXPoint
+		sta	enemyTable+ENEMY_XPOINT, x
+		lda	<setEnemyXPoint+1
+		sta	enemyTable+ENEMY_XPOINT+1, x
+
+		lda	<setEnemyX
+		sta	enemyTable+ENEMY_X, x
+		lda	<setEnemyX+1
+		sta	enemyTable+ENEMY_X+1, x
+
+		lda	<setEnemyYPoint
+		sta	enemyTable+ENEMY_YPOINT, x
+		lda	<setEnemyYPoint+1
+		sta	enemyTable+ENEMY_YPOINT+1, x
+
+		lda	<setEnemyY
+		sta	enemyTable+ENEMY_Y, x
+		lda	<setEnemyY+1
+		sta	enemyTable+ENEMY_Y+1, x
+
+		bra	.enemySetEnd
+
+.enemySetJump:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		bne	.enemySetLoop
+.enemySetEnd:
+		rts
+
+
+;----------------------------
+moveEnemy:
+;move enemy
+
+		clx
+		ldy	#ENEMY_MAX
+
+.moveEnemyLoop:
+		lda	enemyTable+ENEMY_ANGLE, x
+		cmp	#$80
+		jeq	.checkHitJump01
+
+		sec
+		lda	<centerX
+		sbc	enemyTable+ENEMY_X, x
+		sta	<mul16b
+		lda	<centerX+1
+		sbc	enemyTable+ENEMY_X+1, x
+		sta	<mul16b+1
+
+		sec
+		lda	<centerY
+		sbc	enemyTable+ENEMY_Y, x
+		sta	<mul16a
+		lda	<centerY+1
+		sbc	enemyTable+ENEMY_Y+1, x
+		sta	<mul16a+1
+
+		jsr	atan
+
+		lsr	a
+		eor	#$40
+		sta	enemyTable+ENEMY_ANGLE, x
+
+		phy
+
+		asl	a
+		tay
+
+;----------------------------
+		stz	<centerXYWorkPoint
+		lda	sinDataLow, y
+		sta	<centerXYWorkPoint+1
+		lda	sinDataHigh, y
+		sta	<centerXYWork
+		jsr	signExt
+		sta	<centerXYWork+1
+
+		lsrq	<centerXYWorkPoint
+
+		lda	enemyTable+ENEMY_XPOINT, x
+		sta	<checkHitXPoint
+		lda	enemyTable+ENEMY_XPOINT+1, x
+		sta	<checkHitXPoint+1
+		lda	enemyTable+ENEMY_X, x
+		sta	<checkHitX
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<checkHitX+1
+
+		subq	<checkHitXPoint, <centerXYWorkPoint
+		andm	<checkHitX+1, #$0F
+
+;----------------------------
+		stz	<centerXYWorkPoint
+		lda	cosDataLow, y
+		sta	<centerXYWorkPoint+1
+		lda	cosDataHigh, y
+		sta	<centerXYWork
+		jsr	signExt
+		sta	<centerXYWork+1
+
+		lsrq	<centerXYWorkPoint
+
+		lda	enemyTable+ENEMY_YPOINT, x
+		sta	<checkHitYPoint
+		lda	enemyTable+ENEMY_YPOINT+1, x
+		sta	<checkHitYPoint+1
+		lda	enemyTable+ENEMY_Y, x
+		sta	<checkHitY
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<checkHitY+1
+
+		subq	<checkHitYPoint, <centerXYWorkPoint
+		andm	<checkHitY+1, #$0F
+
+		ply
+
+;check move x y
+		jsr	checkHit
+
+		cmp	#$80
+		beq	.checkHitJump00
+
+;check move x
+		movq	<centerXYWorkPoint, <checkHitXPoint
+		lda	enemyTable+ENEMY_XPOINT, x
+		sta	<checkHitXPoint
+		lda	enemyTable+ENEMY_XPOINT+1, x
+		sta	<checkHitXPoint+1
+		lda	enemyTable+ENEMY_X, x
+		sta	<checkHitX
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<checkHitX+1
+
+		jsr	checkHit
+		cmp	#$80
+		beq	.checkHitJump00
+
+;check move y
+		movq	<checkHitXPoint, <centerXYWorkPoint
+		lda	enemyTable+ENEMY_YPOINT, x
+		sta	<checkHitYPoint
+		lda	enemyTable+ENEMY_YPOINT+1, x
+		sta	<checkHitYPoint+1
+		lda	enemyTable+ENEMY_Y, x
+		sta	<checkHitY
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<checkHitY+1
+
+		jsr	checkHit
+		cmp	#$80
+		bne	.checkHitJump01
+
+.checkHitJump00:
+		lda	<checkHitXPoint
+		sta	enemyTable+ENEMY_XPOINT, x
+		lda	<checkHitXPoint+1
+		sta	enemyTable+ENEMY_XPOINT+1, x
+		lda	<checkHitX
+		sta	enemyTable+ENEMY_X, x
+		lda	<checkHitX+1
+		sta	enemyTable+ENEMY_X+1, x
+
+		lda	<checkHitYPoint
+		sta	enemyTable+ENEMY_YPOINT, x
+		lda	<checkHitYPoint+1
+		sta	enemyTable+ENEMY_YPOINT+1, x
+		lda	<checkHitY
+		sta	enemyTable+ENEMY_Y, x
+		lda	<checkHitY+1
+		sta	enemyTable+ENEMY_Y+1, x
+
+.checkHitJump01:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		jne	.moveEnemyLoop
+
+		rts
+
+
+;----------------------------
+setEnemySp:
+;set enemy sprite
+		clx
+		ldy	#ENEMY_MAX
+
+.enemySetSpLoop:
+		lda	enemyTable+ENEMY_ANGLE, x
+		cmp	#$80
+		jeq	.enemySetSpJump00
+
+		lda	<screenAngle
+		asl	a
+		sta	<rotationAngle
+
+		lda	enemyTable+ENEMY_X, x
+		sta	<rotationX
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<rotationX+1
+
+		subw	<rotationX, <centerX
+
+		lda	enemyTable+ENEMY_Y, x
+		sta	<rotationY
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<rotationY+1
+
+		subw	<rotationY, <centerY
+
+		jsr	rotationProc
+
+		addw	<rotationAnsX+1, #SCREEN_CENTERX+32-16
+		addw	<rotationAnsY+1, #SCREEN_CENTERY+64-16
+
+		jsr	checkScreenXY
+		bcs	.enemySetSpJump00
+
+		movw	VDC2_2, <rotationAnsY+1
+		movw	VDC2_2, <rotationAnsX+1
+
+		sec
+		lda	<screenAngle
+		sbc	enemyTable+ENEMY_ANGLE, x
+		and	#$7F
+
+		sta	<getSpAngle
+		mov	<getSpNo, #$02
+		mov	<getSpPalette, #$02
+		jsr	getSpNoAttr
+
+		movw	VDC2_2, <spNoWork
+		movw	VDC2_2, <spAttrWork
+
+		dec	<spDataCount
+
+.enemySetSpJump00:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		jne	.enemySetSpLoop
+
+.enemySetSpEnd:
 		rts
 
 
@@ -3057,7 +3849,7 @@ moveMyshot:
 
 		jsr	getStageData2
 
-		cmp	#$00
+		cmp	#$80
 		beq	.myshotMoveJump
 
 		lda	#$80
@@ -3107,26 +3899,24 @@ setMyshotSp:
 		addw	<rotationAnsX+1, #SCREEN_CENTERX+32-16
 		addw	<rotationAnsY+1, #SCREEN_CENTERY+64-16
 
-		;X < 128-16*6+32-32
-		cmpw	<rotationAnsX+1, #$0020
-		bcc	.myshotSetSpJump01
-
-		;X >= 128+16*6+32
-		cmpw	<rotationAnsX+1, #$0100
-		bcs	.myshotSetSpJump01
-
-		;Y < 0+64-32
-		cmpw	<rotationAnsY+1, #$0020
-		bcc	.myshotSetSpJump01
-
-		;Y >= 240+64
-		cmpw	<rotationAnsY+1, #$0130
+		jsr	checkScreenXY
 		bcs	.myshotSetSpJump01
 
 		movw	VDC1_2, <rotationAnsY+1
 		movw	VDC1_2, <rotationAnsX+1
-		movw	VDC1_2, #$0200
-		movw	VDC1_2, #$1180
+
+		sec
+		lda	<screenAngle
+		sbc	myshotTable+MYSHOT_ANGLE, x
+		and	#$7F
+
+		sta	<getSpAngle
+		mov	<getSpNo, #$02
+		mov	<getSpPalette, #$02
+		jsr	getSpNoAttr
+
+		movw	VDC1_2, <spNoWork
+		movw	VDC1_2, <spAttrWork
 
 		dec	<spDataCount
 		bra	.myshotSetSpJump00
@@ -3507,7 +4297,6 @@ vdpdataloop:	lda	vdpData, y
 		bra	vdpdataloop
 vdpdataend:
 
-;set vpc
 		lda	#$77
 		sta	VPC_0
 		sta	VPC_1
@@ -3535,7 +4324,7 @@ vdpdataend:
 		stz	VCE_2
 		lda	#$01
 		sta	VCE_3
-		tia	spPaletteData, VCE_4, $20
+		tia	spPaletteData, VCE_4, $80
 
 ;clear BG
 		lda	#$02
@@ -3617,12 +4406,21 @@ vdpData:
 
 ;----------------------------
 bgPaletteData:
-		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
 			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
 
 
 ;----------------------------
 spPaletteData:
+		.dw	$0000, $00DB, $01B6, $01FF, $0000, $00DB, $01B6, $01FF,\
+			$0000, $00DB, $01B6, $01FF, $0000, $00DB, $01B6, $01FF
+
+		.dw	$0000, $0000, $0000, $0000, $00DB, $00DB, $00DB, $00DB,\
+			$01B6, $01B6, $01B6, $01B6, $01FF, $01FF, $01FF, $01FF
+
+		.dw	$0000, $0007, $01B6, $00DB, $0038, $0005, $016D, $01FF,\
+			$0000, $00DB, $01B6, $00F6, $01FF, $01FF, $01FF, $01FF
+
 		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
 			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
 
@@ -3727,12 +4525,58 @@ atanDataLow:
 
 ;----------------------------
 hitDataX:
-		.db	-16,   0,  15, -16,  15, -16,   0,  15
+		.db	 -8,   0,   7,  -8,   7,  -8,   0,   7;16*16
 
 
 ;----------------------------
 hitDataY:
-		.db	-16, -16, -16,   0,   0,  15,  15,  15
+		.db	 -8,  -8,  -8,   0,   0,   7,   7,   7;16*16
+
+
+;----------------------------
+spNoData:
+		.dw	$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
+			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
+			$00FF, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
+			$0040, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
+			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
+			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
+			$00FF, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
+			$0040, $0038, $0030, $0028, $0020, $0018, $0010, $0008
+
+
+;----------------------------
+spNoDataNo1:
+		.dw	$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
+			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
+			$00FF, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
+			$0000, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
+			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
+			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
+			$00FF, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
+			$0000, $0078, $0070, $0068, $0060, $0058, $0050, $0048
+
+
+;----------------------------
+spNo32Data:
+		.dw	$0040, $0048, $0050, $0058, $0060, $0068
+
+
+;----------------------------
+spBaseData:
+		.dw	$0100, $0180, $0200, $0280, $0300 ,$0380
+
+
+;----------------------------
+spAttrData:
+		.dw	$1180, $1180, $1180, $1180, $1180, $1180, $1180, $1180,\
+			$1180, $1180, $1180, $1180, $1180, $1180, $1180, $1180,\
+			$1180, $9180, $9180, $9180, $9180, $9180, $9180, $9180,\
+			$9180, $9180, $9180, $9180, $9180, $9180, $9180, $9180,\
+			$9180, $9980, $9980, $9980, $9980, $9980, $9980, $9980,\
+			$9980, $9980, $9980, $9980, $9980, $9980, $9980, $9980,\
+			$1980, $1980, $1980, $1980, $1980, $1980, $1980, $1980,\
+			$1980, $1980, $1980, $1980, $1980, $1980, $1980, $1980
 
 
 ;**********************************
@@ -3741,4 +4585,7 @@ hitDataY:
 		INCBIN	"mul.dat"		;  128K  3~18 $03~$12
 		INCBIN	"spxy.dat"		;  128K 19~34 $13~$22	SPXY and BGXY ([spx:1byte, spy:1byte, bgx:1byte, bgy:1byte] * 128data * 128angle * 2left and right)
 		INCBIN	"stage0.dat"		;   64K 35~42 $23~$2A	256 * 256
-		INCBIN	"sp00.dat"		;   64K 43~50 $2B~$32	32dot*32dot 128angle
+		INCBIN	"spLR00.dat"		;    8K 43~43 $2B~$2B	32dot*32dot*16 left right No0
+		INCBIN	"spL01.dat"		;    8K 44~44 $2C~$2C	32dot*32dot*16 left No1
+		INCBIN	"spR01.dat"		;    8K 45~45 $2D~$2D	32dot*32dot*16 right No1
+		INCBIN	"spLR32.dat"		;    8K 46~46 $2E~$2E	32dot*32dot*8  left right no0-5
