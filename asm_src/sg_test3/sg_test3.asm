@@ -4,7 +4,7 @@
 ;VRAM
 ;0000-03FF	BG0	 1KWORD
 ;0400-04FF	SATB	256WORD
-;0500-07FF	SP	768WORD	  3CHR(32*32)
+;0500-07FF	SP	768WORD	  3CHR(32*32)     ;0028 0038
 ;0800-0FFF	SP	 2KWORD	  8CHR(32*32)     ;0040 0078 No0_1 2 4 6 8 10 X X
 ;1000-1FFF	CHR	 4KWORD	256CHR
 ;2000-2FFF	SP	 4KWORD	 16CHR(32*32 2bpp);0100 0178 No0_1
@@ -17,24 +17,28 @@
 ;MEMORY
 ;0000	I/O
 ;2000	RAM
-;4000	mul data
-;6000
+;4000	mul spxy datas
+;6000	stage datas
 ;8000
-;A000
+;A000	atan sin cos functions and datas
 ;C000	main
 ;E000	irq mul div
 
 
 ;//////////////////////////////////
-charDataBank		.equ	2
-mulDataBank		.equ	3
-spxyDataBank		.equ	19
-stage0DataBank		.equ	35
+charDataBank		.equ	3
+mulDataBank		.equ	4
+spxyDataBank		.equ	20
+stage0DataBank		.equ	36
 
-spLR00DataBank		.equ	43
-spL01DataBank		.equ	44
-spR01DataBank		.equ	45
-spLR32DataBank		.equ	46
+spLR00DataBank		.equ	44
+spL01DataBank		.equ	45
+spR01DataBank		.equ	46
+spLR32DataBank		.equ	47
+spETCDataBank		.equ	48
+
+stageDataBank		.equ	3
+stageDataAddrHigh	.equ	stageDataBank*$20
 
 
 VDC_0			.equ	$0000
@@ -75,8 +79,8 @@ INT_DIS_REG		.equ	$1402
 IO_PAD			.equ	$1000
 
 ;----------------------------
-SCREEN_CENTERX		.equ	128
-SCREEN_CENTERY		.equ	160
+SCREEN_CENTERX		.equ	80+16
+SCREEN_CENTERY		.equ	160-8
 
 
 ;//////////////////////////////////
@@ -661,12 +665,30 @@ cmpzq		.macro
 
 
 ;----------------------------
+aslw		.macro
+;\1 << 1
+		asl	\1
+		rol	\1+1
+
+		.endm
+
+
+;----------------------------
 aslq		.macro
 ;\1 << 1
 		asl	\1
 		rol	\1+1
 		rol	\1+2
 		rol	\1+3
+
+		.endm
+
+
+;----------------------------
+lsrw		.macro
+;\1 >> 1
+		lsr	\1+1
+		ror	\1
 
 		.endm
 
@@ -749,8 +771,6 @@ spDataWorkBGY		.ds	2
 bgCenterX		.ds	1
 bgCenterY		.ds	1
 
-spDataCount		.ds	1
-
 bgDataAddr		.ds	2
 
 ;---------------------
@@ -790,6 +810,40 @@ setEnemyX		.ds	2
 setEnemyYPoint		.ds	2
 setEnemyY		.ds	2
 
+;---------------------
+checkHitObjX0		.ds	2
+checkHitObjY0		.ds	2
+checkHitObjX1		.ds	2
+checkHitObjY1		.ds	2
+checkHitObjWork		.ds	2
+
+;---------------------
+moveEnemyWork		.ds	1
+
+;---------------------
+myshipStatus		.ds	1
+myshipCounter		.ds	1
+
+;---------------------
+VDC1WriteAddr
+VDC1SatAddr
+VDC1SpDmaAddr
+VDC2WriteAddr
+VDC2SatAddr
+VDC2SpDmaAddr		.ds	2
+
+VDC1SpriteY
+VDC2SpriteY		.ds	2
+VDC1SpriteX
+VDC2SpriteX		.ds	2
+VDC1SpriteNo
+VDC2SpriteNo		.ds	2
+VDC1SpriteAttr
+VDC2SpriteAttr		.ds	2
+
+VDC1SpriteCounter	.ds	1
+VDC2SpriteCounter	.ds	1
+
 
 ;//////////////////////////////////
 		.bss
@@ -797,6 +851,9 @@ setEnemyY		.ds	2
 		.org 	$2100
 ;**********************************
 		.org 	$2200
+;---------------------
+frameAddrWork		.ds	2
+
 ;---------------------
 			.rsset	$0
 MYSHOT_ANGLE		.rs	1
@@ -806,18 +863,33 @@ MYSHOT_YPOINT		.rs	2
 MYSHOT_Y		.rs	2
 MYSHOT_STRUCT_SIZE	.rs	0
 MYSHOT_MAX		.equ	4
-myshotTable		.ds	MYSHOT_STRUCT_SIZE*MYSHOT_MAX
+MYSHOT_TABLE_SIZE	.equ	MYSHOT_STRUCT_SIZE*MYSHOT_MAX
+myshotTable		.ds	MYSHOT_TABLE_SIZE
 
 ;---------------------
 			.rsset	$0
 ENEMY_ANGLE		.rs	1
+ENEMY_COUNTER		.rs	1
 ENEMY_XPOINT		.rs	2
 ENEMY_X			.rs	2
 ENEMY_YPOINT		.rs	2
 ENEMY_Y			.rs	2
 ENEMY_STRUCT_SIZE	.rs	0
 ENEMY_MAX		.equ	4
-enemyTable		.ds	ENEMY_STRUCT_SIZE*ENEMY_MAX
+ENEMY_TABEL_SIZE	.equ	ENEMY_STRUCT_SIZE*ENEMY_MAX
+enemyTable		.ds	ENEMY_TABEL_SIZE
+
+;---------------------
+			.rsset	$0
+ENEMYSHOT_ANGLE		.rs	1
+ENEMYSHOT_XPOINT		.rs	2
+ENEMYSHOT_X			.rs	2
+ENEMYSHOT_YPOINT		.rs	2
+ENEMYSHOT_Y			.rs	2
+ENEMYSHOT_STRUCT_SIZE	.rs	0
+ENEMYSHOT_MAX		.equ	4
+ENEMYSHOT_TABLE_SIZE	.equ	ENEMYSHOT_STRUCT_SIZE*ENEMYSHOT_MAX
+enemyshotTable		.ds	ENEMYSHOT_TABLE_SIZE
 
 ;---------------------
 spNo0No_0		.ds	2
@@ -905,7 +977,7 @@ sdiv32:
 		sta	<div16a+1
 
 .sdiv32jp01:
-		jsr	udiv32_2
+		jsr	udiv32
 
 ;anser sign
 		pla
@@ -943,100 +1015,6 @@ sdiv32:
 ;----------------------------
 udiv32:
 ;div16a div16b = div16d:div16c / div16a
-;push x y
-		phx
-		phy
-
-;div16a to div16b
-		lda	<div16a
-		sta	<div16b
-
-		lda	<div16a+1
-		sta	<div16b+1
-
-;set zero div16a
-		stz	<div16a
-		stz	<div16a+1
-
-;set count
-		ldx	#16
-
-.udivloop:
-;right shift div16b:div16a
-		lsr	<div16b+1
-		ror	<div16b
-		ror	<div16a+1
-		ror	<div16a
-
-;div16d:div16c - div16b:div16a = a:y:div32work
-		sec
-		lda	<div16c
-		sbc	<div16a
-		sta	<div32work
-
-		lda	<div16c+1
-		sbc	<div16a+1
-		sta	<div32work+1
-
-		lda	<div16d
-		sbc	<div16b
-		tay
-
-		lda	<div16d+1
-		sbc	<div16b+1
-
-;check div16d:div16c >= div16b:div16a
-		bcc	.udivjump
-
-		rol	<div32ans
-		rol	<div32ans+1
-
-;div16d:div16c = a:y:div32work
-		sty	<div16d
-
-		sta	<div16d+1
-
-		lda	<div32work
-		sta	<div16c
-
-		lda	<div32work+1
-		sta	<div16c+1
-
-		dex
-		bne	.udivloop
-		bra	.udivjump01
-
-.udivjump:
-		rol	<div32ans
-		rol	<div32ans+1
-;decrement x
-		dex
-		bne	.udivloop
-
-.udivjump01:
-;div32ans to div16a
-		lda	<div32ans
-		sta	<div16a
-
-		lda	<div32ans+1
-		sta	<div16a+1
-
-;div16c to div16b
-		lda	<div16c
-		sta	<div16b
-
-		lda	<div16c+1
-		sta	<div16b+1
-
-;pull y x
-		ply
-		plx
-		rts
-
-
-;----------------------------
-udiv32_2:
-;div16a(0_32767) div16b = div16d:div16c(0_32767*32767) / div16a(1_32767)
 ;push x
 		phx
 
@@ -1052,7 +1030,7 @@ udiv32_2:
 		rol	<div16c+1
 
 .jpPl00:
-;div16d MSB 0
+;div16d
 		rol	<div16d
 		rol	<div16d+1
 
@@ -1064,7 +1042,7 @@ udiv32_2:
 		sbc	<div16a+1
 		sta	<div16d+1
 
-		bmi	.jpMi01
+		bcc	.jpMi01
 
 .jpPl01:
 		rol	<div16c
@@ -1088,7 +1066,7 @@ udiv32_2:
 		rts
 
 .jpMi00:
-;div16d MSB 1
+;div16d
 		rol	<div16d
 		rol	<div16d+1
 
@@ -1100,7 +1078,7 @@ udiv32_2:
 		adc	<div16a+1
 		sta	<div16d+1
 
-		bpl	.jpPl01
+		bcs	.jpPl01
 
 .jpMi01:
 		rol	<div16c
@@ -2115,6 +2093,7 @@ _reset:
 ;jump main
 		jmp	main
 
+
 ;----------------------------
 _irq1:
 ;IRQ1 interrupt process
@@ -2244,6 +2223,11 @@ umul16Address
 
 ;----------------------------
 main:
+
+;set func bank
+		lda	#$02
+		tam	#$05
+
 		jsr	initializeVdp
 
 		jsr	setCharData
@@ -2259,6 +2243,27 @@ main:
 		lda	#$60;		rts
 		sta	tiarts
 		sta	tiirts
+
+;left ETC
+		lda	#spETCDataBank
+		tam	#$02
+
+		mov	VDC1_0, #$00
+		movw	VDC1_2, #$0500
+
+		mov	VDC1_0, #$02
+
+		tia	$4000, VDC1_2, 512*3
+
+;right ETC
+
+		mov	VDC2_0, #$00
+		movw	VDC2_2, #$0500
+
+		mov	VDC2_0, #$02
+
+		tia	$4000, VDC2_2, 512*3
+
 
 ;left No0
 		lda	#spLR00DataBank
@@ -2310,7 +2315,89 @@ main:
 
 		tia	$5000, VDC2_2, 4096
 
+
+;++++++++++++++
+;frame
+;-----
+		movw	frameAddrWork, #$0018
+		ldy	#30
+
+.frameLoopR0:
+		mov	VDC1_0, #$00
+		movw	VDC1_2, frameAddrWork
+
+		mov	VDC1_0, #$02
+		ldx	#8
+.frameLoopR1:
+		movw	VDC1_2, #$0181
+		dex
+		bne	.frameLoopR1
+
+		addw	frameAddrWork, #$0020
+		dey
+		bne	.frameLoopR0
+
+;-----
+		movw	frameAddrWork, #$0000
+		ldy	#2
+
+.frameLoopU0:
+		mov	VDC1_0, #$00
+		movw	VDC1_2, frameAddrWork
+
+		mov	VDC1_0, #$02
+		ldx	#32
+.frameLoopU1:
+		movw	VDC1_2, #$0181
+		dex
+		bne	.frameLoopU1
+
+		addw	frameAddrWork, #$0020
+		dey
+		bne	.frameLoopU0
+
+;-----
+		movw	frameAddrWork, #$03A0
+		ldy	#1
+
+.frameLoopD0:
+		mov	VDC1_0, #$00
+		movw	VDC1_2, frameAddrWork
+
+		mov	VDC1_0, #$02
+		ldx	#32
+.frameLoopD1:
+		movw	VDC1_2, #$0181
+		dex
+		bne	.frameLoopD1
+
+		addw	frameAddrWork, #$0020
+		dey
+		bne	.frameLoopD0
+
+;-----
+		movw	frameAddrWork, #$0180+$0018
+		ldy	#8
+
+.radarLoop0:
+		mov	VDC1_0, #$00
+		movw	VDC1_2, frameAddrWork
+
+		mov	VDC1_0, #$02
+		ldx	#8
+.radarLoop1:
+		movw	VDC1_2, #$0182
+		dex
+		bne	.radarLoop1
+
+		addw	frameAddrWork, #$0020
+		dey
+		bne	.radarLoop0
+
 ;initialize
+.initialize:
+		stz	<myshipStatus
+
 		movq	<centerXPoint, #$0068, #$0000
 		movq	<centerYPoint, #$0088, #$0000
 
@@ -2331,6 +2418,8 @@ main:
 		jsr	initMyshot
 
 		jsr	initEnemy
+
+		jsr	initEnemyshot
 
 		mov	<setEnemyAngle, #$00
 		movq	<setEnemyXPoint, #$0028, #$0000
@@ -2356,12 +2445,20 @@ main:
 
 		rmb7	<vsyncFlag
 
+;enable irq
 		cli
 
 ;++++++++++++++++++++++++++++
 .mainLoop:
 ;wait vsync
 		bbs7	<vsyncFlag, .mainLoop
+
+		bbr7	<myshipStatus, .checkPadA
+
+		lda	<myshipCounter
+		cmp	#$C0
+		jeq	.initialize
+		jmp	.checkPadBEnd
 
 ;check pad
 .checkPadA:
@@ -2441,6 +2538,37 @@ main:
 		subq	<checkHitYPoint, <centerXYWorkPoint
 		andm	<checkHitY+1, #$0F
 
+;++++++++
+		ldy	#ENEMY_MAX
+		clx
+.enemyHitLoop:
+		lda	enemyTable+ENEMY_ANGLE, x
+		bmi	.enemyHitJump
+
+		movw	<checkHitObjX0, <checkHitX
+		movw	<checkHitObjY0, <checkHitY
+
+		lda	enemyTable+ENEMY_X, x
+		sta	<checkHitObjX1
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<checkHitObjX1+1
+
+		lda	enemyTable+ENEMY_Y, x
+		sta	<checkHitObjY1
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<checkHitObjY1+1
+
+		jsr	checkHitObj16
+		bcs	.checkHitJump01
+
+.enemyHitJump:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		bne	.enemyHitLoop
+
+;++++++++
 ;check move x y
 		jsr	checkHit
 		cmp	#$80
@@ -2473,10 +2601,27 @@ main:
 
 .checkPadBEnd:
 
+;++++++++
+;move myshot
 		jsr	moveMyshot
 
+;++++++++
+;move enemy
 		jsr	moveEnemy
 
+;++++++++
+;move enemyshot
+		jsr	moveEnemyshot
+
+;++++++++
+;hit check myshot enemy
+		jsr	checkMyshotEnemy
+
+;++++++++
+;hit check enemyshot
+		jsr	checkEnemyshot
+
+;++++++++
 ;set adjust center
 		lda	<screenAngle
 		asl	a
@@ -2516,33 +2661,56 @@ main:
 
 		jsr	rotationProc
 
-		movw	<adjustCenterX, <rotationAnsX+2
-		movw	<adjustCenterY, <rotationAnsY+2
+		addw	<adjustCenterX, <rotationAnsX+2, #32-16
+		subw	<adjustCenterY, <rotationAnsY+2, #48-8
 
+;++++++++
 ;Left
 ;set sprite attribute VRAM address
-		stz	VPC_6		;select VDC#1
+		movw	<VDC1SatAddr, #$0400
+		jsr	clearVDC1Sat
 
-		st0	#$00		;VRAM $0400
-		st1	#$00
-		st2	#$04
+;++++++++
+;set radar sprite
+		jsr	setRadarSp
 
-		st0	#$02
-
-;set left sprite count
-		mov	spDataCount, #64
-
+;++++++++
 ;set myship sprite
-		movw	VDC1_2, #SCREEN_CENTERY+64-16
-		movw	VDC1_2, #SCREEN_CENTERX+32-16
-		movw	VDC1_2, #$0070
-		movw	VDC1_2, #$1182
+		movw	<VDC1SpriteY, #SCREEN_CENTERY+64-16
+		movw	<VDC1SpriteX, #SCREEN_CENTERX+32-16
 
-		dec	<spDataCount
+		bbs7	<myshipStatus, .setmyshipSp
 
+		movw	<VDC1SpriteNo, #$0070
+		movw	<VDC1SpriteAttr, #$1102
+		bra	.setmyshipSpEnd
+
+.setmyshipSp:
+		lda	<myshipCounter
+		and	#$C0
+		lsr	a
+		lsr	a
+		lsr	a
+		add	#$28
+
+		sta	<VDC1SpriteNo
+		stz	<VDC1SpriteNo+1
+		movw	<VDC1SpriteAttr, #$1102
+
+		inc	<myshipCounter
+
+.setmyshipSpEnd:
+		jsr	setVDC1Sp
+
+;++++++++
 ;set myshot sprite
 		jsr	setMyshotSp
 
+;++++++++
+;set enemyshot sprite
+		jsr	setEnemyshotSp
+
+;++++++++
 ;spData set bank
 		lda	<screenAngle
 		lsr	a
@@ -2561,6 +2729,7 @@ main:
 		stz	<spDataAddr
 		sta	<spDataAddr+1
 
+;++++++++
 ;get sp no attr
 ;angle 0
 		mov	<getSpAngle, <screenAngle
@@ -2614,20 +2783,24 @@ main:
 		movw	spNo1No_96, <spNoWork
 		movw	spNo1Attr_96, <spAttrWork
 
-;spData index clear
+;++++++++
+;clear spData index
 		cly
 
+;clear bgDataAddr low byte
+		stz	<bgDataAddr
+
 .spLDataLoop:
+;set sprite position data
 		lda	[spDataAddr], y
 		cmp	#$FF
 		jeq	.spLDataLoopEnd
-		sta	<spDataWorkX
-		stz	<spDataWorkX+1
+
+		sta	<VDC1SpriteX
 		iny
 
 		lda	[spDataAddr], y
-		sta	<spDataWorkY
-		stz	<spDataWorkY+1
+		sta	<VDC1SpriteY
 		iny
 
 		lda	[spDataAddr], y
@@ -2640,53 +2813,97 @@ main:
 		sta	<spDataWorkBGY
 		iny
 
-		bne	.spLDataJump0
+		bne	.L_addrNoCarry
 		inc	<spDataAddr+1
-.spLDataJump0:
-		jsr	getStageData
+.L_addrNoCarry:
+
+;get stage data
+		phy
+
+		ldy	<spDataWorkBGY
+		lda	stageDataBankData, y
+		tam	#stageDataBank
+
+		lda	stageDataAddrHighData, y
+		sta	<bgDataAddr+1
+
+		ldy	<spDataWorkBGX
+		lda	[bgDataAddr], y
+
+		ply
+
 		cmp	#$80
 		beq	.spLDataLoop
 
 		tax
 
-		addw	<spDataWorkX, #32
-		subw	<spDataWorkX, <adjustCenterX
-		addw	<spDataWorkY, #64
-		subw	<spDataWorkY, <adjustCenterY
+;calculation  sprite position
+		sec
+		lda	<VDC1SpriteX
+		sbc	<adjustCenterX
+		sta	<VDC1SpriteX
+		cla
+		sbc	<adjustCenterX+1
+		sta	<VDC1SpriteX+1
 
-		movw	VDC1_2, <spDataWorkY
-		movw	VDC1_2, <spDataWorkX
+		sec
+		lda	<VDC1SpriteY
+		sbc	<adjustCenterY
+		sta	<VDC1SpriteY
+		cla
+		sbc	<adjustCenterY+1
+		sta	<VDC1SpriteY+1
+
+		cmpw	VDC1SpriteX, #32-12-16
+		bcc	.spLDataLoop
+
+		cmpw	VDC1SpriteY, #64-12
+		bcc	.spLDataLoop
+
+		cmpw	VDC1SpriteY, #240+64-4-8
+		bcs	.spLDataLoop
+
+;set left wall sprite
+		sei
+
+		movw	VDC1_2, <VDC1SpriteY
+		movw	VDC1_2, <VDC1SpriteX
 
 		lda	spNo0No_0, x
 		sta	VDC1_2
 		lda	spNo0No_0+1, x
 		sta	VDC1_2+1
+
 		lda	spNo0No_0+2, x
 		sta	VDC1_2
 		lda	spNo0No_0+3, x
 		sta	VDC1_2+1
 
-		dec	<spDataCount
-		jne	.spLDataLoop
+		cli
+
+;check VDC1 sprite counter
+		lda	<VDC1SpriteCounter
+		inc	a
+		sta	<VDC1SpriteCounter
+		cmp	#$64
+		bcs	.spLDataLoopEnd
+		jmp	.spLDataLoop
 
 .spLDataLoopEnd:
 
+;++++++++
 ;Right
 ;set sprite attribute VRAM address
-		lda	#$01
-		sta	VPC_6		;select VDC#2
+		movw	<VDC2SatAddr, #$0400
+		jsr	clearVDC2Sat
 
-		st0	#$00		;VRAM $0400
-		st1	#$00
-		st2	#$04
-
-		st0	#$02
-
-;set right sprite count
-		mov	spDataCount, #64
-
+;++++++++
 ;set enemy sprite
 		jsr	setEnemySp
+
+;++++++++
+;set blast sprite
+		jsr	setBlastSp
 
 ;spData set bank
 		lda	<screenAngle
@@ -2706,20 +2923,23 @@ main:
 		stz	<spDataAddr
 		sta	<spDataAddr+1
 
-;spData index clear
+;clear spData index
 		cly
 
+;clear bgDataAddr low byte
+		stz	<bgDataAddr
+
 .spRDataLoop:
+;set sprite position data
 		lda	[spDataAddr], y
 		cmp	#$FF
 		jeq	.spRDataLoopEnd
-		sta	<spDataWorkX
-		stz	<spDataWorkX+1
+
+		sta	<VDC2SpriteX
 		iny
 
 		lda	[spDataAddr], y
-		sta	<spDataWorkY
-		stz	<spDataWorkY+1
+		sta	<VDC2SpriteY
 		iny
 
 		lda	[spDataAddr], y
@@ -2732,469 +2952,114 @@ main:
 		sta	<spDataWorkBGY
 		iny
 
-		bne	.spRDataJump0
+		bne	.R_addrNoCarry
 		inc	<spDataAddr+1
-.spRDataJump0:
+.R_addrNoCarry:
 
-		jsr	getStageData
+;get stage data
+		phy
+
+		ldy	<spDataWorkBGY
+		lda	stageDataBankData, y
+		tam	#stageDataBank
+
+		lda	stageDataAddrHighData, y
+		sta	<bgDataAddr+1
+
+		ldy	<spDataWorkBGX
+		lda	[bgDataAddr], y
+
+		ply
+
 		cmp	#$80
 		beq	.spRDataLoop
 
 		tax
 
-		addw	<spDataWorkX, #32
-		subw	<spDataWorkX, <adjustCenterX
-		addw	<spDataWorkY, #64
-		subw	<spDataWorkY, <adjustCenterY
+;calculation  sprite position
+		sec
+		lda	<VDC2SpriteX
+		sbc	<adjustCenterX
+		sta	<VDC2SpriteX
+		cla
+		sbc	<adjustCenterX+1
+		sta	<VDC2SpriteX+1
 
-		movw	VDC2_2, <spDataWorkY
-		movw	VDC2_2, <spDataWorkX
+		sec
+		lda	<VDC2SpriteY
+		sbc	<adjustCenterY
+		sta	<VDC2SpriteY
+		cla
+		sbc	<adjustCenterY+1
+		sta	<VDC2SpriteY+1
+
+		cmpw	VDC2SpriteX, #32+16*11-4+16
+		bcs	.spRDataLoop
+
+		cmpw	VDC2SpriteY, #64-12
+		bcc	.spRDataLoop
+
+		cmpw	VDC2SpriteY, #240+64-4-8
+		bcs	.spRDataLoop
+
+;set right wall sprite
+		sei
+
+		movw	VDC2_2, <VDC2SpriteY
+		movw	VDC2_2, <VDC2SpriteX
 
 		lda	spNo0No_0, x
 		sta	VDC2_2
 		lda	spNo0No_0+1, x
 		sta	VDC2_2+1
+
 		lda	spNo0No_0+2, x
+		ora	#$80
 		sta	VDC2_2
 		lda	spNo0No_0+3, x
 		sta	VDC2_2+1
 
-		dec	<spDataCount
-		jne	.spRDataLoop
+		cli
+
+;check VDC2 sprite counter
+		lda	<VDC2SpriteCounter
+		inc	a
+		sta	<VDC2SpriteCounter
+		cmp	#$64
+		bcs	.spRDataLoopEnd
+		jmp	.spRDataLoop
 
 .spRDataLoopEnd:
 
 ;++++++++++++++++++++++++++++
 ;SATB DMA set
-		stz	VPC_6		;select VDC#1
-		st0	#$13
-		st1	#$00
-		st2	#$04
+		movw	<VDC1SpDmaAddr, #$0400
+		jsr	setVDC1SpDma
 
-		lda	#$01
-		sta	VPC_6		;select VDC#2
-		st0	#$13
-		st1	#$00
-		st2	#$04
+		movw	<VDC2SpDmaAddr, #$0400
+		jsr	setVDC2SpDma
 
 ;++++++++++++++++++++++++++++
 ;put datas
 		lda	<screenAngle
-		ldx	#$00
+		ldx	#$18
 		ldy	#$02
 		jsr	putHex
 
-		lda	<centerX+1
-		ldx	#$00
+		lda	<VDC1SpriteCounter
+		ldx	#$18
 		ldy	#$03
 		jsr	putHex
 
-		lda	<centerX
-		ldx	#$02
+		lda	<VDC2SpriteCounter
+		ldx	#$1A
 		ldy	#$03
 		jsr	putHex
-
-		lda	<centerXPoint+1
-		ldx	#$04
-		ldy	#$03
-		jsr	putHex
-
-		lda	<centerXPoint
-		ldx	#$06
-		ldy	#$03
-		jsr	putHex
-
-		lda	<centerY+1
-		ldx	#$00
-		ldy	#$04
-		jsr	putHex
-
-		lda	<centerY
-		ldx	#$02
-		ldy	#$04
-		jsr	putHex
-
-		lda	<centerYPoint+1
-		ldx	#$04
-		ldy	#$04
-		jsr	putHex
-
-		lda	<centerYPoint
-		ldx	#$06
-		ldy	#$04
-		jsr	putHex
-
-;myshot0
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_ANGLE
-		ldx	#$00
-		ldy	#$06
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_X+1
-		ldx	#$00
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_X
-		ldx	#$02
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_XPOINT+1
-		ldx	#$04
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_XPOINT
-		ldx	#$06
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_Y+1
-		ldx	#$00
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_Y
-		ldx	#$02
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_YPOINT+1
-		ldx	#$04
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*0+MYSHOT_YPOINT
-		ldx	#$06
-		ldy	#$08
-		jsr	putHex
-
-;myshot1
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_ANGLE
-		ldx	#$08
-		ldy	#$06
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_X+1
-		ldx	#$08
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_X
-		ldx	#$0A
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_XPOINT+1
-		ldx	#$0C
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_XPOINT
-		ldx	#$0E
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_Y+1
-		ldx	#$08
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_Y
-		ldx	#$0A
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_YPOINT+1
-		ldx	#$0C
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*1+MYSHOT_YPOINT
-		ldx	#$0E
-		ldy	#$08
-		jsr	putHex
-
-;myshot2
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_ANGLE
-		ldx	#$10
-		ldy	#$06
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_X+1
-		ldx	#$10
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_X
-		ldx	#$12
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_XPOINT+1
-		ldx	#$14
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_XPOINT
-		ldx	#$16
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_Y+1
-		ldx	#$10
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_Y
-		ldx	#$12
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_YPOINT+1
-		ldx	#$14
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*2+MYSHOT_YPOINT
-		ldx	#$16
-		ldy	#$08
-		jsr	putHex
-
-;myshot3
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_ANGLE
-		ldx	#$18
-		ldy	#$06
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_X+1
-		ldx	#$18
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_X
-		ldx	#$1A
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_XPOINT+1
-		ldx	#$1C
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_XPOINT
-		ldx	#$1E
-		ldy	#$07
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_Y+1
-		ldx	#$18
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_Y
-		ldx	#$1A
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_YPOINT+1
-		ldx	#$1C
-		ldy	#$08
-		jsr	putHex
-
-		lda	myshotTable+MYSHOT_STRUCT_SIZE*3+MYSHOT_YPOINT
-		ldx	#$1E
-		ldy	#$08
-		jsr	putHex
-
-
-;enemy0
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_ANGLE
-		ldx	#$00
-		ldy	#$0A
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_X+1
-		ldx	#$00
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_X
-		ldx	#$02
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_XPOINT+1
-		ldx	#$04
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_XPOINT
-		ldx	#$06
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_Y+1
-		ldx	#$00
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_Y
-		ldx	#$02
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_YPOINT+1
-		ldx	#$04
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*0+ENEMY_YPOINT
-		ldx	#$06
-		ldy	#$0C
-		jsr	putHex
-
-;enemy1
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_ANGLE
-		ldx	#$08
-		ldy	#$0A
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_X+1
-		ldx	#$08
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_X
-		ldx	#$0A
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_XPOINT+1
-		ldx	#$0C
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_XPOINT
-		ldx	#$0E
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_Y+1
-		ldx	#$08
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_Y
-		ldx	#$0A
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_YPOINT+1
-		ldx	#$0C
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*1+ENEMY_YPOINT
-		ldx	#$0E
-		ldy	#$0C
-		jsr	putHex
-
-;enemy2
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_ANGLE
-		ldx	#$10
-		ldy	#$0A
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_X+1
-		ldx	#$10
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_X
-		ldx	#$12
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_XPOINT+1
-		ldx	#$14
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_XPOINT
-		ldx	#$16
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_Y+1
-		ldx	#$10
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_Y
-		ldx	#$12
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_YPOINT+1
-		ldx	#$14
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*2+ENEMY_YPOINT
-		ldx	#$16
-		ldy	#$0C
-		jsr	putHex
-
-;enemy3
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_ANGLE
-		ldx	#$18
-		ldy	#$0A
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_X+1
-		ldx	#$18
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_X
-		ldx	#$1A
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_XPOINT+1
-		ldx	#$1C
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_XPOINT
-		ldx	#$1E
-		ldy	#$0B
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_Y+1
-		ldx	#$18
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_Y
-		ldx	#$1A
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_YPOINT+1
-		ldx	#$1C
-		ldy	#$0C
-		jsr	putHex
-
-		lda	enemyTable+ENEMY_STRUCT_SIZE*3+ENEMY_YPOINT
-		ldx	#$1E
-		ldy	#$0C
-		jsr	putHex
-
 
 ;++++++++++++++++++++++++++++
+;enable irq
+		cli
+
 ;set vsync flag
 		smb7	<vsyncFlag
 
@@ -3212,77 +3077,60 @@ mainIrqProc:
 		lda	VDC2_0
 		sta	<vdp2Status
 
-		jsr	getPadData
+		bbs7	<vsyncFlag, .vsyncProc
+		jmp	.vsyncProcEnd
 
-		bbr7	<vsyncFlag, .irqEnd
-
+.vsyncProc:
 ;VDC#1 section
-		stz	VPC_6		;select VDC#1
+		mov	VDC1_0, #$07		;scroll x
+		movw	VDC1_2, #$0000
 
-		st0	#$07		;scrollx
-		st1	#$00
-		st2	#$00
-
-		st0	#$08		;scrolly
-		st1	#$00
-		st2	#$00
+		mov	VDC1_0, #$08		;scroll y
+		movw	VDC1_2, #$0000
 
 ;clear SATB
-		st0	#$00		;set SATB addr
-		st1	#$00
-		st2	#$04
+		mov	VDC1_0, #$00		;set SATB addr
+		movw	VDC1_2, #$0400
 
-		st0	#$02		;VRAM clear
-		st1	#$00
-		st2	#$00
+		mov	VDC1_0, #$02		;VRAM clear
+		movw	VDC1_2, #$0000
 
-		st0	#$10		;set DMA src
-		st1	#$00
-		st2	#$04
+		mov	VDC1_0, #$10		;set DMA src
+		movw	VDC1_2, #$0400
 
-		st0	#$11		;set DMA dist
-		st1	#$01
-		st2	#$04
+		mov	VDC1_0, #$11		;set DMA dist
+		movw	VDC1_2, #$0401
 
-		st0	#$12		;set DMA count 255WORD
-		st1	#$FF
-		st2	#$00
+		mov	VDC1_0, #$12		;set DMA count 255WORD
+		movw	VDC1_2, #$00FF
 
 ;VDC#2 section
-		lda	#$01
-		sta	VPC_6		;select VDC#2
+		mov	VDC2_0, #$07		;scroll x
+		movw	VDC2_2, #$0000
 
-		st0	#$07		;scrollx
-		st1	#$00
-		st2	#$00
-
-		st0	#$08		;scrolly
-		st1	#$00
-		st2	#$00
+		mov	VDC2_0, #$08		;scroll y
+		movw	VDC2_2, #$0000
 
 ;clear SATB
-		st0	#$00		;set SATB addr
-		st1	#$00
-		st2	#$04
+		mov	VDC2_0, #$00		;set SATB addr
+		movw	VDC2_2, #$0400
 
-		st0	#$02		;VRAM clear
-		st1	#$00
-		st2	#$00
+		mov	VDC2_0, #$02		;VRAM clear
+		movw	VDC2_2, #$0000
 
-		st0	#$10		;set DMA src
-		st1	#$00
-		st2	#$04
+		mov	VDC2_0, #$10		;set DMA src
+		movw	VDC2_2, #$0400
 
-		st0	#$11		;set DMA dist
-		st1	#$01
-		st2	#$04
+		mov	VDC2_0, #$11		;set DMA dist
+		movw	VDC2_2, #$0401
 
-		st0	#$12		;set DMA count 255WORD
-		st1	#$FF
-		st2	#$00
+		mov	VDC2_0, #$12		;set DMA count 255WORD
+		movw	VDC2_2, #$00FF
 
 		rmb7	<vsyncFlag
-.irqEnd:
+.vsyncProcEnd:
+
+		jsr	getPadData
 
 		ply
 		plx
@@ -3359,20 +3207,20 @@ getSpNoAttr:
 checkScreenXY:
 ;rotationAnsX rotationAnsY
 
-		;X < 128-16*6+32-32
-		cmpw	<rotationAnsX+1, #$0020
+		;X < 4
+		cmpw	<rotationAnsX+1, #32-12-16
 		bcc	.outJump
 
-		;X >= 128+16*6+32
-		cmpw	<rotationAnsX+1, #$0100
+		;X >= 220
+		cmpw	<rotationAnsX+1, #32+16*12-4
 		bcs	.outJump
 
-		;Y < 0+64-32
-		cmpw	<rotationAnsY+1, #$0020
+		;Y < 52
+		cmpw	<rotationAnsY+1, #64-12
 		bcc	.outJump
 
-		;Y >= 240+64
-		cmpw	<rotationAnsY+1, #$0130
+		;Y >= 292
+		cmpw	<rotationAnsY+1, #240+64-12
 		bcs	.outJump
 
 		clc
@@ -3383,8 +3231,160 @@ checkScreenXY:
 
 
 ;----------------------------
+checkHitObj16_2:
+;1dot 16*16 object
+
+		lda	<checkHitObjX0
+		and	#$0F
+		sta	<checkHitObjWork
+		stz	<checkHitObjWork+1
+
+		lda	<checkHitObjX0
+		and	#$F0
+		sta	<checkHitObjX0
+
+		subw	<checkHitObjX1, <checkHitObjWork
+
+		lda	<checkHitObjX1
+		and	#$F0
+		sta	<checkHitObjWork
+		lda	<checkHitObjX1+1
+		sta	<checkHitObjWork+1
+
+		subw	<checkHitObjWork, <checkHitObjX0
+
+		lda	<checkHitObjWork
+		ora	<checkHitObjWork+1
+		bne	.withoutXY
+
+;--------
+		lda	<checkHitObjY0
+		and	#$0F
+		sta	<checkHitObjWork
+		stz	<checkHitObjWork+1
+
+		lda	<checkHitObjY0
+		and	#$F0
+		sta	<checkHitObjY0
+
+		subw	<checkHitObjY1, <checkHitObjWork
+
+		lda	<checkHitObjY1
+		and	#$F0
+		sta	<checkHitObjWork
+		lda	<checkHitObjY1+1
+		sta	<checkHitObjWork+1
+
+		subw	<checkHitObjWork, <checkHitObjY0
+
+		lda	<checkHitObjWork
+		ora	<checkHitObjWork+1
+		bne	.withoutXY
+
+;--------
+		sec
+		rts
+
+.withoutXY:
+		clc
+		rts
+
+
+;----------------------------
+checkHitObj16:
+;16*16 16*16 object
+
+		lda	<checkHitObjX0
+		and	#$0F
+		sta	<checkHitObjWork
+		stz	<checkHitObjWork+1
+
+		lda	<checkHitObjX0
+		and	#$F0
+		sta	<checkHitObjX0
+
+		subw	<checkHitObjX1, <checkHitObjWork
+
+		lda	<checkHitObjX1
+		and	#$F0
+		sta	<checkHitObjWork
+		lda	<checkHitObjX1+1
+		sta	<checkHitObjWork+1
+
+		subw	<checkHitObjWork, <checkHitObjX0
+
+		lda	<checkHitObjWork
+		ora	<checkHitObjWork+1
+		beq	.withinX
+
+;--------
+		addw	<checkHitObjX1, #$000F
+
+		lda	<checkHitObjX1
+		and	#$F0
+		sta	<checkHitObjWork
+		lda	<checkHitObjX1+1
+		sta	<checkHitObjWork+1
+
+		subw	<checkHitObjWork, <checkHitObjX0
+
+		lda	<checkHitObjWork
+		ora	<checkHitObjWork+1
+		bne	.withoutXY
+
+;--------
+.withinX:
+		lda	<checkHitObjY0
+		and	#$0F
+		sta	<checkHitObjWork
+		stz	<checkHitObjWork+1
+
+		lda	<checkHitObjY0
+		and	#$F0
+		sta	<checkHitObjY0
+
+		subw	<checkHitObjY1, <checkHitObjWork
+
+		lda	<checkHitObjY1
+		and	#$F0
+		sta	<checkHitObjWork
+		lda	<checkHitObjY1+1
+		sta	<checkHitObjWork+1
+
+		subw	<checkHitObjWork, <checkHitObjY0
+
+		lda	<checkHitObjWork
+		ora	<checkHitObjWork+1
+		beq	.withinY
+
+;--------
+		addw	<checkHitObjY1, #$000F
+
+		lda	<checkHitObjY1
+		and	#$F0
+		sta	<checkHitObjWork
+		lda	<checkHitObjY1+1
+		sta	<checkHitObjWork+1
+
+		subw	<checkHitObjWork, <checkHitObjY0
+
+		lda	<checkHitObjWork
+		ora	<checkHitObjWork+1
+		bne	.withoutXY
+
+;--------
+.withinY:
+		sec
+		rts
+
+.withoutXY:
+		clc
+		rts
+
+
+;----------------------------
 checkHit:
-;checkHitX checkHitY
+;block checkHitX checkHitY
 		phx
 
 		clx
@@ -3420,6 +3420,189 @@ checkHit:
 
 
 ;----------------------------
+setRadarSp:
+;
+		movw	<VDC1SpriteY, <centerY
+		lsrw	<VDC1SpriteY
+		lsrw	<VDC1SpriteY
+		lsrw	<VDC1SpriteY
+		addw	<VDC1SpriteY, #96+64
+
+		movw	<VDC1SpriteX, <centerX
+		lsrw	<VDC1SpriteX
+		lsrw	<VDC1SpriteX
+		lsrw	<VDC1SpriteX
+		addw	<VDC1SpriteX, #176+32+16
+
+		movw	<VDC1SpriteNo, #$007A
+		movw	<VDC1SpriteAttr, #$0083
+		jsr	setVDC1Sp
+
+;++++++++
+		clx
+		ldy	#ENEMY_MAX
+.radarEnemyLoop:
+		lda	enemyTable+ENEMY_ANGLE, x
+		jmi	.enemyNext
+
+		lda	enemyTable+ENEMY_X, x
+		sta	<VDC1SpriteX
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<VDC1SpriteX+1
+
+		lsrw	<VDC1SpriteX
+		lsrw	<VDC1SpriteX
+		lsrw	<VDC1SpriteX
+		addw	<VDC1SpriteX, #176+32+16
+
+		lda	enemyTable+ENEMY_Y, x
+		sta	<VDC1SpriteY
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<VDC1SpriteY+1
+
+		lsrw	<VDC1SpriteY
+		lsrw	<VDC1SpriteY
+		lsrw	<VDC1SpriteY
+		addw	<VDC1SpriteY, #96+64
+
+		movw	<VDC1SpriteNo, #$0078
+		movw	<VDC1SpriteAttr, #$0083
+		jsr	setVDC1Sp
+
+.enemyNext:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+
+		dey
+		bne	.radarEnemyLoop
+
+		rts
+
+
+;----------------------------
+checkEnemyshot:
+;
+
+		bbs7	<myshipStatus, .enemyshotEnd
+
+		clx
+		ldy	#ENEMYSHOT_MAX
+
+.enemyshotLoop:
+		lda	enemyshotTable+ENEMYSHOT_ANGLE, x
+		cmp	#$80
+		beq	.nextEnemyshot
+
+		lda	enemyshotTable+ENEMYSHOT_X, x
+		sta	<checkHitObjX1
+		lda	enemyshotTable+ENEMYSHOT_X+1, x
+		sta	<checkHitObjX1+1
+
+		lda	enemyshotTable+ENEMYSHOT_Y, x
+		sta	<checkHitObjY1
+		lda	enemyshotTable+ENEMYSHOT_Y+1, x
+		sta	<checkHitObjY1+1
+
+		movw	<checkHitObjX0, <centerX
+		subw	<checkHitObjX0, #$0008
+
+		movw	<checkHitObjY0, <centerY
+		subw	<checkHitObjY0, #$0008
+
+		jsr	checkHitObj16_2
+		bcc	.nextEnemyshot
+
+		lda	#$80
+		sta	enemyshotTable+ENEMYSHOT_ANGLE, x
+
+		mov	<myshipStatus, #$80
+		stz	<myshipCounter
+
+		bra	.enemyshotEnd
+
+.nextEnemyshot:
+		txa
+		add	#ENEMYSHOT_STRUCT_SIZE
+		tax
+		dey
+		bne	.enemyshotLoop
+.enemyshotEnd:
+		rts
+
+
+;----------------------------
+checkMyshotEnemy:
+;
+		clx
+.loopShot:
+		lda	myshotTable+MYSHOT_ANGLE, x
+		cmp	#$80
+		beq	.loopNextShot
+
+		cly
+.loopEnemy:
+		lda	enemyTable+ENEMY_ANGLE, y
+		bmi	.loopNextEnemy
+
+;--------
+		lda	myshotTable+MYSHOT_X, x
+		sta	<checkHitObjX1
+		lda	myshotTable+MYSHOT_X+1, x
+		sta	<checkHitObjX1+1
+
+		lda	myshotTable+MYSHOT_Y, x
+		sta	<checkHitObjY1
+		lda	myshotTable+MYSHOT_Y+1, x
+		sta	<checkHitObjY1+1
+
+;--------
+		lda	enemyTable+ENEMY_X, y
+		sta	<checkHitObjX0
+		lda	enemyTable+ENEMY_X+1, y
+		sta	<checkHitObjX0+1
+
+		subw	<checkHitObjX0, #$0008
+
+		lda	enemyTable+ENEMY_Y, y
+		sta	<checkHitObjY0
+		lda	enemyTable+ENEMY_Y+1, y
+		sta	<checkHitObjY0+1
+
+		subw	<checkHitObjY0, #$0008
+
+		jsr	checkHitObj16_2
+		bcc	.loopNextEnemy
+
+		lda	#$80
+		sta	myshotTable+MYSHOT_ANGLE, x
+
+		lda	#$81
+		sta	enemyTable+ENEMY_ANGLE, y
+
+		cla
+		sta	enemyTable+ENEMY_COUNTER, y
+
+		bra	.loopNextShot
+
+.loopNextEnemy:
+		tya
+		add	#ENEMY_STRUCT_SIZE
+		tay
+		cpy	#ENEMY_STRUCT_SIZE*ENEMY_MAX
+		bne	.loopEnemy
+
+.loopNextShot:
+		txa
+		add	#MYSHOT_STRUCT_SIZE
+		tax
+		cpx	#MYSHOT_STRUCT_SIZE*MYSHOT_MAX
+		jne	.loopShot
+
+		rts
+
+
+;----------------------------
 initEnemy:
 ;initialize enemy
 		clx
@@ -3443,8 +3626,7 @@ setEnemy:
 		ldy	#ENEMY_MAX
 .enemySetLoop:
 		lda	enemyTable+ENEMY_ANGLE, x
-		cmp	#$80
-		bne	.enemySetJump
+		bpl	.enemySetJump
 
 		lda	<setEnemyAngle
 		sta	enemyTable+ENEMY_ANGLE, x
@@ -3486,12 +3668,11 @@ moveEnemy:
 ;move enemy
 
 		clx
-		ldy	#ENEMY_MAX
+		cly
 
 .moveEnemyLoop:
 		lda	enemyTable+ENEMY_ANGLE, x
-		cmp	#$80
-		jeq	.checkHitJump01
+		jmi	.checkHitJump01
 
 		sec
 		lda	<centerX
@@ -3515,12 +3696,13 @@ moveEnemy:
 		eor	#$40
 		sta	enemyTable+ENEMY_ANGLE, x
 
+;--------
 		phy
 
 		asl	a
 		tay
 
-;----------------------------
+;--------
 		stz	<centerXYWorkPoint
 		lda	sinDataLow, y
 		sta	<centerXYWorkPoint+1
@@ -3543,7 +3725,7 @@ moveEnemy:
 		subq	<checkHitXPoint, <centerXYWorkPoint
 		andm	<checkHitX+1, #$0F
 
-;----------------------------
+;--------
 		stz	<centerXYWorkPoint
 		lda	cosDataLow, y
 		sta	<centerXYWorkPoint+1
@@ -3568,6 +3750,63 @@ moveEnemy:
 
 		ply
 
+;--------
+		bbs7	<myshipStatus, .checkHitJump03
+		movw	<checkHitObjX0, <centerX
+		movw	<checkHitObjY0, <centerY
+		movw	<checkHitObjX1, <checkHitX
+		movw	<checkHitObjY1, <checkHitY
+
+		jsr	checkHitObj16
+		jcs	.checkHitJump01
+
+;--------
+.checkHitJump03:
+		phy
+		stx	<moveEnemyWork
+
+		ldy	#ENEMY_MAX
+		clx
+
+.enemyHitLoop:
+		cpx	<moveEnemyWork
+		beq	.enemyHitJump
+
+		lda	enemyTable+ENEMY_ANGLE, x
+		bmi	.enemyHitJump
+
+		movw	<checkHitObjX0, <checkHitX
+		movw	<checkHitObjY0, <checkHitY
+
+		lda	enemyTable+ENEMY_X, x
+		sta	<checkHitObjX1
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<checkHitObjX1+1
+
+		lda	enemyTable+ENEMY_Y, x
+		sta	<checkHitObjY1
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<checkHitObjY1+1
+
+		jsr	checkHitObj16
+		bcs	.checkHitJump02
+
+.enemyHitJump:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		bne	.enemyHitLoop
+
+		clc
+
+.checkHitJump02:
+		ldx	<moveEnemyWork
+		ply
+
+		jcs	.checkHitJump01
+
+;--------
 ;check move x y
 		jsr	checkHit
 
@@ -3623,11 +3862,19 @@ moveEnemy:
 		lda	<checkHitY+1
 		sta	enemyTable+ENEMY_Y+1, x
 
+		jsr	setEnemyshot
+
+;--------
 .checkHitJump01:
 		txa
 		add	#ENEMY_STRUCT_SIZE
 		tax
-		dey
+
+		tya
+		add	#ENEMYSHOT_STRUCT_SIZE
+		tay
+
+		cpx	#ENEMY_TABEL_SIZE
 		jne	.moveEnemyLoop
 
 		rts
@@ -3641,8 +3888,7 @@ setEnemySp:
 
 .enemySetSpLoop:
 		lda	enemyTable+ENEMY_ANGLE, x
-		cmp	#$80
-		jeq	.enemySetSpJump00
+		jmi	.enemySetSpJump00
 
 		lda	<screenAngle
 		asl	a
@@ -3670,8 +3916,8 @@ setEnemySp:
 		jsr	checkScreenXY
 		bcs	.enemySetSpJump00
 
-		movw	VDC2_2, <rotationAnsY+1
-		movw	VDC2_2, <rotationAnsX+1
+		movw	<VDC2SpriteY, <rotationAnsY+1
+		movw	<VDC2SpriteX, <rotationAnsX+1
 
 		sec
 		lda	<screenAngle
@@ -3683,10 +3929,10 @@ setEnemySp:
 		mov	<getSpPalette, #$02
 		jsr	getSpNoAttr
 
-		movw	VDC2_2, <spNoWork
-		movw	VDC2_2, <spAttrWork
+		movw	<VDC2SpriteNo, <spNoWork
+		movw	<VDC2SpriteAttr, <spAttrWork
 
-		dec	<spDataCount
+		jsr	setVDC2Sp
 
 .enemySetSpJump00:
 		txa
@@ -3696,6 +3942,310 @@ setEnemySp:
 		jne	.enemySetSpLoop
 
 .enemySetSpEnd:
+		rts
+
+
+;----------------------------
+setBlastSp:
+;set blast sprite
+		clx
+		ldy	#ENEMY_MAX
+
+.blastSetSpLoop:
+		lda	enemyTable+ENEMY_ANGLE, x
+
+		jpl	.blastSetSpJump00
+		and	#$7F
+		jeq	.blastSetSpJump00
+
+		lda	enemyTable+ENEMY_COUNTER, x
+		inc	a
+		cmp	#$C0
+		bne	.blastSetSpJump01
+
+		lda	#$80
+		sta	enemyTable+ENEMY_ANGLE, x
+		jmp	.blastSetSpJump00
+
+
+.blastSetSpJump01:
+		sta	enemyTable+ENEMY_COUNTER, x
+
+		lda	<screenAngle
+		asl	a
+		sta	<rotationAngle
+
+		lda	enemyTable+ENEMY_X, x
+		sta	<rotationX
+		lda	enemyTable+ENEMY_X+1, x
+		sta	<rotationX+1
+
+		subw	<rotationX, <centerX
+
+		lda	enemyTable+ENEMY_Y, x
+		sta	<rotationY
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	<rotationY+1
+
+		subw	<rotationY, <centerY
+
+		jsr	rotationProc
+
+		addw	<rotationAnsX+1, #SCREEN_CENTERX+32-16
+		addw	<rotationAnsY+1, #SCREEN_CENTERY+64-16
+
+		jsr	checkScreenXY
+		bcs	.blastSetSpJump00
+
+		movw	<VDC2SpriteY, <rotationAnsY+1
+		movw	<VDC2SpriteX, <rotationAnsX+1
+
+		lda	enemyTable+ENEMY_COUNTER, x
+		and	#$C0
+		lsr	a
+		lsr	a
+		lsr	a
+		add	#$28
+
+		sta	<VDC2SpriteNo
+		stz	<VDC2SpriteNo+1
+		movw	<VDC2SpriteAttr, #$1182
+
+		jsr	setVDC2Sp
+
+.blastSetSpJump00:
+		txa
+		add	#ENEMY_STRUCT_SIZE
+		tax
+		dey
+		jne	.blastSetSpLoop
+
+.blastSetSpEnd:
+		rts
+
+
+;----------------------------
+initEnemyshot:
+;initialize enemyshot
+		clx
+		ldy	#ENEMYSHOT_MAX
+.enemyshotInitLoop:
+		lda	#$80
+		sta	enemyshotTable+ENEMYSHOT_ANGLE, x
+		txa
+		add	#ENEMYSHOT_STRUCT_SIZE
+		tax
+		dey
+		bne	.enemyshotInitLoop
+
+		rts
+
+
+;----------------------------
+moveEnemyshot:
+;move enemyshot
+		clx
+		ldy	#ENEMYSHOT_MAX
+
+.enemyshotMoveLoop:
+		lda	enemyshotTable+ENEMYSHOT_ANGLE, x
+		cmp	#$80
+		jeq	.enemyshotMoveJump
+
+		phy
+
+		asl	a
+		tay
+
+;--------
+		stz	<centerXYWorkPoint
+		lda	sinDataLow, y
+		sta	<centerXYWorkPoint+1
+		lda	sinDataHigh, y
+		sta	<centerXYWork
+		jsr	signExt
+		sta	<centerXYWork+1
+
+		aslq	<centerXYWorkPoint
+		aslq	<centerXYWorkPoint
+		aslq	<centerXYWorkPoint
+
+		sec
+		lda	enemyshotTable+ENEMYSHOT_XPOINT, x
+		sbc	<centerXYWorkPoint
+		sta	enemyshotTable+ENEMYSHOT_XPOINT, x
+		lda	enemyshotTable+ENEMYSHOT_XPOINT+1, x
+		sbc	<centerXYWorkPoint+1
+		sta	enemyshotTable+ENEMYSHOT_XPOINT+1, x
+
+		lda	enemyshotTable+ENEMYSHOT_X, x
+		sbc	<centerXYWork
+		sta	enemyshotTable+ENEMYSHOT_X, x
+		lda	enemyshotTable+ENEMYSHOT_X+1, x
+		sbc	<centerXYWork+1
+		sta	enemyshotTable+ENEMYSHOT_X+1, x
+
+;--------
+		stz	<centerXYWorkPoint
+		lda	cosDataLow, y
+		sta	<centerXYWorkPoint+1
+		lda	cosDataHigh, y
+		sta	<centerXYWork
+		jsr	signExt
+		sta	<centerXYWork+1
+
+		aslq	<centerXYWorkPoint
+		aslq	<centerXYWorkPoint
+		aslq	<centerXYWorkPoint
+
+		sec
+		lda	enemyshotTable+ENEMYSHOT_YPOINT, x
+		sbc	<centerXYWorkPoint
+		sta	enemyshotTable+ENEMYSHOT_YPOINT, x
+		lda	enemyshotTable+ENEMYSHOT_YPOINT+1, x
+		sbc	<centerXYWorkPoint+1
+		sta	enemyshotTable+ENEMYSHOT_YPOINT+1, x
+
+		lda	enemyshotTable+ENEMYSHOT_Y, x
+		sbc	<centerXYWork
+		sta	enemyshotTable+ENEMYSHOT_Y, x
+		lda	enemyshotTable+ENEMYSHOT_Y+1, x
+		sbc	<centerXYWork+1
+		sta	enemyshotTable+ENEMYSHOT_Y+1, x
+
+;--------
+		lda	enemyshotTable+ENEMYSHOT_X, x
+		sta	<spDataWorkBGX
+		lda	enemyshotTable+ENEMYSHOT_X+1, x
+		sta	<spDataWorkBGX+1
+
+		lda	enemyshotTable+ENEMYSHOT_Y, x
+		sta	<spDataWorkBGY
+		lda	enemyshotTable+ENEMYSHOT_Y+1, x
+		sta	<spDataWorkBGY+1
+
+;--------
+		ply
+
+		jsr	getStageData2
+
+		cmp	#$80
+		beq	.enemyshotMoveJump
+
+		lda	#$80
+		sta	enemyshotTable+ENEMYSHOT_ANGLE, x
+
+.enemyshotMoveJump:
+		txa
+		add	#ENEMYSHOT_STRUCT_SIZE
+		tax
+		dey
+		jne	.enemyshotMoveLoop
+.enemyshotMoveEnd:
+		rts
+
+
+;----------------------------
+setEnemyshotSp:
+;set enemyshot sprite
+		clx
+		ldy	#ENEMYSHOT_MAX
+
+.enemyshotSetSpLoop:
+		lda	enemyshotTable+ENEMYSHOT_ANGLE, x
+		cmp	#$80
+		jeq	.enemyshotSetSpJump00
+
+		lda	<screenAngle
+		asl	a
+		sta	<rotationAngle
+
+		lda	enemyshotTable+ENEMYSHOT_X, x
+		sta	<rotationX
+		lda	enemyshotTable+ENEMYSHOT_X+1, x
+		sta	<rotationX+1
+
+		subw	<rotationX, <centerX
+
+		lda	enemyshotTable+ENEMYSHOT_Y, x
+		sta	<rotationY
+		lda	enemyshotTable+ENEMYSHOT_Y+1, x
+		sta	<rotationY+1
+
+		subw	<rotationY, <centerY
+
+		jsr	rotationProc
+
+		addw	<rotationAnsX+1, #SCREEN_CENTERX+32-16
+		addw	<rotationAnsY+1, #SCREEN_CENTERY+64-16
+
+		jsr	checkScreenXY
+		bcs	.enemyshotSetSpJump01
+
+		movw	<VDC1SpriteY, <rotationAnsY+1
+		movw	<VDC1SpriteX, <rotationAnsX+1
+
+		sec
+		lda	<screenAngle
+		sbc	enemyshotTable+ENEMYSHOT_ANGLE, x
+		and	#$7F
+
+		sta	<getSpAngle
+		mov	<getSpNo, #$02
+		mov	<getSpPalette, #$02
+		jsr	getSpNoAttr
+
+		movw	<VDC1SpriteNo, <spNoWork
+		movw	<VDC1SpriteAttr, <spAttrWork
+
+		jsr	setVDC1Sp
+
+		bra	.enemyshotSetSpJump00
+
+.enemyshotSetSpJump01:
+
+.enemyshotSetSpJump00:
+		txa
+		add	#ENEMYSHOT_STRUCT_SIZE
+		tax
+		dey
+		jne	.enemyshotSetSpLoop
+
+.enemyshotSetSpEnd:
+		rts
+
+
+;----------------------------
+setEnemyshot:
+;set enemyshot
+		lda	enemyshotTable+ENEMYSHOT_ANGLE, y
+		cmp	#$80
+		bne	.enemyshotSetEnd
+
+		lda	enemyTable+ENEMY_ANGLE, x
+		sta	enemyshotTable+ENEMYSHOT_ANGLE, y
+
+		lda	enemyTable+ENEMY_XPOINT, x
+		sta	enemyshotTable+ENEMYSHOT_XPOINT, y
+		lda	enemyTable+ENEMY_XPOINT+1, x
+		sta	enemyshotTable+ENEMYSHOT_XPOINT+1, y
+
+		lda	enemyTable+ENEMY_X, x
+		sta	enemyshotTable+ENEMYSHOT_X, y
+		lda	enemyTable+ENEMY_X+1, x
+		sta	enemyshotTable+ENEMYSHOT_X+1, y
+
+		lda	enemyTable+ENEMY_YPOINT, x
+		sta	enemyshotTable+ENEMYSHOT_YPOINT, y
+		lda	enemyTable+ENEMY_YPOINT+1, x
+		sta	enemyshotTable+ENEMYSHOT_YPOINT+1, y
+
+		lda	enemyTable+ENEMY_Y, x
+		sta	enemyshotTable+ENEMYSHOT_Y, y
+		lda	enemyTable+ENEMY_Y+1, x
+		sta	enemyshotTable+ENEMYSHOT_Y+1, y
+
+.enemyshotSetEnd:
 		rts
 
 
@@ -3777,7 +4327,7 @@ moveMyshot:
 		asl	a
 		tay
 
-;----------------------------
+;--------
 		stz	<centerXYWorkPoint
 		lda	sinDataLow, y
 		sta	<centerXYWorkPoint+1
@@ -3805,7 +4355,7 @@ moveMyshot:
 		sbc	<centerXYWork+1
 		sta	myshotTable+MYSHOT_X+1, x
 
-;----------------------------
+;--------
 		stz	<centerXYWorkPoint
 		lda	cosDataLow, y
 		sta	<centerXYWorkPoint+1
@@ -3833,7 +4383,7 @@ moveMyshot:
 		sbc	<centerXYWork+1
 		sta	myshotTable+MYSHOT_Y+1, x
 
-;----------------------------
+;--------
 		lda	myshotTable+MYSHOT_X, x
 		sta	<spDataWorkBGX
 		lda	myshotTable+MYSHOT_X+1, x
@@ -3844,7 +4394,7 @@ moveMyshot:
 		lda	myshotTable+MYSHOT_Y+1, x
 		sta	<spDataWorkBGY+1
 
-;----------------------------
+;--------
 		ply
 
 		jsr	getStageData2
@@ -3902,8 +4452,8 @@ setMyshotSp:
 		jsr	checkScreenXY
 		bcs	.myshotSetSpJump01
 
-		movw	VDC1_2, <rotationAnsY+1
-		movw	VDC1_2, <rotationAnsX+1
+		movw	<VDC1SpriteY, <rotationAnsY+1
+		movw	<VDC1SpriteX, <rotationAnsX+1
 
 		sec
 		lda	<screenAngle
@@ -3915,10 +4465,11 @@ setMyshotSp:
 		mov	<getSpPalette, #$02
 		jsr	getSpNoAttr
 
-		movw	VDC1_2, <spNoWork
-		movw	VDC1_2, <spAttrWork
+		movw	<VDC1SpriteNo, <spNoWork
+		movw	<VDC1SpriteAttr, <spAttrWork
 
-		dec	<spDataCount
+		jsr	setVDC1Sp
+
 		bra	.myshotSetSpJump00
 
 .myshotSetSpJump01:
@@ -3992,6 +4543,651 @@ getStageData:
 		ply
 		rts
 
+
+;----------------------------
+setCharData:
+;CHAR set to vram
+		lda	#charDataBank
+		tam	#$02
+
+;vram address $1000
+		stz	VPC_6	;select VDC#1
+
+		st0	#$00
+		st1	#$00
+		st2	#$10
+
+		st0	#$02
+		tia	$4000, VDC1_2, $2000
+
+		lda	#$01
+		sta	VPC_6	;select VDC#2
+
+		st0	#$00
+		st1	#$00
+		st2	#$10
+
+		st0	#$02
+		tia	$4000, VDC2_2, $2000
+
+		rts
+
+
+;----------------------------
+putHex:
+		pha
+		phx
+		phy
+
+		sta	<puthexdata
+
+		stz	<puthexaddr
+		sty	<puthexaddr+1
+
+		lsr	<puthexaddr+1
+		ror	<puthexaddr
+		lsr	<puthexaddr+1
+		ror	<puthexaddr
+		lsr	<puthexaddr+1
+		ror	<puthexaddr
+
+		txa
+		ora	<puthexaddr
+		sta	<puthexaddr
+
+		lda	<puthexdata
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		jsr	numtochar
+		tax
+
+		lda	<puthexdata
+		and	#$0F
+		jsr	numtochar
+
+		sei
+
+		stz	VDC1_0
+		ldy	<puthexaddr
+		sty	VDC1_2
+		ldy	<puthexaddr+1
+		sty	VDC1_3
+
+		ldy	#$02
+		sty	VDC1_0
+		stx	VDC1_2
+		ldy	#$01
+		sty	VDC1_3
+
+		sta	VDC1_2
+		sty	VDC1_3
+
+		cli
+
+		ply
+		plx
+		pla
+
+		rts
+
+
+;----------------------------
+setVDC1WriteAddr:
+;
+		sei
+		mov	VDC1_0, #$00
+		movw	VDC1_2, <VDC1WriteAddr
+		mov	VDC1_0, #$02
+		cli
+		rts
+
+
+;----------------------------
+clearVDC1Sat:
+;
+		sei
+		mov	VDC1_0, #$00
+		movw	VDC1_2, <VDC1SatAddr
+		mov	VDC1_0, #$02
+
+		cli
+		stz	<VDC1SpriteCounter
+		rts
+
+
+;----------------------------
+setVDC1Sp:
+;
+		lda	<VDC1SpriteCounter
+		cmp	#$64
+		bcs	.jp00
+
+		jsr	_setVDC1Sp
+
+		inc	<VDC1SpriteCounter
+
+		clc
+
+.jp00:
+		rts
+
+
+;----------------------------
+_setVDC1Sp:
+;
+		sei
+		movw	VDC1_2, <VDC1SpriteY
+		movw	VDC1_2, <VDC1SpriteX
+		movw	VDC1_2, <VDC1SpriteNo
+		movw	VDC1_2, <VDC1SpriteAttr
+		cli
+
+		rts
+
+
+;----------------------------
+setVDC1SpDma:
+;
+		sei
+		mov	VDC1_0, #$13
+		movw	VDC1_2, <VDC1SpDmaAddr
+		cli
+		rts
+
+
+;----------------------------
+setVDC2WriteAddr:
+;
+		sei
+		mov	VDC2_0, #$00
+		movw	VDC2_2, <VDC2WriteAddr
+		mov	VDC2_0, #$02
+		cli
+		rts
+
+
+;----------------------------
+clearVDC2Sat:
+;
+		sei
+		mov	VDC2_0, #$00
+		movw	VDC2_2, <VDC2SatAddr
+		mov	VDC2_0, #$02
+
+		cli
+		stz	<VDC2SpriteCounter
+		rts
+
+
+;----------------------------
+setVDC2Sp:
+;
+		lda	<VDC2SpriteCounter
+		cmp	#$64
+		bcs	.jp00
+
+		jsr	_setVDC2Sp
+
+		inc	<VDC2SpriteCounter
+
+		clc
+
+.jp00:
+		rts
+
+
+;----------------------------
+_setVDC2Sp:
+;
+		sei
+		movw	VDC2_2, <VDC2SpriteY
+		movw	VDC2_2, <VDC2SpriteX
+		movw	VDC2_2, <VDC2SpriteNo
+		movw	VDC2_2, <VDC2SpriteAttr
+		cli
+
+		rts
+
+
+;----------------------------
+setVDC2SpDma:
+;
+		sei
+		mov	VDC2_0, #$13
+		movw	VDC2_2, <VDC2SpDmaAddr
+		cli
+		rts
+
+
+;----------------------------
+initializeVdp:
+;reset wait
+		cly
+.resetWaitloop0:
+		clx
+.resetWaitloop1:
+		dex
+		bne	.resetWaitloop1
+		dey
+		bne	.resetWaitloop0
+
+;set vdp
+		lda	VDC1_0
+		lda	VDC2_0
+vdpdataloop:	lda	vdpData, y
+		cmp	#$FF
+		beq	vdpdataend
+		sta	VDC1_0
+		sta	VDC2_0
+		iny
+
+		lda	vdpData, y
+		sta	VDC1_2
+		sta	VDC2_2
+		iny
+
+		lda	vdpData, y
+		sta	VDC1_3
+		sta	VDC2_3
+		iny
+		bra	vdpdataloop
+vdpdataend:
+
+		lda	#$33
+		sta	VPC_0
+		sta	VPC_1
+
+		stz	VPC_2
+		stz	VPC_3
+		stz	VPC_4
+		stz	VPC_5
+
+		stz	VPC_6	;select VDC#1
+
+;disable interrupts TIQD       IRQ2D
+		lda	#$05
+		sta	INT_DIS_REG
+
+;262Line  VCE Clock 5MHz
+		lda	#$04
+		sta	VCE_0
+
+;set palette
+		stz	VCE_2
+		stz	VCE_3
+		tia	bgPaletteData, VCE_4, $0200
+
+		stz	VCE_2
+		lda	#$01
+		sta	VCE_3
+		tia	spPaletteData, VCE_4, $0200
+
+;clear BG
+		lda	#$02
+
+		stz	VDC1_0
+		stz	VDC1_2
+		stz	VDC1_3
+		sta	VDC1_0
+
+		stz	VDC2_0
+		stz	VDC2_2
+		stz	VDC2_3
+		sta	VDC2_0
+
+		ldy	#4
+		lda	#$01
+.clearBGLoop0:
+		clx
+.clearBGLoop1:
+		stz	VDC1_2
+		sta	VDC1_3
+
+		stz	VDC2_2
+		sta	VDC2_3
+
+		dex
+		bne	.clearBGLoop1
+
+		dey
+		bne	.clearBGLoop0
+
+		rts
+
+
+;----------------------------
+showScreen:
+;show screen
+;VDC#1
+;bg sp       vsync
+;+1
+		stz	VPC_6		;select VDC#1
+
+		st0	#$05
+		st1	#$C8
+		st2	#$00
+
+;VDC#2
+;bg sp
+;+1
+		lda	#$01
+		sta	VPC_6		;select VDC#2
+
+		st0	#$05
+		st1	#$C0
+		st2	#$C0
+
+		rts
+
+
+;----------------------------
+padAngleData:
+		;	0000 000U 00R0 00RU 0D00 0D0U 0DR0 0DRU L000 L00U L0R0 L0RU LD00 LD0U LDR0 LDRU
+		.db	$80, $00, $60, $70, $40, $80, $50, $80, $20, $10, $80, $80, $30, $80, $80, $80
+
+
+;----------------------------
+vdpData:
+		.db	$05, $00, $00	;screen off +1
+		.db	$0A, $02, $02	;HSW $02 HDS $02
+		.db	$0B, $1F, $04	;HDW $1F HDE $04
+		.db	$0C, $02, $0D	;VSW $02 VDS $0D
+		.db	$0D, $EF, $00	;VDW $00EF
+		.db	$0E, $03, $00	;VCR $03
+		.db	$07, $00, $00	;scrollx 0
+		.db	$08, $00, $00	;scrolly 0
+		.db	$09, $00, $00	;32x32
+		.db	$FF		;end
+
+
+;----------------------------
+bgPaletteData:
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+;--------
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+
+;----------------------------
+spPaletteData:
+		.dw	$0000, $00DB, $01B6, $01FF, $0000, $00DB, $01B6, $01FF,\
+			$0000, $00DB, $01B6, $01FF, $0000, $00DB, $01B6, $01FF
+
+		.dw	$0000, $0000, $0000, $0000, $00DB, $00DB, $00DB, $00DB,\
+			$01B6, $01B6, $01B6, $01B6, $01FF, $01FF, $01FF, $01FF
+
+		.dw	$0000, $0007, $01B6, $00DB, $0038, $0005, $016D, $01FF,\
+			$0000, $00DB, $01B6, $00F6, $01FF, $01FF, $01FF, $01FF
+
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+;--------
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+		.dw	$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000,\
+			$0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
+
+
+;----------------------------
+hitDataX:
+		.db	 -8,   0,   7,  -8,   7,  -8,   0,   7;16*16
+
+
+;----------------------------
+hitDataY:
+		.db	 -8,  -8,  -8,   0,   0,   7,   7,   7;16*16
+
+
+;----------------------------
+spNoData:
+		.dw	$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
+			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
+			$00FF, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
+			$0040, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
+			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
+			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
+			$00FF, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
+			$0040, $0038, $0030, $0028, $0020, $0018, $0010, $0008
+
+
+;----------------------------
+spNo32Data:
+		.dw	$0040, $0048, $0050, $0058, $0060, $0068
+
+
+;----------------------------
+spBaseData:
+		.dw	$0100, $0180, $0200, $0280, $0300 ,$0380
+
+
+;----------------------------
+spAttrData:
+		.dw	$1100, $1100, $1100, $1100, $1100, $1100, $1100, $1100,\
+			$1100, $1100, $1100, $1100, $1100, $1100, $1100, $1100,\
+			$1100, $9100, $9100, $9100, $9100, $9100, $9100, $9100,\
+			$9100, $9100, $9100, $9100, $9100, $9100, $9100, $9100,\
+			$9100, $9900, $9900, $9900, $9900, $9900, $9900, $9900,\
+			$9900, $9900, $9900, $9900, $9900, $9900, $9900, $9900,\
+			$1900, $1900, $1900, $1900, $1900, $1900, $1900, $1900,\
+			$1900, $1900, $1900, $1900, $1900, $1900, $1900, $1900
+
+
+;----------------------------
+stageDataBankData:
+		.db	$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank, $00+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank, $01+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank, $02+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank, $03+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank, $04+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank, $05+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank, $06+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank,\
+			$07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank, $07+stage0DataBank
+
+
+;----------------------------
+stageDataAddrHighData:
+		.db	$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh,\
+			$00+stageDataAddrHigh, $01+stageDataAddrHigh, $02+stageDataAddrHigh, $03+stageDataAddrHigh,\
+			$04+stageDataAddrHigh, $05+stageDataAddrHigh, $06+stageDataAddrHigh, $07+stageDataAddrHigh,\
+			$08+stageDataAddrHigh, $09+stageDataAddrHigh, $0A+stageDataAddrHigh, $0B+stageDataAddrHigh,\
+			$0C+stageDataAddrHigh, $0D+stageDataAddrHigh, $0E+stageDataAddrHigh, $0F+stageDataAddrHigh,\
+			$10+stageDataAddrHigh, $11+stageDataAddrHigh, $12+stageDataAddrHigh, $13+stageDataAddrHigh,\
+			$14+stageDataAddrHigh, $15+stageDataAddrHigh, $16+stageDataAddrHigh, $17+stageDataAddrHigh,\
+			$18+stageDataAddrHigh, $19+stageDataAddrHigh, $1A+stageDataAddrHigh, $1B+stageDataAddrHigh,\
+			$1C+stageDataAddrHigh, $1D+stageDataAddrHigh, $1E+stageDataAddrHigh, $1F+stageDataAddrHigh
+
+
+;**********************************
+		.bank	2
+		.org	$A000
 
 ;----------------------------
 rotationProc:
@@ -4179,253 +5375,6 @@ _atan:
 
 
 ;----------------------------
-setCharData:
-;CHAR set to vram
-		lda	#charDataBank
-		tam	#$02
-
-;vram address $1000
-		stz	VPC_6	;select VDC#1
-
-		st0	#$00
-		st1	#$00
-		st2	#$10
-
-		st0	#$02
-		tia	$4000, VDC1_2, $2000
-
-		lda	#$01
-		sta	VPC_6	;select VDC#2
-
-		st0	#$00
-		st1	#$00
-		st2	#$10
-
-		st0	#$02
-		tia	$4000, VDC2_2, $2000
-
-		rts
-
-
-;----------------------------
-putHex:
-		pha
-		phx
-		phy
-
-		sta	<puthexdata
-
-		stz	<puthexaddr
-		sty	<puthexaddr+1
-
-		lsr	<puthexaddr+1
-		ror	<puthexaddr
-		lsr	<puthexaddr+1
-		ror	<puthexaddr
-		lsr	<puthexaddr+1
-		ror	<puthexaddr
-
-		txa
-		ora	<puthexaddr
-		sta	<puthexaddr
-
-		lda	<puthexdata
-		lsr	a
-		lsr	a
-		lsr	a
-		lsr	a
-		jsr	numtochar
-		tax
-
-		lda	<puthexdata
-		and	#$0F
-		jsr	numtochar
-
-		stz	VDC1_0
-		ldy	<puthexaddr
-		sty	VDC1_2
-		ldy	<puthexaddr+1
-		sty	VDC1_3
-
-		ldy	#$02
-		sty	VDC1_0
-		stx	VDC1_2
-		ldy	#$01
-		sty	VDC1_3
-
-		sta	VDC1_2
-		sty	VDC1_3
-
-		ply
-		plx
-		pla
-
-		rts
-
-
-;----------------------------
-initializeVdp:
-;reset wait
-		cly
-.resetWaitloop0:
-		clx
-.resetWaitloop1:
-		dex
-		bne	.resetWaitloop1
-		dey
-		bne	.resetWaitloop0
-
-;set vdp
-		lda	VDC1_0
-		lda	VDC2_0
-vdpdataloop:	lda	vdpData, y
-		cmp	#$FF
-		beq	vdpdataend
-		sta	VDC1_0
-		sta	VDC2_0
-		iny
-
-		lda	vdpData, y
-		sta	VDC1_2
-		sta	VDC2_2
-		iny
-
-		lda	vdpData, y
-		sta	VDC1_3
-		sta	VDC2_3
-		iny
-		bra	vdpdataloop
-vdpdataend:
-
-		lda	#$77
-		sta	VPC_0
-		sta	VPC_1
-
-		stz	VPC_2
-		stz	VPC_3
-		stz	VPC_4
-		stz	VPC_5
-
-		stz	VPC_6	;select VDC#1
-
-;disable interrupts TIQD       IRQ2D
-		lda	#$05
-		sta	INT_DIS_REG
-
-;262Line  VCE Clock 5MHz
-		lda	#$04
-		sta	VCE_0
-
-;set palette
-		stz	VCE_2
-		stz	VCE_3
-		tia	bgPaletteData, VCE_4, $20
-
-		stz	VCE_2
-		lda	#$01
-		sta	VCE_3
-		tia	spPaletteData, VCE_4, $80
-
-;clear BG
-		lda	#$02
-
-		stz	VDC1_0
-		stz	VDC1_2
-		stz	VDC1_3
-		sta	VDC1_0
-
-		stz	VDC2_0
-		stz	VDC2_2
-		stz	VDC2_3
-		sta	VDC2_0
-
-		ldy	#4
-		lda	#$01
-.clearBGLoop0:
-		clx
-.clearBGLoop1:
-		stz	VDC1_2
-		sta	VDC1_3
-
-		stz	VDC2_2
-		sta	VDC2_3
-
-		dex
-		bne	.clearBGLoop1
-
-		dey
-		bne	.clearBGLoop0
-
-		rts
-
-
-;----------------------------
-showScreen:
-;show screen
-;VDC#1
-;bg sp       vsync
-;+1
-		stz	VPC_6		;select VDC#1
-
-		st0	#$05
-		st1	#$C8
-		st2	#$00
-
-;VDC#2
-;bg sp
-;+1
-		lda	#$01
-		sta	VPC_6		;select VDC#2
-
-		st0	#$05
-		st1	#$C0
-		st2	#$C0
-
-		rts
-
-
-;----------------------------
-padAngleData:
-		;	0000 000U 00R0 00RU 0D00 0D0U 0DR0 0DRU L000 L00U L0R0 L0RU LD00 LD0U LDR0 LDRU
-		.db	$80, $00, $60, $70, $40, $80, $50, $80, $20, $10, $80, $80, $30, $80, $80, $80
-
-
-;----------------------------
-vdpData:
-		.db	$05, $00, $00	;screen off +1
-		.db	$0A, $02, $02	;HSW $02 HDS $02
-		.db	$0B, $1F, $04	;HDW $1F HDE $04
-		.db	$0C, $02, $0D	;VSW $02 VDS $0D
-		.db	$0D, $EF, $00	;VDW $00EF
-		.db	$0E, $03, $00	;VCR $03
-		.db	$07, $00, $00	;scrollx 0
-		.db	$08, $00, $00	;scrolly 0
-		.db	$09, $00, $00	;32x32
-		.db	$FF		;end
-
-
-;----------------------------
-bgPaletteData:
-		.dw	$0111, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
-			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
-
-
-;----------------------------
-spPaletteData:
-		.dw	$0000, $00DB, $01B6, $01FF, $0000, $00DB, $01B6, $01FF,\
-			$0000, $00DB, $01B6, $01FF, $0000, $00DB, $01B6, $01FF
-
-		.dw	$0000, $0000, $0000, $0000, $00DB, $00DB, $00DB, $00DB,\
-			$01B6, $01B6, $01B6, $01B6, $01FF, $01FF, $01FF, $01FF
-
-		.dw	$0000, $0007, $01B6, $00DB, $0038, $0005, $016D, $01FF,\
-			$0000, $00DB, $01B6, $00F6, $01FF, $01FF, $01FF, $01FF
-
-		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
-			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
-
-
-;----------------------------
 sinDataLow:
 		.db	$00, $06, $0D, $13, $19, $1F, $26, $2C, $32, $38, $3E, $44, $4A, $50, $56, $5C,\
 			$62, $68, $6D, $73, $79, $7E, $84, $89, $8E, $93, $98, $9D, $A2, $A7, $AC, $B1,\
@@ -4523,69 +5472,14 @@ atanDataLow:
 			$00, $61, $D0, $50, $E6, $97, $6C, $72, $BE, $6E, $BA, $09, $3A, $8E, $4D, $F7
 
 
-;----------------------------
-hitDataX:
-		.db	 -8,   0,   7,  -8,   7,  -8,   0,   7;16*16
-
-
-;----------------------------
-hitDataY:
-		.db	 -8,  -8,  -8,   0,   0,   7,   7,   7;16*16
-
-
-;----------------------------
-spNoData:
-		.dw	$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
-			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
-			$00FF, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
-			$0040, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
-			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
-			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
-			$00FF, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
-			$0040, $0038, $0030, $0028, $0020, $0018, $0010, $0008
-
-
-;----------------------------
-spNoDataNo1:
-		.dw	$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
-			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
-			$00FF, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
-			$0000, $0078, $0070, $0068, $0060, $0058, $0050, $0048,\
-			$0040, $0048, $0050, $0058, $0060, $0068, $0070, $0078,\
-			$0000, $0008, $0010, $0018, $0020, $0028, $0030, $0038,\
-			$00FF, $0038, $0030, $0028, $0020, $0018, $0010, $0008,\
-			$0000, $0078, $0070, $0068, $0060, $0058, $0050, $0048
-
-
-;----------------------------
-spNo32Data:
-		.dw	$0040, $0048, $0050, $0058, $0060, $0068
-
-
-;----------------------------
-spBaseData:
-		.dw	$0100, $0180, $0200, $0280, $0300 ,$0380
-
-
-;----------------------------
-spAttrData:
-		.dw	$1180, $1180, $1180, $1180, $1180, $1180, $1180, $1180,\
-			$1180, $1180, $1180, $1180, $1180, $1180, $1180, $1180,\
-			$1180, $9180, $9180, $9180, $9180, $9180, $9180, $9180,\
-			$9180, $9180, $9180, $9180, $9180, $9180, $9180, $9180,\
-			$9180, $9980, $9980, $9980, $9980, $9980, $9980, $9980,\
-			$9980, $9980, $9980, $9980, $9980, $9980, $9980, $9980,\
-			$1980, $1980, $1980, $1980, $1980, $1980, $1980, $1980,\
-			$1980, $1980, $1980, $1980, $1980, $1980, $1980, $1980
-
-
 ;**********************************
-		.bank	2
-		INCBIN	"char.dat"		;    8K  2    $02
-		INCBIN	"mul.dat"		;  128K  3~18 $03~$12
-		INCBIN	"spxy.dat"		;  128K 19~34 $13~$22	SPXY and BGXY ([spx:1byte, spy:1byte, bgx:1byte, bgy:1byte] * 128data * 128angle * 2left and right)
-		INCBIN	"stage0.dat"		;   64K 35~42 $23~$2A	256 * 256
-		INCBIN	"spLR00.dat"		;    8K 43~43 $2B~$2B	32dot*32dot*16 left right No0
-		INCBIN	"spL01.dat"		;    8K 44~44 $2C~$2C	32dot*32dot*16 left No1
-		INCBIN	"spR01.dat"		;    8K 45~45 $2D~$2D	32dot*32dot*16 right No1
-		INCBIN	"spLR32.dat"		;    8K 46~46 $2E~$2E	32dot*32dot*8  left right no0-5
+		.bank	3
+		INCBIN	"char.dat"		;    8K  3    $02
+		INCBIN	"mul.dat"		;  128K  4~19 $04~$13
+		INCBIN	"spxy.dat"		;  128K 20~35 $14~$23	SPXY and BGXY ([spx:1byte, spy:1byte, bgx:1byte, bgy:1byte] * 128data * 128angle * 2left and right)
+		INCBIN	"stage0.dat"		;   64K 36~43 $24~$2B	256 * 256
+		INCBIN	"spLR00.dat"		;    8K 44~44 $2C~$2C	32dot*32dot*16 left right No0_1
+		INCBIN	"spL01.dat"		;    8K 45~45 $2D~$2D	32dot*32dot*16 left No2
+		INCBIN	"spR01.dat"		;    8K 46~46 $2E~$2E	32dot*32dot*16 right No2
+		INCBIN	"spLR32.dat"		;    8K 47~47 $2F~$2F	32dot*32dot*16 left right no0_1 2 4 6 8 10 X X
+		INCBIN	"spETC.dat"		;    8K 48~48 $30~$30	32dot*32dot*16
