@@ -1,32 +1,15 @@
-;VDC1
-;VRAM
-;0000-03FF	BG0	 1KWORD
-;0400-0FFF
-;1000-1FFF	CHR	 4KWORD	0-255CHR
-;2000-4FFF	CHRBG0	12KWORD	32*24CHR(256*192)
-;5000-7FFF
-
-;Memory
-;0000	I/O
-;2000	RAM
-;4000	mul data : div data : frame buffer ram $1F2000-$1F7FFF($F9-$FB) 24KBYTE
-;6000
-;8000
-;A000	polygon process
-;C000	polygon process
-;E000	main irq
-
-
 VDC_0			.equ	$0000
 VDC_1			.equ	$0001
 VDC_2			.equ	$0002
 VDC_3			.equ	$0003
 
+VDC1			.equ	1
 VDC1_0			.equ	VDC_0
 VDC1_1			.equ	VDC_1
 VDC1_2			.equ	VDC_2
 VDC1_3			.equ	VDC_3
 
+VDC2			.equ	2
 VDC2_0			.equ	$0010
 VDC2_1			.equ	$0011
 VDC2_2			.equ	$0012
@@ -54,38 +37,762 @@ INT_DIS_REG		.equ	$1402
 
 IO_PAD			.equ	$1000
 
-
 chardatBank		.equ	3
 muldatBank		.equ	4
 divdatBank		.equ	20
 
 
+;//////////////////////////////////
 ;----------------------------
-putPolyLine00m		.macro
-		lda	<polyLineColorDataWork0
-		sta	[polyLineLeftAddr],y
-		iny
+putPolyLineV1m	.macro
+		sta	VDC1_2
+		sty	VDC1_3
+		.endm
 
-		lda	<polyLineColorDataWork1
-		sta	[polyLineLeftAddr],y
-		clc
+
+;----------------------------
+putPolyLineV2m	.macro
+		sta	VDC2_2
+		sty	VDC2_3
+		.endm
+
+
+;----------------------------
+putPolyLineV1lm	.macro
+		putPolyLineV1m		;30
+
+		putPolyLineV1m		;29
+		putPolyLineV1m		;28
+		putPolyLineV1m		;27
+		putPolyLineV1m		;26
+		putPolyLineV1m		;25
+		putPolyLineV1m		;24
+		putPolyLineV1m		;23
+		putPolyLineV1m		;22
+		putPolyLineV1m		;21
+
+		putPolyLineV1m		;20
+		putPolyLineV1m		;19
+		putPolyLineV1m		;18
+		putPolyLineV1m		;17
+		putPolyLineV1m		;16
+		putPolyLineV1m		;15
+		putPolyLineV1m		;14
+		putPolyLineV1m		;13
+		putPolyLineV1m		;12
+		putPolyLineV1m		;11
+
+		putPolyLineV1m		;10
+		putPolyLineV1m		;9
+		putPolyLineV1m		;8
+		putPolyLineV1m		;7
+		putPolyLineV1m		;6
+		putPolyLineV1m		;5
+		putPolyLineV1m		;4
+		putPolyLineV1m		;3
+		putPolyLineV1m		;2
+		putPolyLineV1m		;1
+		.endm
+
+
+;----------------------------
+putPolyLineV2lm	.macro
+		putPolyLineV2m		;30
+
+		putPolyLineV2m		;29
+		putPolyLineV2m		;28
+		putPolyLineV2m		;27
+		putPolyLineV2m		;26
+		putPolyLineV2m		;25
+		putPolyLineV2m		;24
+		putPolyLineV2m		;23
+		putPolyLineV2m		;22
+		putPolyLineV2m		;21
+
+		putPolyLineV2m		;20
+		putPolyLineV2m		;19
+		putPolyLineV2m		;18
+		putPolyLineV2m		;17
+		putPolyLineV2m		;16
+		putPolyLineV2m		;15
+		putPolyLineV2m		;14
+		putPolyLineV2m		;13
+		putPolyLineV2m		;12
+		putPolyLineV2m		;11
+
+		putPolyLineV2m		;10
+		putPolyLineV2m		;9
+		putPolyLineV2m		;8
+		putPolyLineV2m		;7
+		putPolyLineV2m		;6
+		putPolyLineV2m		;5
+		putPolyLineV2m		;4
+		putPolyLineV2m		;3
+		putPolyLineV2m		;2
+		putPolyLineV2m		;1
+		.endm
+
+
+;----------------------------
+setEdgeBufferm	.macro
+;set edge buffer
+		lda	edgeCount,x
+
+		beq	.jpCount1_\@			;count 1
+		bpl	.jpCount2_\@			;count 2
+
+;count 0
+.jpCount0_\@:
 		tya
-		adc	#$0F
-		tay
+		sta	edgeLeft,x
+		inc	edgeCount,x
+		bra	.jp2_\@
 
-		lda	<polyLineColorDataWork2
-		sta	[polyLineLeftAddr],y
-		iny
-
-		lda	<polyLineColorDataWork3
-		sta	[polyLineLeftAddr],y
-		clc
+;count 1
+.jpCount1_\@:
 		tya
-		adc	#$0F
-		tay
-		bcc	.jp\@
-		inc	<polyLineLeftAddr+1
+		cmp	edgeLeft,x
+		bcs	.jp4_\@			;a >= edgeLeft,x
+
+		lda	edgeLeft,x
+		sta	edgeRight,x
+		tya
+		sta	edgeLeft,x
+
+		inc	edgeCount,x
+		bra	.jp2_\@
+
+.jp4_\@:
+		sta	edgeRight,x
+		inc	edgeCount,x
+		bra	.jp2_\@
+
+;count 2
+.jpCount2_\@:
+		tya
+		cmp	edgeLeft,x
+		bcs	.jp3_\@			;a >= edgeLeft,x
+		sta	edgeLeft,x
+		bra	.jp2_\@
+
+.jp3_\@:
+		cmp	edgeRight,x
+		bcc	.jp2_\@			;a < edgeRight,x
+		sta	edgeRight,x
+
+.jp2_\@:
+		.endm
+
+
+;----------------------------
+jcc		.macro
+		bcs	.jp\@
+		jmp	\1
 .jp\@
+		.endm
+
+
+;----------------------------
+jcs		.macro
+		bcc	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+jeq		.macro
+		bne	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+jne		.macro
+		beq	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+jpl		.macro
+		bmi	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+jmi		.macro
+		bpl	.jp\@
+		jmp	\1
+.jp\@
+		.endm
+
+
+;----------------------------
+add		.macro
+;\1 = \2 + \3
+;\1 = \1 + \2
+		.if	(\# = 1)
+			clc
+			adc	\1
+		.else
+			.if	(\# = 3)
+				clc
+				lda	\2
+				adc	\3
+				sta	\1
+			.else
+				clc
+				lda	\1
+				adc	\2
+				sta	\1
+			.endif
+		.endif
+		.endm
+
+
+;----------------------------
+sub		.macro
+;\1 = \2 - \3
+;\1 = \1 - \2
+		.if	(\# = 1)
+			sec
+			sbc	\1
+		.else
+			.if	(\# = 3)
+				sec
+				lda	\2
+				sbc	\3
+				sta	\1
+			.else
+				sec
+				lda	\1
+				sbc	\2
+				sta	\1
+			.endif
+		.endif
+		.endm
+
+
+;----------------------------
+addw		.macro
+;\1 = \2 + \3
+;\1 = \1 + \2
+		.if	(\# = 3)
+			.if	(\?3 = 2);Immediate
+				clc
+				lda	\2
+				adc	#LOW(\3)
+				sta	\1
+
+				lda	\2+1
+				adc	#HIGH(\3)
+				sta	\1+1
+			.else
+				clc
+				lda	\2
+				adc	\3
+				sta	\1
+
+				lda	\2+1
+				adc	\3+1
+				sta	\1+1
+			.endif
+		.else
+			.if	(\?2 = 2);Immediate
+				clc
+				lda	\1
+				adc	#LOW(\2)
+				sta	\1
+
+				lda	\1+1
+				adc	#HIGH(\2)
+				sta	\1+1
+			.else
+				clc
+				lda	\1
+				adc	\2
+				sta	\1
+
+				lda	\1+1
+				adc	\2+1
+				sta	\1+1
+			.endif
+		.endif
+		.endm
+
+
+;----------------------------
+addwb		.macro
+;\1(word) = \1(word) + \2(byte)
+		clc
+		lda	\1
+		adc	\2
+		sta	\1
+		bcc	.jp0\@
+		inc	\1+1
+.jp0\@
+		.endm
+
+
+;----------------------------
+subw		.macro
+;\1 = \2 - \3
+;\1 = \1 - \2
+		.if	(\# = 3)
+			.if	(\?3 = 2);Immediate
+				sec
+				lda	\2
+				sbc	#LOW(\3)
+				sta	\1
+
+				lda	\2+1
+				sbc	#HIGH(\3)
+				sta	\1+1
+			.else
+				.if	(\?2 = 2);Immediate
+					sec
+					lda	#LOW(\2)
+					sbc	\3
+					sta	\1
+
+					lda	#HIGH(\2)
+					sbc	\3+1
+					sta	\1+1
+				.else
+					sec
+					lda	\2
+					sbc	\3
+					sta	\1
+
+					lda	\2+1
+					sbc	\3+1
+					sta	\1+1
+				.endif
+			.endif
+		.else
+			.if	(\?2 = 2);Immediate
+				sec
+				lda	\1
+				sbc	#LOW(\2)
+				sta	\1
+
+				lda	\1+1
+				sbc	#HIGH(\2)
+				sta	\1+1
+			.else
+				sec
+				lda	\1
+				sbc	\2
+				sta	\1
+
+				lda	\1+1
+				sbc	\2+1
+				sta	\1+1
+			.endif
+		.endif
+		.endm
+
+
+;----------------------------
+addq		.macro
+;\1 = \2 + \3
+;\1 = \1 + \2
+		.if	(\# = 3)
+			clc
+			lda	\2
+			adc	\3
+			sta	\1
+
+			lda	\2+1
+			adc	\3+1
+			sta	\1+1
+
+			lda	\2+2
+			adc	\3+2
+			sta	\1+2
+
+			lda	\2+3
+			adc	\3+3
+			sta	\1+3
+		.else
+			clc
+			lda	\1
+			adc	\2
+			sta	\1
+
+			lda	\1+1
+			adc	\2+1
+			sta	\1+1
+
+			lda	\1+2
+			adc	\2+2
+			sta	\1+2
+
+			lda	\1+3
+			adc	\2+3
+			sta	\1+3
+		.endif
+		.endm
+
+
+;----------------------------
+subq		.macro
+;\1 = \2 - \3
+;\1 = \1 - \2
+		.if	(\# = 3)
+			sec
+			lda	\2
+			sbc	\3
+			sta	\1
+
+			lda	\2+1
+			sbc	\3+1
+			sta	\1+1
+
+			lda	\2+2
+			sbc	\3+2
+			sta	\1+2
+
+			lda	\2+3
+			sbc	\3+3
+			sta	\1+3
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			sta	\1
+
+			lda	\1+1
+			sbc	\2+1
+			sta	\1+1
+
+			lda	\1+2
+			sbc	\2+2
+			sta	\1+2
+
+			lda	\1+3
+			sbc	\2+3
+			sta	\1+3
+		.endif
+		.endm
+
+
+;----------------------------
+andm		.macro
+;\1 = \1 AND \2
+		lda	\1
+		and	\2
+		sta	\1
+		.endm
+
+
+;----------------------------
+andmw		.macro
+;\1 = \1 AND \2
+		.if	(\?2 = 2);Immediate
+			lda	\1
+			and	#LOW(\2)
+			sta	\1
+
+			lda	\1+1
+			and	#HIGH(\2)
+			sta	\1+1
+		.else
+			lda	\1
+			and	\2
+			sta	\1
+
+			lda	\1+1
+			and	\2+1
+			sta	\1+1
+		.endif
+		.endm
+
+
+;----------------------------
+oram		.macro
+;\1 = \1 OR \2
+		lda	\1
+		ora	\2
+		sta	\1
+		.endm
+
+
+;----------------------------
+oramw		.macro
+;\1 = \1 OR \2
+		.if	(\?2 = 2);Immediate
+			lda	\1
+			ora	#LOW(\2)
+			sta	\1
+
+			lda	\1+1
+			ora	#HIGH(\2)
+			sta	\1+1
+		.else
+			lda	\1
+			ora	\2
+			sta	\1
+
+			lda	\1+1
+			ora	\2+1
+			sta	\1+1
+		.endif
+		.endm
+
+
+;----------------------------
+eorm		.macro
+;\1 = \1 XOR \2
+		lda	\1
+		eor	\2
+		sta	\1
+		.endm
+
+
+;----------------------------
+eormw		.macro
+;\1 = \1 XOR \2
+		.if	(\?2 = 2);Immediate
+			lda	\1
+			eor	#LOW(\2)
+			sta	\1
+
+			lda	\1+1
+			eor	#HIGH(\2)
+			sta	\1+1
+		.else
+			lda	\1
+			eor	\2
+			sta	\1
+
+			lda	\1+1
+			eor	\2+1
+			sta	\1+1
+		.endif
+		.endm
+
+
+;----------------------------
+mov		.macro
+;\1 = \2
+		lda	\2
+		sta	\1
+		.endm
+
+
+;----------------------------
+movw		.macro
+;\1 = \2
+		.if	(\?2 = 2);Immediate
+			lda	#LOW(\2)
+			sta	\1
+			lda	#HIGH(\2)
+			sta	\1+1
+		.else
+			lda	\2
+			sta	\1
+			lda	\2+1
+			sta	\1+1
+		.endif
+		.endm
+
+
+;----------------------------
+movq		.macro
+;\1 = \2
+;\1 = \2:\3
+		.if	(\?2 = 2);Immediate
+			lda	#LOW(\3)
+			sta	\1
+			lda	#HIGH(\3)
+			sta	\1+1
+			lda	#LOW(\2)
+			sta	\1+2
+			lda	#HIGH(\2)
+			sta	\1+3
+		.else
+			lda	\2
+			sta	\1
+			lda	\2+1
+			sta	\1+1
+			lda	\2+2
+			sta	\1+2
+			lda	\2+3
+			sta	\1+3
+		.endif
+		.endm
+
+
+;----------------------------
+stzw		.macro
+;\1 = 0
+		stz	\1
+		stz	\1+1
+		.endm
+
+
+;----------------------------
+stzq		.macro
+;\1 = 0
+		stz	\1
+		stz	\1+1
+		stz	\1+2
+		stz	\1+3
+		.endm
+
+
+;----------------------------
+cmpw		.macro
+;\1 - \2
+		.if	(\?2 = 2);Immediate
+			sec
+			lda	\1
+			sbc	#LOW(\2)
+			lda	\1+1
+			sbc	#HIGH(\2)
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			lda	\1+1
+			sbc	\2+1
+		.endif
+		.endm
+
+
+;----------------------------
+cmpzw		.macro
+;\1 - \2
+		phx
+		tsx
+		pha
+
+		.if	(\?2 = 2);Immediate
+			sec
+			lda	\1
+			sbc	#LOW(\2)
+			sta	$2100, x
+			lda	\1+1
+			sbc	#HIGH(\2)
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			sta	$2100, x
+			lda	\1+1
+			sbc	\2+1
+		.endif
+
+		php
+		ora	$2100, x
+		bne	.jp0\@
+
+		pla
+		ora	#$02
+		bra	.jp1\@
+.jp0\@
+		pla
+		and	#$FD
+.jp1\@
+		txs
+		plx
+
+		pha
+		plp
+		.endm
+
+
+;----------------------------
+cmpq		.macro
+;\1 - \2
+;\1 - \2:\3
+		.if	(\?2 = 2);Immediate
+			sec
+			lda	\1
+			sbc	#LOW(\3)
+			lda	\1+1
+			sbc	#HIGH(\3)
+			lda	\1+2
+			sbc	#LOW(\2)
+			lda	\1+3
+			sbc	#HIGH(\2)
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			lda	\1+1
+			sbc	\2+1
+			lda	\1+2
+			sbc	\2+2
+			lda	\1+3
+			sbc	\2+3
+		.endif
+		.endm
+
+
+;----------------------------
+cmpzq		.macro
+;\1 - \2
+;\1 - \2:\3
+		phx
+		tsx
+		pha
+
+		.if	(\?2 = 2);Immediate
+			sec
+			lda	\1
+			sbc	#LOW(\3)
+			sta	$2100, x
+			lda	\1+1
+			sbc	#HIGH(\3)
+			ora	$2100, x
+			sta	$2100, x
+			lda	\1+2
+			sbc	#LOW(\2)
+			ora	$2100, x
+			sta	$2100, x
+			lda	\1+3
+			sbc	#HIGH(\2)
+		.else
+			sec
+			lda	\1
+			sbc	\2
+			sta	$2100, x
+			lda	\1+1
+			sbc	\2+1
+			ora	$2100, x
+			sta	$2100, x
+			lda	\1+2
+			sbc	\2+2
+			ora	$2100, x
+			sta	$2100, x
+			lda	\1+3
+			sbc	\2+3
+		.endif
+
+		php
+		ora	$2100, x
+		bne	.jp0\@
+
+		pla
+		ora	#$02
+		bra	.jp1\@
+.jp0\@
+		pla
+		and	#$FD
+.jp1\@
+		txs
+		plx
+
+		pha
+		plp
+
 		.endm
 
 
@@ -107,8 +814,14 @@ div16work		.ds	2
 
 muladdr			.ds	2
 
+sqrt64a			.ds	8
+sqrt64ans
+sqrt64b			.ds	8
+
+mulbank			.ds	1
+
 ;---------------------
-;LDRU SsBA
+;LDRU RSBA
 padlast			.ds	1
 padnow			.ds	1
 padstate		.ds	1
@@ -121,6 +834,12 @@ puthexdata		.ds	1
 udiv32_2Work		.ds	2
 
 ;---------------------
+vsyncFlag		.ds	1
+vdp1Status		.ds	1
+vdp2Status		.ds	1
+selectVdc		.ds	1
+
+;---------------------
 vertexCount		.ds	1
 vertexCountWork		.ds	1
 vertex0Addr		.ds	2
@@ -131,6 +850,7 @@ vertexWork		.ds	4
 clip2D0Count		.ds	1
 clip2D1Count		.ds	1
 clip2DFlag		.ds	1
+clip2D0LastIndex	.ds	1
 
 ;---------------------
 edgeX0			.ds	1
@@ -143,17 +863,25 @@ edgeSlopeY		.ds	1
 edgeSigneX		.ds	1
 
 ;---------------------
+minEdgeY		.ds	1
+
+;---------------------
 polyLineX0		.ds	1
 polyLineX1		.ds	1
 polyLineY		.ds	1
 
 polyLineLeftAddr	.ds	2
 
+polyLineRightAddr	.ds	2
+
 polyLineLeftData	.ds	1
 polyLineLeftMask	.ds	1
 
 polyLineRightData	.ds	1
 polyLineRightMask	.ds	1
+
+polyLineDataLow		.ds	1
+polyLineDataHigh	.ds	1
 
 polyLineColorNo		.ds	1
 polyLineColorDataWork	.ds	1
@@ -218,6 +946,9 @@ rotationZ		.ds	1
 
 rotationSelect		.ds	1
 
+vertexRotationSin	.ds	2
+vertexRotationCos	.ds	2
+
 ;---------------------
 eyeTranslationX		.ds	2
 eyeTranslationY		.ds	2
@@ -238,6 +969,7 @@ eyeRotationSelect	.ds	1
 ;---------------------
 frameCount		.ds	1
 drawCount		.ds	1
+drawCountWork		.ds	1
 
 ;---------------------
 shipX			.ds	2
@@ -427,12 +1159,33 @@ main:
 		lda	#60
 		sta	frameCount
 		stz	drawCount
+		stz	drawCountWork
+
+;VDC1
+;bg sp       vsync
+;+32
+		mov	VDC1_0, #$05
+		movw	VDC1_2, #$08C8
+
+;VDC2
+;bg sp
+;+32
+		mov	VDC2_0, #$05
+		movw	VDC2_2, #$0800
+
+		mov	<selectVdc, #VDC2
+
+		rmb7	<vsyncFlag
 
 ;vsync interrupt start
 		cli
 
 ;main loop
 .mainLoop:
+;wait vsync
+		bbs7	<vsyncFlag, .mainLoop
+
+		eorm	<selectVdc, #$03
 
 ;check pad
 ;pad up
@@ -772,13 +1525,20 @@ main:
 .building2Jump:
 
 ;put polygon
-		jsr	clearRam
-
 		jsr	putPolyBuffer
 
-		jsr	ramToChar
+		inc	drawCountWork
 
-		inc	drawCount
+		ldx	#0
+		ldy	#24
+		lda	drawCount
+		sei
+		jsr	puthex2
+		cli
+
+;set vsync flag
+		smb7	<vsyncFlag
+
 ;jump mainloop
 		jmp	.mainLoop
 
@@ -800,15 +1560,18 @@ initializeVdc:
 vdcdataloop:	lda	vdcdata, y
 		cmp	#$FF
 		beq	vdcdataend
-		sta	$0000
+		sta	VDC1_0
+		sta	VDC2_0
 		iny
 
 		lda	vdcdata, y
-		sta	$0002
+		sta	VDC1_2
+		sta	VDC2_2
 		iny
 
 		lda	vdcdata, y
-		sta	$0003
+		sta	VDC1_3
+		sta	VDC2_3
 		iny
 		bra	vdcdataloop
 vdcdataend:
@@ -825,19 +1588,22 @@ vdcdataend:
 ;set palette
 		stz	$0402
 		stz	$0403
-		tia	palettedata, $0404, $20
+		tia	palettedata, $0404, $20*32
 
 ;CHAR set to vram
 		lda	#chardatBank
 		tam	#$06
 
 ;vram address $1000
-		st0	#$00
-		st1	#$00
-		st2	#$10
+		mov	VDC1_0, #$00
+		movw	VDC1_2, #$1000
+		mov	VDC1_0, #$02
+		tia	$C000, VDC1_2, $2000
 
-		st0	#$02
-		tia	$C000, $0002, $2000
+		mov	VDC2_0, #$00
+		movw	VDC2_2, #$1000
+		mov	VDC2_0, #$02
+		tia	$C000, VDC2_2, $2000
 
 ;clear BAT
 		st0	#$00
@@ -865,6 +1631,89 @@ vdcdataend:
 		st0	#$05
 		st1	#$C8
 		st2	#$00
+
+		rts
+
+
+;----------------------------
+puthex2:
+;
+		pha
+		phx
+		phy
+
+		sta	<puthexdata
+
+		stz	<puthexaddr
+		sty	<puthexaddr+1
+
+		lsr	<puthexaddr+1
+		ror	<puthexaddr
+		lsr	<puthexaddr+1
+		ror	<puthexaddr
+		lsr	<puthexaddr+1
+		ror	<puthexaddr
+
+		txa
+		ora	<puthexaddr
+		sta	<puthexaddr
+
+		lda	<puthexdata
+		lsr	a
+		lsr	a
+		lsr	a
+		lsr	a
+		jsr	numtochar
+		tax
+
+		lda	<puthexdata
+		and	#$0F
+		jsr	numtochar
+		tay
+
+		lda	<selectVdc
+		cmp	#VDC2
+		beq 	.vdc_2
+
+		mov	VDC1_0, #$00
+		movw	VDC1_2, <puthexaddr
+
+		mov	VDC1_0, #$02
+		stx	VDC1_2
+		mov	VDC1_3, #$01
+
+		addw	<puthexaddr, #1
+
+		mov	VDC1_0, #$00
+		movw	VDC1_2, <puthexaddr
+
+		mov	VDC1_0, #$02
+		sty	VDC1_2
+		mov	VDC1_3, #$01
+
+		bra	.puthexEnd
+
+.vdc_2:
+		mov	VDC2_0, #$00
+		movw	VDC2_2, <puthexaddr
+
+		mov	VDC2_0, #$02
+		stx	VDC2_2
+		mov	VDC2_3, #$01
+
+		addw	<puthexaddr, #1
+
+		mov	VDC2_0, #$00
+		movw	VDC2_2, <puthexaddr
+
+		mov	VDC2_0, #$02
+		sty	VDC2_2
+		mov	VDC2_3, #$01
+
+.puthexEnd:
+		ply
+		plx
+		pla
 
 		rts
 
@@ -968,101 +1817,94 @@ sdiv32:
 
 ;----------------------------
 udiv32:
-;div16d:div16c / div16a = div16a div16b
-;push x y
+;div16a div16b = div16d:div16c / div16a
+;push x
 		phx
-		phy
 
-;div16a to div16b
+;dec div16a
 		lda	<div16a
-		sta	<div16b
+		bne	.jp00
+		dec	<div16a+1
+.jp00:
+		dec	<div16a
 
-		lda	<div16a+1
-		sta	<div16b+1
+		ldx	#$10
+		asl	<div16c
+		rol	<div16c+1
 
-;set zero div16a
-		stz	<div16a
-		stz	<div16a+1
-
-;set zero div16ans
-		stz	<div16ans
-		stz	<div16ans+1
-
-;set count
-		ldx	#16
-
-.udivloop:
-;right shift div16b:div16a
-		lsr	<div16b+1
-		ror	<div16b
-		ror	<div16a+1
-		ror	<div16a
-
-;div16d:div16c - div16b:div16a = a:y:div16work
-		sec
-		lda	<div16c
-		sbc	<div16a
-		sta	<div16work
-
-		lda	<div16c+1
-		sbc	<div16a+1
-		sta	<div16work+1
+.jpPl00:
+;div16d
+		rol	<div16d
+		rol	<div16d+1
 
 		lda	<div16d
-		sbc	<div16b
-		tay
+		sbc	<div16a
+		sta	<div16d
 
 		lda	<div16d+1
-		sbc	<div16b+1
-
-;check div16d:div16c >= div16b:div16a
-		bcc	.udivjump
-
-;left rotation with carry div16ans
-		rol	<div16ans
-		rol	<div16ans+1
-
-;div16d:div16c = a:y:div16work
-		sty	<div16d
-
+		sbc	<div16a+1
 		sta	<div16d+1
 
-		lda	<div16work
-		sta	<div16c
+		bcc	.jpMi01
 
-		lda	<div16work+1
-		sta	<div16c+1
+.jpPl01:
+		rol	<div16c
+		rol	<div16c+1
 
 		dex
-		bne	.udivloop
-		bra	.udivjump01
+		bne	.jpPl00
 
-.udivjump:
-;left rotation with carry div16ans
-		rol	<div16ans
-		rol	<div16ans+1
-;decrement x
-		dex
-		bne	.udivloop
-
-
-.udivjump01:
-;div16ans to div16a
-		lda	<div16ans
+		lda	<div16c
 		sta	<div16a
-
-		lda	<div16ans+1
+		lda	<div16c+1
 		sta	<div16a+1
 
-;div16c to div16b
-		lda	<div16c
+		lda	<div16d
 		sta	<div16b
-
-		lda	<div16c+1
+		lda	<div16d+1
 		sta	<div16b+1
 
-;pull y x
-		ply
+;pull x
+		plx
+		rts
+
+.jpMi00:
+;div16d
+		rol	<div16d
+		rol	<div16d+1
+
+		lda	<div16d
+		adc	<div16a
+		sta	<div16d
+
+		lda	<div16d+1
+		adc	<div16a+1
+		sta	<div16d+1
+
+		bcs	.jpPl01
+
+.jpMi01:
+		rol	<div16c
+		rol	<div16c+1
+
+		dex
+		bne	.jpMi00
+
+		sec
+		lda	<div16d
+		adc	<div16a
+		sta	<div16b
+
+		lda	<div16d+1
+		adc	<div16a+1
+		sta	<div16b+1
+
+		lda	<div16c
+		sta	<div16a
+		lda	<div16c+1
+		sta	<div16a+1
+
+;pull x
 		plx
 		rts
 
@@ -1161,11 +2003,11 @@ umul16:
 		sta	<muladdr+1
 
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<mul16c
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		sta	<mul16c+1
 
 		pla
@@ -1175,12 +2017,12 @@ umul16:
 
 		clc
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16c+1
 		sta	<mul16c+1
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	#0
 		sta	<mul16d
 
@@ -1195,12 +2037,12 @@ umul16:
 
 		clc
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16c+1
 		sta	<mul16c+1
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16d
 		sta	<mul16d
 
@@ -1215,12 +2057,12 @@ umul16:
 
 		clc
 		ldy	<mul16a
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16d
 		sta	<mul16d
 
 		ldy	<mul16a+1
-		lda	[muladdr],y
+		lda	[muladdr], y
 		adc	<mul16d+1
 		sta	<mul16d+1
 
@@ -1354,23 +2196,114 @@ _irq1:
 		phx
 		phy
 
-		lda	$0000
+		lda	VDC1_0
+		sta	<vdp1Status
+		lda	VDC2_0
+		sta	<vdp2Status
+
+		bbs7	<vsyncFlag, .vsyncProc
+		jmp	.vsyncProcEnd
+
+.vsyncProc:
+		lda	<selectVdc
+		cmp	#VDC2
+		beq	.vdc2Jp
+
+;+32 bg sp vsync
+		mov	VDC1_0, #$05
+		movw	VDC1_2, #$08C8
+
+;+32
+		mov	VDC2_0, #$05
+		movw	VDC2_2, #$0800
+
+;VRAM Clear
+		clx
+		cly
+.vramClearLoop2:
+		mov	VDC2_0, #$00		;set VRAM addr
+		sty	VDC2_2
+		movw	VDC2_3, #$40
+		iny
+
+		mov	VDC2_0, #$02		;VRAM clear
+		lda	vramClearData, x
+		sta	VDC2_2
+		inx
+		lda	vramClearData, x
+		sta	VDC2_3
+		inx
+
+		cpx	#$20
+		bne	.vramClearLoop2
+
+		mov	VDC2_0, #$10		;set DMA src
+		movw	VDC2_2, #$4000
+
+		mov	VDC2_0, #$11		;set DMA dist
+		movw	VDC2_2, #$4010
+
+		mov	VDC2_0, #$12		;set DMA count
+		movw	VDC2_2, #$4000-$10
+
+		bra	.vdcEnd
+.vdc2Jp:
+;+32 vsync
+		mov	VDC1_0, #$05
+		movw	VDC1_2, #$0808
+
+;bg sp
+;+32 bg sp
+		mov	VDC2_0, #$05
+		movw	VDC2_2, #$08C0
+
+;VRAM Clear
+		clx
+		cly
+.vramClearLoop1:
+		mov	VDC1_0, #$00		;set VRAM addr
+		sty	VDC1_2
+		movw	VDC1_3, #$40
+		iny
+
+		mov	VDC1_0, #$02		;VRAM clear
+		lda	vramClearData, x
+		sta	VDC1_2
+		inx
+		lda	vramClearData, x
+		sta	VDC1_3
+		inx
+
+		cpx	#$20
+		bne	.vramClearLoop1
+
+		mov	VDC1_0, #$10		;set DMA src
+		movw	VDC1_2, #$4000
+
+		mov	VDC1_0, #$11		;set DMA dist
+		movw	VDC1_2, #$4010
+
+		mov	VDC1_0, #$12		;set DMA count
+		movw	VDC1_2, #$4000-$10
+.vdcEnd:
+
+		rmb7	<vsyncFlag
+
+.vsyncProcEnd:
 
 		jsr	getpaddata
 
 		dec	frameCount
 		bne	.irqEnd
 
-		ldx	#0
-		ldy	#24
-		lda	drawCount
-		jsr	puthex
-
 		lda	#60
 		sta	frameCount
-		stz	drawCount
 
+		lda	drawCountWork
+		sta	drawCount
+		stz	drawCountWork
 .irqEnd:
+
 		ply
 		plx
 		pla
@@ -1406,6 +2339,12 @@ _timer:
 _nmi:
 ;IRQ2 TIMER NMI interrupt process
 		rti
+
+
+;----------------------------
+vramClearData
+		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF,\
+			$FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00
 
 
 ;----------------------------
@@ -1570,6 +2509,7 @@ vdcdata:
 		.db	$0C, $02, $0D	;VSW $02 VDS $0D
 		.db	$0D, $EF, $00	;VDW $00EF
 		.db	$0E, $03, $00	;VCR $03
+		.db	$0F, $00, $00	;DMA +1 +1
 		.db	$07, $00, $00	;scrollx 0
 		.db	$08, $00, $00	;scrolly 0
 		.db	$09, $00, $00	;32x32
@@ -1579,6 +2519,69 @@ vdcdata:
 ;----------------------------
 palettedata:
 		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\;GRB
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
+			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
+		.dw	$0000, $0020, $0100, $0120, $0004, $0024, $0104, $0124,\
 			$01B6, $0038, $01C0, $01F8, $0007, $003F, $01C7, $01FF
 
 
@@ -1651,12 +2654,12 @@ vertexRotationSelect:
 .rotationSelectJump10:
 		ldx	<rotationX
 		jsr	vertexRotationX
-		jmp	.rotationSelectJump2
+		rts
 
 .rotationSelectJump11:
 		ldx	<rotationY
 		jsr	vertexRotationY
-		jmp	.rotationSelectJump2
+		rts
 
 .rotationSelectJump12:
 		ldx	<rotationZ
@@ -1673,64 +2676,47 @@ vertexRotationZ:
 ;vertexCount = count
 ;x = angle
 		cpx	#0
-		bne	.vertexRotationZJump0
-		jmp	.vertexRotationZEnd
-.vertexRotationZJump0:
+		jeq	.vertexRotationZEnd
 
 		lda	<vertexCount
-		bne	.vertexRotationZJump1
-		jmp	.vertexRotationZEnd
-.vertexRotationZJump1:
+		jeq	.vertexRotationZEnd
 		sta	<vertexCountWork
+
+		lda	sinDataLow,x			;sin
+		sta	<vertexRotationSin
+		lda	sinDataHigh,x
+		sta	<vertexRotationSin+1
+
+		lda	cosDataLow,x			;cos
+		sta	<vertexRotationCos
+		lda	cosDataHigh,x
+		sta	<vertexRotationCos+1
 
 		cly
 
 .vertexRotationZLoop:
 ;----------------
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0,y		;X0
 		sta	<mul16a
 		lda	transform2DWork0+1,y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
-		sta	<mul16b
-		lda	cosDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;xcosA
+		movw	<mul16b, <vertexRotationCos	;cos
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		jsr	smul16				;xcosA
 
-		lda	transform2DWork0+2,y	;Y0
+		movq	<div16ans, <mul16c
+
+		lda	transform2DWork0+2,y		;Y0
 		sta	<mul16a
 		lda	transform2DWork0+3,y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
-		sta	<mul16b
-		lda	sinDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;ysinA
+		movw	<mul16b, <vertexRotationSin	;sin
 
-		sec				;xcosA-ysinA
-		lda	<div16ans
-		sbc	<mul16c
-		sta	<mul16c
-		lda	<div16ans+1
-		sbc	<mul16c+1
-		sta	<mul16c+1
-		lda	<div16work
-		sbc	<mul16d
-		sta	<mul16d
-		lda	<div16work+1
-		sbc	<mul16d+1
-		sta	<mul16d+1
+		jsr	smul16				;ysinA
+
+		subq	<mul16c, <div16ans, <mul16c	;xcosA-ysinA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -1745,50 +2731,27 @@ vertexRotationZ:
 		pha
 
 ;----------------
-		lda	transform2DWork0,y	;X0
+		lda	transform2DWork0,y		;X0
 		sta	<mul16a
 		lda	transform2DWork0+1,y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
-		sta	<mul16b
-		lda	sinDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;xsinA
+		movw	<mul16b, <vertexRotationSin	;sin
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		jsr	smul16				;xsinA
 
-		lda	transform2DWork0+2,y	;Y0
+		movq	<div16ans, <mul16c
+
+		lda	transform2DWork0+2,y		;Y0
 		sta	<mul16a
 		lda	transform2DWork0+3,y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
-		sta	<mul16b
-		lda	cosDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;ycosA
+		movw	<mul16b, <vertexRotationCos	;cos
 
-		clc				;xsinA+ycosA
-		lda	<div16ans
-		adc	<mul16c
-		sta	<mul16c
-		lda	<div16ans+1
-		adc	<mul16c+1
-		sta	<mul16c+1
-		lda	<div16work
-		adc	<mul16d
-		sta	<mul16d
-		lda	<div16work+1
-		adc	<mul16d+1
-		sta	<mul16d+1
+		jsr	smul16				;ycosA
+
+		addq	<mul16c, <div16ans, <mul16c	;xsinA+ycosA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -1815,8 +2778,7 @@ vertexRotationZ:
 		tay
 
 		dec	<vertexCountWork
-		beq	.vertexRotationZEnd
-		jmp	.vertexRotationZLoop
+		jne	.vertexRotationZLoop
 
 .vertexRotationZEnd:
 		rts
@@ -1829,64 +2791,47 @@ vertexRotationY:
 ;vertexCount = count
 ;x = angle
 		cpx	#0
-		bne	.vertexRotationYJump0
-		jmp	.vertexRotationYEnd
-.vertexRotationYJump0:
+		jeq	.vertexRotationYEnd
 
 		lda	<vertexCount
-		bne	.vertexRotationYJump1
-		jmp	.vertexRotationYEnd
-.vertexRotationYJump1:
+		jeq	.vertexRotationYEnd
 		sta	<vertexCountWork
+
+		lda	sinDataLow,x			;sin
+		sta	<vertexRotationSin
+		lda	sinDataHigh,x
+		sta	<vertexRotationSin+1
+
+		lda	cosDataLow,x			;cos
+		sta	<vertexRotationCos
+		lda	cosDataHigh,x
+		sta	<vertexRotationCos+1
 
 		cly
 
 .vertexRotationYLoop:
 ;----------------
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4,y		;Z0
 		sta	<mul16a
 		lda	transform2DWork0+5,y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
-		sta	<mul16b
-		lda	sinDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;zsinA
+		movw	<mul16b, <vertexRotationSin	;sin
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		jsr	smul16				;zsinA
 
-		lda	transform2DWork0,y	;X0
+		movq	<div16ans, <mul16c
+
+		lda	transform2DWork0,y		;X0
 		sta	<mul16a
 		lda	transform2DWork0+1,y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
-		sta	<mul16b
-		lda	cosDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;xcosA
+		movw	<mul16b, <vertexRotationCos	;cos
 
-		clc				;zsinA+xcosA
-		lda	<div16ans
-		adc	<mul16c
-		sta	<mul16c
-		lda	<div16ans+1
-		adc	<mul16c+1
-		sta	<mul16c+1
-		lda	<div16work
-		adc	<mul16d
-		sta	<mul16d
-		lda	<div16work+1
-		adc	<mul16d+1
-		sta	<mul16d+1
+		jsr	smul16				;xcosA
+
+		addq	<mul16c, <div16ans, <mul16c	;zsinA+xcosA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -1901,50 +2846,27 @@ vertexRotationY:
 		pha
 
 ;----------------------------
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4,y		;Z0
 		sta	<mul16a
 		lda	transform2DWork0+5,y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
-		sta	<mul16b
-		lda	cosDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;zcosA
+		movw	<mul16b, <vertexRotationCos	;cos
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		jsr	smul16				;zcosA
 
-		lda	transform2DWork0,y	;X0
+		movq	<div16ans, <mul16c
+
+		lda	transform2DWork0,y		;X0
 		sta	<mul16a
 		lda	transform2DWork0+1,y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
-		sta	<mul16b
-		lda	sinDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;xsinA
+		movw	<mul16b, <vertexRotationSin	;sin
 
-		sec				;zcosA-xsinA
-		lda	<div16ans
-		sbc	<mul16c
-		sta	<mul16c
-		lda	<div16ans+1
-		sbc	<mul16c+1
-		sta	<mul16c+1
-		lda	<div16work
-		sbc	<mul16d
-		sta	<mul16d
-		lda	<div16work+1
-		sbc	<mul16d+1
-		sta	<mul16d+1
+		jsr	smul16				;xsinA
+
+		subq	<mul16c, <div16ans, <mul16c	;zcosA-xsinA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -1971,8 +2893,7 @@ vertexRotationY:
 		tay
 
 		dec	<vertexCountWork
-		beq	.vertexRotationYEnd
-		jmp	.vertexRotationYLoop
+		jne	.vertexRotationYLoop
 
 .vertexRotationYEnd:
 		rts
@@ -1985,64 +2906,47 @@ vertexRotationX:
 ;vertexCount = count
 ;x = angle
 		cpx	#0
-		bne	.vertexRotationXJump0
-		jmp	.vertexRotationXEnd
-.vertexRotationXJump0:
+		jeq	.vertexRotationXEnd
 
 		lda	<vertexCount
-		bne	.vertexRotationXJump1
-		jmp	.vertexRotationXEnd
-.vertexRotationXJump1:
+		jeq	.vertexRotationXEnd
 		sta	<vertexCountWork
+
+		lda	sinDataLow,x			;sin
+		sta	<vertexRotationSin
+		lda	sinDataHigh,x
+		sta	<vertexRotationSin+1
+
+		lda	cosDataLow,x			;cos
+		sta	<vertexRotationCos
+		lda	cosDataHigh,x
+		sta	<vertexRotationCos+1
 
 		cly
 
 .vertexRotationXLoop:
 ;----------------
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2,y		;Y0
 		sta	<mul16a
 		lda	transform2DWork0+3,y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
-		sta	<mul16b
-		lda	cosDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;ycosA
+		movw	<mul16b, <vertexRotationCos	;cos
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		jsr	smul16				;ycosA
 
-		lda	transform2DWork0+4,y	;Z0
+		movq	<div16ans, <mul16c
+
+		lda	transform2DWork0+4,y		;Z0
 		sta	<mul16a
 		lda	transform2DWork0+5,y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
-		sta	<mul16b
-		lda	sinDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;zsinA
+		movw	<mul16b, <vertexRotationSin	;sin
 
-		sec				;ycosA-zsinA
-		lda	<div16ans
-		sbc	<mul16c
-		sta	<mul16c
-		lda	<div16ans+1
-		sbc	<mul16c+1
-		sta	<mul16c+1
-		lda	<div16work
-		sbc	<mul16d
-		sta	<mul16d
-		lda	<div16work+1
-		sbc	<mul16d+1
-		sta	<mul16d+1
+		jsr	smul16				;zsinA
+
+		subq	<mul16c, <div16ans, <mul16c	;ycosA-zsinA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2057,50 +2961,28 @@ vertexRotationX:
 		pha
 
 ;----------------
-		lda	transform2DWork0+2,y	;Y0
+		lda	transform2DWork0+2,y		;Y0
 		sta	<mul16a
 		lda	transform2DWork0+3,y
 		sta	<mul16a+1
-		lda	sinDataLow,x		;sin
-		sta	<mul16b
-		lda	sinDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;ysinA
+		movw	<mul16b, <vertexRotationSin	;sin
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		jsr	smul16				;ysinA
 
-		lda	transform2DWork0+4,y	;Z0
+
+		movq	<div16ans, <mul16c
+
+		lda	transform2DWork0+4,y		;Z0
 		sta	<mul16a
 		lda	transform2DWork0+5,y
 		sta	<mul16a+1
-		lda	cosDataLow,x		;cos
-		sta	<mul16b
-		lda	cosDataHigh,x
-		sta	<mul16b+1
 
-		jsr	smul16			;zcosA
+		movw	<mul16b, <vertexRotationCos	;cos
 
-		clc				;ysinA+zcosA
-		lda	<div16ans
-		adc	<mul16c
-		sta	<mul16c
-		lda	<div16ans+1
-		adc	<mul16c+1
-		sta	<mul16c+1
-		lda	<div16work
-		adc	<mul16d
-		sta	<mul16d
-		lda	<div16work+1
-		adc	<mul16d+1
-		sta	<mul16d+1
+		jsr	smul16				;zcosA
+
+		addq	<mul16c, <div16ans, <mul16c	;ysinA+zcosA
 
 		asl	<mul16c+1
 		rol	<mul16d
@@ -2127,8 +3009,7 @@ vertexRotationX:
 		tay
 
 		dec	<vertexCountWork
-		beq	.vertexRotationXEnd
-		jmp	.vertexRotationXLoop
+		jne	.vertexRotationXLoop
 
 .vertexRotationXEnd:
 		rts
@@ -2187,26 +3068,26 @@ transform2D2:
 		cly
 
 .transform2D2Loop0:
-		lda	transform2DWork0,y
-		sta	transform2DWork1,y
-		lda	transform2DWork0+1,y
-		sta	transform2DWork1+1,y
+		lda	transform2DWork0, y
+		sta	transform2DWork1, y
+		lda	transform2DWork0+1, y
+		sta	transform2DWork1+1, y
 
-		lda	transform2DWork0+2,y
-		sta	transform2DWork1+2,y
-		lda	transform2DWork0+3,y
-		sta	transform2DWork1+3,y
+		lda	transform2DWork0+2, y
+		sta	transform2DWork1+2, y
+		lda	transform2DWork0+3, y
+		sta	transform2DWork1+3, y
 
-		lda	transform2DWork0+4,y
-		sta	transform2DWork1+4,y
-		lda	transform2DWork0+5,y
-		sta	transform2DWork1+5,y
+		lda	transform2DWork0+4, y
+		sta	transform2DWork1+4, y
+		lda	transform2DWork0+5, y
+		sta	transform2DWork1+5, y
 
 ;Z0 < 128 check
 		sec
-		lda	transform2DWork0+4,y	;Z0
+		lda	transform2DWork0+4, y	;Z0
 		sbc	#128
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sbc	#00
 
 		bpl	.transform2D2Jump05
@@ -2214,41 +3095,40 @@ transform2D2:
 
 .transform2D2Jump05:
 ;X0 to mul16c
-		lda	transform2DWork0,y
+		lda	transform2DWork0, y
 		sta	<mul16c
-		lda	transform2DWork0+1,y
+		lda	transform2DWork0+1, y
 		sta	<mul16c+1
 
 ;Z0 to mul16a
-		lda	transform2DWork0+4,y
+		lda	transform2DWork0+4, y
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
 
 ;X0*128/Z0
 		jsr	transform2DProc
-
 
 ;X0*128/Z0+centerX
 ;mul16a+centerX to X0
 		clc
 		lda	<mul16a
 		adc	<centerX
-		sta	transform2DWork0,y	;X0
+		sta	transform2DWork0, y	;X0
 		lda	<mul16a+1
 		adc	<centerX+1
-		sta	transform2DWork0+1,y
+		sta	transform2DWork0+1, y
 
 ;Y0 to mul16c
-		lda	transform2DWork0+2,y
+		lda	transform2DWork0+2, y
 		sta	<mul16c
-		lda	transform2DWork0+3,y
+		lda	transform2DWork0+3, y
 		sta	<mul16c+1
 
 ;Z0 to mul16a
-		lda	transform2DWork0+4,y
+		lda	transform2DWork0+4, y
 		sta	<mul16a
-		lda	transform2DWork0+5,y
+		lda	transform2DWork0+5, y
 		sta	<mul16a+1
 
 ;Y0*128/Z0
@@ -2259,19 +3139,19 @@ transform2D2:
 		clc
 		lda	<mul16a
 		adc	<centerY
-		sta	transform2DWork0+2,y	;Y0
+		sta	transform2DWork0+2, y	;Y0
 		lda	<mul16a+1
 		adc	<centerY+1
-		sta	transform2DWork0+3,y
+		sta	transform2DWork0+3, y
 
 		jmp	.transform2D2Jump01
 
 .transform2D2Jump00:
 ;Z0<128 flag set
 		lda	#$00
-		sta	transform2DWork0+4,y
+		sta	transform2DWork0+4, y
 		lda	#$80
-		sta	transform2DWork0+5,y
+		sta	transform2DWork0+5, y
 
 .transform2D2Jump01:
 		clc
@@ -2280,10 +3160,8 @@ transform2D2:
 		tay
 
 		dex
-		beq	.transform2D2Jump02
-		jmp	.transform2D2Loop0
+		jne	.transform2D2Loop0
 
-.transform2D2Jump02:
 		rts
 
 
@@ -2297,25 +3175,25 @@ moveToTransform2DWork0:
 		cly
 
 .moveToTransform2DWork0Loop:
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		lda	[vertex0Addr], y
+		sta	transform2DWork0, y
 		iny
 		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
-		iny
-
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
-		iny
-		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		sta	transform2DWork0, y
 		iny
 
 		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		sta	transform2DWork0, y
 		iny
 		lda	[vertex0Addr],y
-		sta	transform2DWork0,y
+		sta	transform2DWork0, y
+		iny
+
+		lda	[vertex0Addr],y
+		sta	transform2DWork0, y
+		iny
+		lda	[vertex0Addr],y
+		sta	transform2DWork0, y
 		iny
 
 		dec	<vertexCountWork
@@ -2328,33 +3206,30 @@ moveToTransform2DWork0:
 ;----------------------------
 putPolyBuffer:
 ;
-		lda	polyBufferStart
-		sta	<polyBufferAddr
-		lda	polyBufferStart+1
-		sta	<polyBufferAddr+1
+		movw	<polyBufferAddr, polyBufferStart
 
 .putPolyBufferLoop0:
 		ldy	#5
-		lda	[polyBufferAddr],y	;COUNT
+		lda	[polyBufferAddr], y	;COUNT
 		beq	.putPolyBufferEnd
 		sta	<clip2D0Count
 		pha
 
 		ldy	#4
-		lda	[polyBufferAddr],y	;COLOR
+		lda	[polyBufferAddr], y	;COLOR
 		sta	<polyLineColorNo
 
 		clx
 		ldy	#6
 
 .putPolyBufferLoop1:
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sta	clip2D0,x
 		inx
 		inx
 		iny
 
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sta	clip2D0,x
 		inx
 		inx
@@ -2369,10 +3244,10 @@ putPolyBuffer:
 		jsr	calcEdge_putPoly
 
 		ldy	#0
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		tax
 		iny
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sta	<polyBufferAddr+1
 		txa
 		sta	<polyBufferAddr+0
@@ -2388,14 +3263,14 @@ setModel2:
 ;
 ;rotation
 		ldy	#$05
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		ldy	#$03
-		lda	[modelAddr],y		;vertex data address
+		lda	[modelAddr], y		;vertex data address
 		sta	<vertex0Addr
 		ldy	#$04
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<vertex0Addr+1
 
 		jsr	moveToTransform2DWork0
@@ -2419,39 +3294,18 @@ setModel2:
 		jsr	vertexRotationSelect
 
 ;translation
-		sec
-		lda	<translationX
-		sbc	<eyeTranslationX
-		sta	<translationX
-		lda	<translationX+1
-		sbc	<eyeTranslationX+1
-		sta	<translationX+1
+		subw	<translationX, <eyeTranslationX
 
-		sec
-		lda	<translationY
-		sbc	<eyeTranslationY
-		sta	<translationY
-		lda	<translationY+1
-		sbc	<eyeTranslationY+1
-		sta	<translationY+1
+		subw	<translationY, <eyeTranslationY
 
-		sec
-		lda	<translationZ
-		sbc	<eyeTranslationZ
-		sta	<translationZ
-		lda	<translationZ+1
-		sbc	<eyeTranslationZ+1
-		sta	<translationZ+1
+		subw	<translationZ, <eyeTranslationZ
 
 		jsr	vertexTranslation2
 
 ;eye rotation
-		lda	<eyeRotationX
-		sta	<rotationX
-		lda	<eyeRotationY
-		sta	<rotationY
-		lda	<eyeRotationZ
-		sta	<rotationZ
+		mov	<rotationX, <eyeRotationX
+		mov	<rotationY, <eyeRotationY
+		mov	<rotationZ, <eyeRotationZ
 
 		lda	<eyeRotationSelect
 		and	#3
@@ -2484,54 +3338,39 @@ setModel:
 ;
 ;Rotation
 		ldy	#$05
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
 		ldy	#$03
-		lda	[modelAddr],y		;vertex data address
+		lda	[modelAddr], y		;vertex data address
 		sta	<vertex0Addr
 		ldy	#$04
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<vertex0Addr+1
 
-		lda	#LOW(transform2DWork0)
-		sta	<vertex1Addr
-		lda	#HIGH(transform2DWork0)
-		sta	<vertex1Addr+1
+		movw	<vertex1Addr, #transform2DWork0
 
 		jsr	vertexMultiply
 
 ;translation
 		ldy	#$05
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
-		lda	#LOW(transform2DWork0)
-		sta	<vertex0Addr
-		lda	#HIGH(transform2DWork0)
-		sta	<vertex0Addr+1
+		movw	<vertex0Addr, #transform2DWork0
 
-		lda	#LOW(transform2DWork1)
-		sta	<vertex1Addr
-		lda	#HIGH(transform2DWork1)
-		sta	<vertex1Addr+1
+		movw	<vertex1Addr, #transform2DWork1
 
 		jsr	vertexTranslation
 
 ;transform2D
 		ldy	#$05
-		lda	[modelAddr],y		;vertex count
+		lda	[modelAddr], y		;vertex count
 		sta	<vertexCount
 
-		lda	#LOW(transform2DWork1)
-		sta	<vertex0Addr
-		lda	#HIGH(transform2DWork1)
-		sta	<vertex0Addr+1
+		movw	<vertex0Addr, #transform2DWork1
 
-		lda	#LOW(transform2DWork0)
-		sta	<vertex1Addr
-		lda	#HIGH(transform2DWork0)
-		sta	<vertex1Addr+1
+		movw	<vertex1Addr, #transform2DWork0
 
 		jsr	transform2D
 
@@ -2544,14 +3383,14 @@ setModel:
 setModelProc2:
 ;
 		ldy	#$00
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<modelAddrWork		;ModelData Polygon Addr
 		iny
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<modelAddrWork+1
 
 		ldy	#$02
-		lda	[modelAddr],y		;Polygon Count
+		lda	[modelAddr], y		;Polygon Count
 		sta	<modelPolygonCount
 
 		cly
@@ -2559,20 +3398,20 @@ setModelProc2:
 .setModelLoop3:
 		phy
 
-		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		lda	[modelAddrWork], y	;ModelData Vertex Count, Front Color
 		and	#$F8
 		lsr	a
 		lsr	a
 		sta	<setModelFrontColor
 
-		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		lda	[modelAddrWork], y	;ModelData Vertex Count, Front Color
 		and	#$07
 		dec	a
 		sta	<setModelCount
 
 		iny
 
-		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
+		lda	[modelAddrWork], y	;ModelData Polygon Attr, Back Color
 		sta	<setModelAttr
 		and	#$F8
 		lsr	a
@@ -2581,7 +3420,7 @@ setModelProc2:
 
 		iny
 
-		lda	[modelAddrWork],y
+		lda	[modelAddrWork], y
 		sta	<frontClipDataWork
 
 		stz	<model2DClipIndexWork
@@ -2592,12 +3431,12 @@ setModelProc2:
 		stz	<polyBufferZ0Work0+1
 
 .setModelLoop4:
-		lda	[modelAddrWork],y
+		lda	[modelAddrWork], y
 		sta	<frontClipData0
 
 		iny
 
-		lda	[modelAddrWork],y
+		lda	[modelAddrWork], y
 		sta	<frontClipData1
 
 		phy
@@ -2608,7 +3447,7 @@ setModelProc2:
 		bne	.setModelLoop4
 
 ;--------
-		lda	[modelAddrWork],y
+		lda	[modelAddrWork], y
 		sta	<frontClipData0
 
 		lda	<frontClipDataWork
@@ -2617,22 +3456,18 @@ setModelProc2:
 		jsr	clipFront
 
 		lda	<frontClipCount
-		bne	.setModelJump11
-		jmp	.setModelJump0
+		jeq	.setModelJump0
 
-.setModelJump11:
 		sta	<clip2D0Count
 		jsr	clip2D
-		bne	.setModelJump3
-		jmp	.setModelJump0
+		jeq	.setModelJump0
 
-.setModelJump3:
 ;back side check
 		sec
 		lda	clip2D0+8		;X2
 		sbc	clip2D0+4		;X1
 		sta	<mul16a
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16a+1
 
@@ -2640,27 +3475,19 @@ setModelProc2:
 		lda	clip2D0+2		;Y0
 		sbc	clip2D0+6		;Y1
 		sta	<mul16b
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		movq	<div16ans, <mul16c
 
 		sec
 		lda	clip2D0+10		;Y2
 		sbc	clip2D0+6		;Y1
 		sta	<mul16a
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16a+1
 
@@ -2668,27 +3495,18 @@ setModelProc2:
 		lda	clip2D0			;X0
 		sbc	clip2D0+4		;X1
 		sta	<mul16b
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		sec
-		lda	<div16ans
-		sbc	<mul16c
-		lda	<div16ans+1
-		sbc	<mul16c+1
-
-		lda	<div16work
-		sbc	<mul16d
-		lda	<div16work+1
-		sbc	<mul16d+1
+		cmpq	<div16ans, <mul16c
 
 		bpl	.setModelJump2
 
 ;Back Side
-		bbr0	<setModelAttr,.setModelJump6
+		bbr0	<setModelAttr, .setModelJump6
 		jmp	.setModelJump0
 
 .setModelJump6:
@@ -2701,85 +3519,79 @@ setModelProc2:
 
 .setModelJump5:
 		ldy	#4
-		sta	[polyBufferAddr],y	;COLOR
+		sta	[polyBufferAddr], y	;COLOR
 
 		lda	<clip2D0Count
 		ldy	#5
-		sta	[polyBufferAddr],y	;COUNT
+		sta	[polyBufferAddr], y	;COUNT
 
 ;SAMPLE Z
 		ldy	#2
 		lda	<polyBufferZ0Work0	;SAMPLE Z
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 		iny
 		lda	<polyBufferZ0Work0+1
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 
 ;set buffer
-		lda	#LOW(polyBufferStart)
-		sta	<polyBufferNow
-		lda	#HIGH(polyBufferStart)
-		sta	<polyBufferNow+1
+		movw	<polyBufferNow, #polyBufferStart
 
 .setBufferLoop:
 		ldy	#0			;NEXT ADDR
-		lda	[polyBufferNow],y
+		lda	[polyBufferNow], y
 		sta	<polyBufferNext
 		iny
-		lda	[polyBufferNow],y
+		lda	[polyBufferNow], y
 		sta	<polyBufferNext+1
 
 		ldy	#2			;NEXT SAMPLE Z
-		lda	[polyBufferNext],y
+		lda	[polyBufferNext], y
 		sta	<polyBufferZ0Work0
 		iny
-		lda	[polyBufferNext],y
+		lda	[polyBufferNext], y
 		sta	<polyBufferZ0Work0+1
 
 		ldy	#2			;SAMPLE Z
 		sec
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sbc	<polyBufferZ0Work0
 		iny
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sbc	<polyBufferZ0Work0+1
 
 		bpl	.setBufferJump		;SAMPLE Z >= NEXT SAMPLE Z
 
-		lda	<polyBufferNext
-		sta	<polyBufferNow
-		lda	<polyBufferNext+1
-		sta	<polyBufferNow+1
+		movw	<polyBufferNow, <polyBufferNext
 
 		bra	.setBufferLoop
 
 .setBufferJump:
 		ldy	#0			;BUFFER -> NEXT
 		lda	<polyBufferNext
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 		iny
 		lda	<polyBufferNext+1
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 
 		ldy	#0			;NOW -> BUFFER
 		lda	<polyBufferAddr
-		sta	[polyBufferNow],y
+		sta	[polyBufferNow], y
 		iny
 		lda	<polyBufferAddr+1
-		sta	[polyBufferNow],y
+		sta	[polyBufferNow], y
 
 ;set data
 		clx
 		ldy	#6
 .setModelLoop2:
 		lda	clip2D0,x
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 		inx
 		inx
 		iny
 
 		lda	clip2D0,x
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 		inx
 		inx
 		iny
@@ -2802,10 +3614,8 @@ setModelProc2:
 		tay
 
 		dec	<modelPolygonCount
-		beq	.setModelEnd
-		jmp	.setModelLoop3
+		jne	.setModelLoop3
 
-.setModelEnd:
 		rts
 
 
@@ -2814,40 +3624,36 @@ clipFront:
 		ldx	<frontClipData0
 		ldy	<frontClipData1
 
-		lda	transform2DWork0+5,x	;Z0<128 flag
+		lda	transform2DWork0+5, x	;Z0<128 flag
 		and	#$80
 		lsr	a
 		sta	<frontClipFlag
-		lda	transform2DWork0+5,y	;Z0<128 flag
+		lda	transform2DWork0+5, y	;Z0<128 flag
 		and	#$80
 		ora	<frontClipFlag
 		sta	<frontClipFlag
-		bne	.clipFrontJump12
-		jmp	.clipFrontJump8
+		jeq	.clipFrontJump8
 
-.clipFrontJump12:
 		cmp	#$C0
-		bne	.clipFrontJump13
-		jmp	.clipFrontJump9
+		jeq	.clipFrontJump9
 
-.clipFrontJump13:
 ;clip front
 ;(128-Z0) to mul16a
 		sec
 		lda	#128
-		sbc	transform2DWork1+4,x
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
 		lda	#0
-		sbc	transform2DWork1+5,x
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(X1-X0) to mul16b
 		sec
-		lda	transform2DWork1+0,y
-		sbc	transform2DWork1+0,x
+		lda	transform2DWork1+0, y
+		sbc	transform2DWork1+0, x
 		sta	<mul16b
-		lda	transform2DWork1+1,y
-		sbc	transform2DWork1+1,x
+		lda	transform2DWork1+1, y
+		sbc	transform2DWork1+1, x
 		sta	<mul16b+1
 
 ;(128-Z0)*(X1-X0) to mul16d:mul16c
@@ -2855,11 +3661,11 @@ clipFront:
 
 ;(Z1-Z0) to mul16a
 		sec
-		lda	transform2DWork1+4,y
-		sbc	transform2DWork1+4,x
+		lda	transform2DWork1+4, y
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
-		lda	transform2DWork1+5,y
-		sbc	transform2DWork1+5,x
+		lda	transform2DWork1+5, y
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(128-Z0)*(X1-X0)/(Z1-Z0)
@@ -2868,37 +3674,31 @@ clipFront:
 ;(128-Z0)*(X1-X0)/(Z1-Z0)+X0
 		clc
 		lda	<mul16a
-		adc	transform2DWork1+0,x
+		adc	transform2DWork1+0, x
 		sta	<mul16a
 		lda	<mul16a+1
-		adc	transform2DWork1+1,x
+		adc	transform2DWork1+1, x
 		sta	<mul16a+1
 
 ;mul16a+centerX
-		clc
-		lda	<mul16a
-		adc	<centerX
-		sta	<clipFrontX
-		lda	<mul16a+1
-		adc	<centerX+1
-		sta	<clipFrontX+1
+		addw	<clipFrontX, <mul16a, <centerX
 
 ;(128-Z0) to mul16a
 		sec
 		lda	#128
-		sbc	transform2DWork1+4,x
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
 		lda	#0
-		sbc	transform2DWork1+5,x
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(Y1-Y0) to mul16b
 		sec
-		lda	transform2DWork1+2,y
-		sbc	transform2DWork1+2,x
+		lda	transform2DWork1+2, y
+		sbc	transform2DWork1+2, x
 		sta	<mul16b
-		lda	transform2DWork1+3,y
-		sbc	transform2DWork1+3,x
+		lda	transform2DWork1+3, y
+		sbc	transform2DWork1+3, x
 		sta	<mul16b+1
 
 ;(128-Z0)*(Y1-Y0) to mul16d:mul16c
@@ -2906,11 +3706,11 @@ clipFront:
 
 ;(Z1-Z0) to mul16a
 		sec
-		lda	transform2DWork1+4,y
-		sbc	transform2DWork1+4,x
+		lda	transform2DWork1+4, y
+		sbc	transform2DWork1+4, x
 		sta	<mul16a
-		lda	transform2DWork1+5,y
-		sbc	transform2DWork1+5,x
+		lda	transform2DWork1+5, y
+		sbc	transform2DWork1+5, x
 		sta	<mul16a+1
 
 ;(128-Z0)*(Y1-Y0)/(Z1-Z0)
@@ -2919,37 +3719,31 @@ clipFront:
 ;(128-Z0)*(Y1-Y0)/(Z1-Z0)+Y0
 		clc
 		lda	<mul16a
-		adc	transform2DWork1+2,x
+		adc	transform2DWork1+2, x
 		sta	<mul16a
 		lda	<mul16a+1
-		adc	transform2DWork1+3,x
+		adc	transform2DWork1+3, x
 		sta	<mul16a+1
 
 ;mul16a+centerY
-		clc
-		lda	<mul16a
-		adc	<centerY
-		sta	<clipFrontY
-		lda	<mul16a+1
-		adc	<centerY+1
-		sta	<clipFrontY+1
+		addw	<clipFrontY, <mul16a, <centerY
 
-		bbs7	<frontClipFlag,.clipFrontJump10
+		bbs7	<frontClipFlag, .clipFrontJump10
 
 		ldy	<model2DClipIndexWork
 
 		lda	<clipFrontX
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 		lda	<clipFrontX+1
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 
 		lda	<clipFrontY
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 		lda	<clipFrontY+1
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 
 		sty	<model2DClipIndexWork
@@ -2965,39 +3759,39 @@ clipFront:
 .clipFrontJump10:
 		ldy	<model2DClipIndexWork
 
-		lda	transform2DWork0,x
-		sta	clip2D0,y
+		lda	transform2DWork0, x
+		sta	clip2D0, y
 		iny
-		lda	transform2DWork0+1,x
-		sta	clip2D0,y
+		lda	transform2DWork0+1, x
+		sta	clip2D0, y
 		iny
 
-		lda	transform2DWork0+2,x
-		sta	clip2D0,y
+		lda	transform2DWork0+2, x
+		sta	clip2D0, y
 		iny
-		lda	transform2DWork0+3,x
-		sta	clip2D0,y
+		lda	transform2DWork0+3, x
+		sta	clip2D0, y
 		iny
 
 		lda	<clipFrontX
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 		lda	<clipFrontX+1
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 
 		lda	<clipFrontY
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 		lda	<clipFrontY+1
-		sta	clip2D0,y
+		sta	clip2D0, y
 		iny
 
 		sty	<model2DClipIndexWork
 
-		lda	transform2DWork0+4,x
+		lda	transform2DWork0+4, x
 		sta	polyBufferZ0Work1
-		lda	transform2DWork0+5,x
+		lda	transform2DWork0+5, x
 		sta	polyBufferZ0Work1+1
 
 		inc	<frontClipCount
@@ -3008,43 +3802,36 @@ clipFront:
 .clipFrontJump8:
 		ldy	<model2DClipIndexWork
 
-		lda	transform2DWork0,x
-		sta	clip2D0,y
+		lda	transform2DWork0, x
+		sta	clip2D0, y
 		iny
-		lda	transform2DWork0+1,x
-		sta	clip2D0,y
+		lda	transform2DWork0+1, x
+		sta	clip2D0, y
 		iny
 
-		lda	transform2DWork0+2,x
-		sta	clip2D0,y
+		lda	transform2DWork0+2, x
+		sta	clip2D0, y
 		iny
-		lda	transform2DWork0+3,x
-		sta	clip2D0,y
+		lda	transform2DWork0+3, x
+		sta	clip2D0, y
 		iny
 
 		sty	<model2DClipIndexWork
 
-		lda	transform2DWork0+4,x
+		lda	transform2DWork0+4, x
 		sta	polyBufferZ0Work1
-		lda	transform2DWork0+5,x
+		lda	transform2DWork0+5, x
 		sta	polyBufferZ0Work1+1
 
 		inc	<frontClipCount
 
 .clipFrontJump11:
 ;check Z sample
-		sec
-		lda	<polyBufferZ0Work0
-		sbc	<polyBufferZ0Work1
-		lda	<polyBufferZ0Work0+1
-		sbc	<polyBufferZ0Work1+1
+		cmpw	<polyBufferZ0Work0, <polyBufferZ0Work1
 
 		bpl	.clipFrontJump9
 
-		lda	<polyBufferZ0Work1
-		sta	<polyBufferZ0Work0
-		lda	<polyBufferZ0Work1+1
-		sta	<polyBufferZ0Work0+1
+		movw	<polyBufferZ0Work0, <polyBufferZ0Work1
 
 .clipFrontJump9:
 		rts
@@ -3054,14 +3841,14 @@ clipFront:
 setModelProc:
 ;
 		ldy	#$00
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<modelAddrWork		;ModelData Polygon Addr
 		iny
-		lda	[modelAddr],y
+		lda	[modelAddr], y
 		sta	<modelAddrWork+1
 
 		ldy	#$02
-		lda	[modelAddr],y		;Polygon Count
+		lda	[modelAddr], y		;Polygon Count
 		sta	<modelPolygonCount
 
 		stz	<polyBufferAddrWork0	;ModelData Polygon
@@ -3069,20 +3856,20 @@ setModelProc:
 .setModelLoop0:
 		ldy	<polyBufferAddrWork0
 
-		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		lda	[modelAddrWork], y	;ModelData Vertex Count, Front Color
 		and	#$F8
 		lsr	a
 		lsr	a
 		sta	<setModelFrontColor
 
-		lda	[modelAddrWork],y	;ModelData Vertex Count, Front Color
+		lda	[modelAddrWork], y	;ModelData Vertex Count, Front Color
 		and	#$07
 		sta	<setModelCountWork
 		sta	<setModelCount
 
 		iny
 
-		lda	[modelAddrWork],y	;ModelData Polygon Attr, Back Color
+		lda	[modelAddrWork], y	;ModelData Polygon Attr, Back Color
 		sta	<setModelAttr
 		and	#$F8
 		lsr	a
@@ -3099,47 +3886,44 @@ setModelProc:
 
 .setModelLoop1:
 		ldy	<polyBufferAddrWork0	;ModelData Polygon
-		lda	[modelAddrWork],y
+		lda	[modelAddrWork], y
 		tax
 
 		ldy	<polyBufferAddrWork1
 
 ;move to clip2D0
-		lda	transform2DWork0,x	;2D X0
-		sta	clip2D0,y
+		lda	transform2DWork0, x	;2D X0
+		sta	clip2D0, y
 		inx
 		iny
 
-		lda	transform2DWork0,x
-		sta	clip2D0,y
+		lda	transform2DWork0, x
+		sta	clip2D0, y
 		inx
 		iny
 
-		lda	transform2DWork0,x	;2D Y0
-		sta	clip2D0,y
+		lda	transform2DWork0, x	;2D Y0
+		sta	clip2D0, y
 		inx
 		iny
 
-		lda	transform2DWork0,x
-		sta	clip2D0,y
+		lda	transform2DWork0, x
+		sta	clip2D0, y
 		inx
 		iny
 
 		sty	<polyBufferAddrWork1
 
 		sec
-		lda	transform2DWork0,x	;3D Z0
+		lda	transform2DWork0, x	;3D Z0
 		sbc	<polyBufferZ0Work0
 		inx
-		lda	transform2DWork0,x
+		lda	transform2DWork0, x
 
 		bpl	.setModelJump4		;Z0<128 flag check
 
 ;next polygon data index
-		clc
-		lda	<polyBufferAddrWork0
-		adc	<setModelCount
-		sta	<polyBufferAddrWork0
+		add	<polyBufferAddrWork0, <setModelCount
 		jmp	.setModelJump0
 
 .setModelJump4:
@@ -3158,20 +3942,17 @@ setModelProc:
 		bne	.setModelLoop1
 
 ;call clip2D
-		lda	<setModelCountWork
-		sta	<clip2D0Count
+		mov	<clip2D0Count, <setModelCountWork
 		jsr	clip2D
-		bne	.setModelJump3
+;.setModelJump3:
+		jeq	.setModelJump0
 
-		jmp	.setModelJump0
-
-.setModelJump3:
 ;back side check
 		sec
 		lda	clip2D0+8		;X2
 		sbc	clip2D0+4		;X1
 		sta	<mul16a
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16a+1
 
@@ -3179,27 +3960,19 @@ setModelProc:
 		lda	clip2D0+2		;Y0
 		sbc	clip2D0+6		;Y1
 		sta	<mul16b
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		lda	<mul16c
-		sta	<div16ans
-		lda	<mul16c+1
-		sta	<div16ans+1
-
-		lda	<mul16d
-		sta	<div16work
-		lda	<mul16d+1
-		sta	<div16work+1
+		movq	<div16ans, <mul16c
 
 		sec
 		lda	clip2D0+10		;Y2
 		sbc	clip2D0+6		;Y1
 		sta	<mul16a
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16a+1
 
@@ -3207,22 +3980,13 @@ setModelProc:
 		lda	clip2D0			;X0
 		sbc	clip2D0+4		;X1
 		sta	<mul16b
-		lda	#0
+		cla
 		sbc	#0
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		sec
-		lda	<div16ans
-		sbc	<mul16c
-		lda	<div16ans+1
-		sbc	<mul16c+1
-
-		lda	<div16work
-		sbc	<mul16d
-		lda	<div16work+1
-		sbc	<mul16d+1
+		cmpq	<div16ans, <mul16c
 
 		bpl	.setModelJump2
 
@@ -3240,23 +4004,23 @@ setModelProc:
 
 .setModelJump5:
 		ldy	#4
-		sta	[polyBufferAddr],y	;COLOR
+		sta	[polyBufferAddr], y	;COLOR
 
 		lda	<clip2D0Count
 		ldy	#5
-		sta	[polyBufferAddr],y	;COUNT
+		sta	[polyBufferAddr], y	;COUNT
 
 		clx
 		ldy	#6
 .setModelLoop2:
-		lda	clip2D0,x
-		sta	[polyBufferAddr],y
+		lda	clip2D0, x
+		sta	[polyBufferAddr], y
 		inx
 		inx
 		iny
 
-		lda	clip2D0,x
-		sta	[polyBufferAddr],y
+		lda	clip2D0, x
+		sta	[polyBufferAddr], y
 		inx
 		inx
 		iny
@@ -3269,63 +4033,57 @@ setModelProc:
 ;SAMPLE Z
 		ldy	#2
 		lda	<polyBufferZ0Work0	;SAMPLE Z
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 		iny
 		lda	<polyBufferZ0Work0+1
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 
 ;set buffer
-		lda	#LOW(polyBufferStart)
-		sta	<polyBufferNow
-		lda	#HIGH(polyBufferStart)
-		sta	<polyBufferNow+1
+		movw	<polyBufferNow, #polyBufferStart
 
 .setBufferLoop:
 		ldy	#0			;NEXT ADDR
-		lda	[polyBufferNow],y
+		lda	[polyBufferNow], y
 		sta	<polyBufferNext
 		iny
-		lda	[polyBufferNow],y
+		lda	[polyBufferNow], y
 		sta	<polyBufferNext+1
 
 		ldy	#2			;NEXT SAMPLE Z
-		lda	[polyBufferNext],y
+		lda	[polyBufferNext], y
 		sta	<polyBufferZ0Work0
 		iny
-		lda	[polyBufferNext],y
+		lda	[polyBufferNext], y
 		sta	<polyBufferZ0Work0+1
 
 		ldy	#2			;SAMPLE Z
 		sec
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sbc	<polyBufferZ0Work0
 		iny
-		lda	[polyBufferAddr],y
+		lda	[polyBufferAddr], y
 		sbc	<polyBufferZ0Work0+1
 
 		bpl	.setBufferJump		;SAMPLE Z >= NEXT SAMPLE Z
 
-		lda	<polyBufferNext
-		sta	<polyBufferNow
-		lda	<polyBufferNext+1
-		sta	<polyBufferNow+1
+		movw	<polyBufferNow, <polyBufferNext
 
 		bra	.setBufferLoop
 
 .setBufferJump:
 		ldy	#0			;BUFFER -> NEXT
 		lda	<polyBufferNext
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 		iny
 		lda	<polyBufferNext+1
-		sta	[polyBufferAddr],y
+		sta	[polyBufferAddr], y
 
 		ldy	#0			;NOW -> BUFFER
 		lda	<polyBufferAddr
-		sta	[polyBufferNow],y
+		sta	[polyBufferNow], y
 		iny
 		lda	<polyBufferAddr+1
-		sta	[polyBufferNow],y
+		sta	[polyBufferNow], y
 
 ;next buffer addr
 		clc
@@ -3344,10 +4102,7 @@ setModelProc:
 
 .setModelJump7:
 		dec	<modelPolygonCount
-		beq	.setModelEnd
-		jmp	.setModelLoop0
-
-.setModelEnd:
+		jne	.setModelLoop0
 		rts
 
 
@@ -3355,28 +4110,16 @@ setModelProc:
 initializePolyBuffer:
 ;
 ;initialize polyBufferAddr = polyBuffer
-		lda	#LOW(polyBuffer)
-		sta	<polyBufferAddr
-		lda	#HIGH(polyBuffer)
-		sta	<polyBufferAddr+1
+		movw	<polyBufferAddr, #polyBuffer
 
 ;polyBufferStart NEXT ADDR = polyBufferEnd
-		lda	#LOW(polyBufferEnd)
-		sta	polyBufferStart
-		lda	#HIGH(polyBufferEnd)
-		sta	polyBufferStart+1
+		movw	polyBufferStart, #polyBufferEnd
 
 ;polyBufferStart SAMPLE Z = $7FFF
-		lda	#$FF
-		sta	polyBufferStart+2
-		lda	#$7F
-		sta	polyBufferStart+3
+		movw	polyBufferStart+2, #$7FFF
 
 ;polyBufferEnd SAMPLE Z = $0000
-		lda	#$00
-		sta	polyBufferEnd+2
-		lda	#$00
-		sta	polyBufferEnd+3
+		stzw	polyBufferEnd+2
 
 ;polyBufferEnd COLOR = $00
 		stz	polyBufferEnd+4
@@ -3390,21 +4133,21 @@ initializePolyBuffer:
 ;----------------------------
 moveMatrix1ToMatrix0:
 ;
-		tii	matrix1,matrix0,18
+		tii	matrix1, matrix0, 18
 		rts
 
 
 ;----------------------------
 moveMatrix1ToMatrix2:
 ;
-		tii	matrix1,matrix2,18
+		tii	matrix1, matrix2, 18
 		rts
 
 
 ;----------------------------
 moveMatrix2ToMatrix0:
 ;
-		tii	matrix2,matrix0,18
+		tii	matrix2, matrix0, 18
 		rts
 
 
@@ -3424,17 +4167,17 @@ setMatrix1RotationX:
 		stz	matrix1+6+0
 		stz	matrix1+6+1
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+6+2
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+6+3
 
 		clc
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		eor	#$FF
 		adc	#$01
 		sta	matrix1+6+4
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		eor	#$FF
 		adc	#$00
 		sta	matrix1+6+5
@@ -3444,12 +4187,12 @@ setMatrix1RotationX:
 
 		lda	sinDataLow,x
 		sta	matrix1+12+2
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	matrix1+12+3
 
 		lda	cosDataLow,x
 		sta	matrix1+12+4
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+12+5
 
 		rts
@@ -3458,17 +4201,17 @@ setMatrix1RotationX:
 ;----------------------------
 setMatrix1RotationY:
 ;
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+0+0
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+0+1
 
 		stz	matrix1+0+2
 		stz	matrix1+0+3
 
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		sta	matrix1+0+4
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	matrix1+0+5
 
 		stz	matrix1+6+0
@@ -3482,11 +4225,11 @@ setMatrix1RotationY:
 		stz	matrix1+6+5
 
 		clc
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		eor	#$FF
 		adc	#$01
 		sta	matrix1+12+0
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		eor	#$FF
 		adc	#$00
 		sta	matrix1+12+1
@@ -3494,9 +4237,9 @@ setMatrix1RotationY:
 		stz	matrix1+12+2
 		stz	matrix1+12+3
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+12+4
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+12+5
 
 		rts
@@ -3505,17 +4248,17 @@ setMatrix1RotationY:
 ;----------------------------
 setMatrix1RotationZ:
 ;
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+0+0
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+0+1
 
 		clc
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		eor	#$FF
 		adc	#$01
 		sta	matrix1+0+2
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		eor	#$FF
 		adc	#$00
 		sta	matrix1+0+3
@@ -3523,14 +4266,14 @@ setMatrix1RotationZ:
 		stz	matrix1+0+4
 		stz	matrix1+0+5
 
-		lda	sinDataLow,x
+		lda	sinDataLow, x
 		sta	matrix1+6+0
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	matrix1+6+1
 
-		lda	cosDataLow,x
+		lda	cosDataLow, x
 		sta	matrix1+6+2
-		lda	cosDataHigh,x
+		lda	cosDataHigh, x
 		sta	matrix1+6+3
 
 		stz	matrix1+6+4
@@ -3629,28 +4372,16 @@ vertexMultiply:
 		sta	<mul16a+1
 		iny
 
-		lda	matrix2,x
+		lda	matrix2, x
 		sta	<mul16b
 		inx
-		lda	matrix2,x
+		lda	matrix2, x
 		sta	<mul16b+1
 		inx
 
 		jsr	smul16
 
-		clc
-		lda	<mul16c
-		adc	<vertexWork
-		sta	<vertexWork
-		lda	<mul16c+1
-		adc	<vertexWork+1
-		sta	<vertexWork+1
-		lda	<mul16d
-		adc	<vertexWork+2
-		sta	<vertexWork+2
-		lda	<mul16d+1
-		adc	<vertexWork+3
-		sta	<vertexWork+3
+		addq	<vertexWork, <mul16c, <vertexWork
 
 		cpy	#6
 		bne	.vertexMultiplyLoop0
@@ -3705,80 +4436,49 @@ matrixMultiply:
 
 .matrixMultiplyLoop0:
 
-		lda	matrix0,x
+		lda	matrix0, x
 		sta	<mul16a
-		lda	matrix0+1,x
+		lda	matrix0+1, x
 		sta	<mul16a+1
 
-		lda	matrix1,y
+		lda	matrix1, y
 		sta	<mul16b
-		lda	matrix1+1,y
+		lda	matrix1+1, y
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		lda	<mul16c
-		sta	<vertexWork
-		lda	<mul16c+1
-		sta	<vertexWork+1
-		lda	<mul16d
-		sta	<vertexWork+2
-		lda	<mul16d+1
-		sta	<vertexWork+3
+		movq	<vertexWork, <mul16c
 
 ;----------------
-		lda	matrix0+6,x
+		lda	matrix0+6, x
 		sta	<mul16a
-		lda	matrix0+7,x
+		lda	matrix0+7, x
 		sta	<mul16a+1
 
-		lda	matrix1+2,y
+		lda	matrix1+2, y
 		sta	<mul16b
-		lda	matrix1+3,y
+		lda	matrix1+3, y
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		clc
-		lda	<mul16c
-		adc	<vertexWork
-		sta	<vertexWork
-		lda	<mul16c+1
-		adc	<vertexWork+1
-		sta	<vertexWork+1
-		lda	<mul16d
-		adc	<vertexWork+2
-		sta	<vertexWork+2
-		lda	<mul16d+1
-		adc	<vertexWork+3
-		sta	<vertexWork+3
+		addq	<vertexWork, <mul16c, <vertexWork
 
 ;----------------
-		lda	matrix0+12,x
+		lda	matrix0+12, x
 		sta	<mul16a
-		lda	matrix0+13,x
+		lda	matrix0+13, x
 		sta	<mul16a+1
 
-		lda	matrix1+4,y
+		lda	matrix1+4, y
 		sta	<mul16b
-		lda	matrix1+5,y
+		lda	matrix1+5, y
 		sta	<mul16b+1
 
 		jsr	smul16
 
-		clc
-		lda	<mul16c
-		adc	<vertexWork
-		sta	<vertexWork
-		lda	<mul16c+1
-		adc	<vertexWork+1
-		sta	<vertexWork+1
-		lda	<mul16d
-		adc	<vertexWork+2
-		sta	<vertexWork+2
-		lda	<mul16d+1
-		adc	<vertexWork+3
-		sta	<vertexWork+3
+		addq	<vertexWork, <mul16c, <vertexWork
 
 ;----------------
 
@@ -3792,10 +4492,10 @@ matrixMultiply:
 
 		phx
 		ldx	<vertex1Addr
-		sta	matrix2,x
+		sta	matrix2, x
 		inx
 		lda	<vertexWork+3
-		sta	matrix2,x
+		sta	matrix2, x
 		inx
 		stx	<vertex1Addr
 		plx
@@ -3803,10 +4503,8 @@ matrixMultiply:
 		inx
 		inx
 		cpx	#6
-		beq	.matrixMultiplyJump0
-		jmp	.matrixMultiplyLoop0
+		jne	.matrixMultiplyLoop0
 
-.matrixMultiplyJump0:
 		clx
 
 		clc
@@ -3814,10 +4512,8 @@ matrixMultiply:
 		adc	#6
 		tay
 		cpy	#18
-		beq	.matrixMultiplyJump1
-		jmp	.matrixMultiplyLoop0
+		jne	.matrixMultiplyLoop0
 
-.matrixMultiplyJump1:
 		rts
 
 
@@ -3828,30 +4524,28 @@ transform2D:
 ;Z0 < 128 check
 		ldy	#$04
 		sec
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sbc	#128
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sbc	#00
 
-		bpl	.transform2DJump05
-		jmp	.transform2DJump00
+		jmi	.transform2DJump00
 
-.transform2DJump05:
 ;X0 to mul16c
 		ldy	#$00
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c+1
 
 ;Z0 to mul16a
 		ldy	#$04
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a+1
 
 ;X0*128/Z0
@@ -3864,26 +4558,26 @@ transform2D:
 		clc
 		lda	<mul16a
 		adc	<centerX
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 		iny
 		lda	<mul16a+1
 		adc	<centerX+1
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 
 ;Y0 to mul16c
 		ldy	#$02
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16c+1
 
 ;Z0 to mul16a
 		ldy	#$04
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	<mul16a+1
 
 ;Y0*128/Z0
@@ -3896,20 +4590,20 @@ transform2D:
 		clc
 		lda	<mul16a
 		adc	<centerY
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 		iny
 		lda	<mul16a+1
 		adc	<centerY+1
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 
 ;Z0>=128 flag set
 ;Z0 set
 		iny
-		lda	[vertex0Addr],y
-		sta	[vertex1Addr],y
+		lda	[vertex0Addr], y
+		sta	[vertex1Addr], y
 		iny
-		lda	[vertex0Addr],y
-		sta	[vertex1Addr],y
+		lda	[vertex0Addr], y
+		sta	[vertex1Addr], y
 
 		jmp	.transform2DJump01
 
@@ -3917,164 +4611,200 @@ transform2D:
 ;Z0<128 flag set
 		ldy	#$04
 		lda	#$00
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 		iny
 		lda	#$80
-		sta	[vertex1Addr],y
+		sta	[vertex1Addr], y
 
 .transform2DJump01:
-		clc
-		lda	<vertex0Addr
-		adc	#$06
-		sta	<vertex0Addr
-		bcc	.transform2DJump03
-		inc	<vertex0Addr+1
-.transform2DJump03:
+		addwb	<vertex0Addr, #$06
 
-		clc
-		lda	<vertex1Addr
-		adc	#$06
-		sta	<vertex1Addr
-		bcc	.transform2DJump04
-		inc	<vertex1Addr+1
-.transform2DJump04:
+		addwb	<vertex1Addr, #$06
 
 		dec	<vertexCount
-		beq	.transform2DJump02
-		jmp	.transform2DLoop0
+		jne	.transform2DLoop0
 
-.transform2DJump02:
 		rts
 
 
 ;----------------------------
 transform2DProc:
-;mul16c(-32768_32767) * 128 / mul16a(1_32767) = mul16a(rough value)
-		phx
+;mul16a(rough value) = (mul16c(-32768_32767) * 128 / mul16a(1_32767))
+;push y
 		phy
-
+;c sign
 		lda	<mul16c+1
-		sta	<mul16d
+		pha
+		bpl	.jp00
+;c neg
+		sec
+		cla
+		sbc	<mul16c
+		sta	<mul16c
 
-		lda	<mul16c
+		cla
+		sbc	<mul16c+1
 		sta	<mul16c+1
+.jp00:
+		stz	<muladdr
 
-		stz	<mul16c
-		stz	<mul16d+1
-
-		bbr7	<mul16d,.transform2DPJump06
-
-		lda	#$FF
-		sta	<mul16d+1
-
-.transform2DPJump06:
 ;get div data
-		ldx	<div16a+1
-		lda	divbankdata, x
-		pha
-		tam	#$02
-
-		lda	muladdrdata, x
-		sta	<muladdr+1
-		lda	<div16a
-		sta	<muladdr
-
-		lda	[muladdr]
-		sta	<udiv32_2Work
-
+		ldy	<div16a+1
 		clc
-		pla
-		adc	#4
+		lda	mulbankdata, y
+		adc	#divdatBank-muldatBank	;carry clear
+		sta	<mulbank
 		tam	#$02
 
-		lda	[muladdr]
-		sta	<udiv32_2Work+1
-
-;mul udiv32_2Work low byte
-		ldx	<udiv32_2Work
-		lda	mulbankdata, x
-		pha
-		tam	#$02
-
-		lda	muladdrdata, x
-		stz	<muladdr
+		lda	muladdrdata, y
 		sta	<muladdr+1
 
-		stz	<div16ans
+		ldy	<div16a
 
-		ldy	<mul16c+1
-		lda	[muladdr],y
-		sta	<div16ans+1
+		lda	[muladdr], y
+		sta	<sqrt64a
 
-		ldy	<mul16d
-		lda	[muladdr],y
-		sta	<div16work
-
-		ldy	<mul16d+1
-		lda	[muladdr],y
-		sta	<div16work+1
-
-		pla
-		clc
-		adc	#8
+		lda	<mulbank
+		adc	#4		;carry clear
 		tam	#$02
 
-		clc
-		ldy	<mul16c+1
-		lda	[muladdr],y
-		adc	<div16work
-		sta	<div16work
+		lda	[muladdr], y
+		sta	<sqrt64a+1
 
-		ldy	<mul16d
-		lda	[muladdr],y
-		adc	<div16work+1
-		sta	<div16work+1
-
-;mul udiv32_2Work high byte
-		ldx	<udiv32_2Work+1
-		lda	mulbankdata, x
-		pha
+		lda	<mulbank
+		adc	#8		;carry clear
 		tam	#$02
 
-		lda	muladdrdata, x
-		stz	<muladdr
+		lda	[muladdr], y
+		sta	<sqrt64a+2
+
+;mul mul16c low byte
+		ldy	<mul16c
+		lda	mulbankdata, y
+
+		sta	<mulbank
+		tam	#$02
+
+		lda	muladdrdata, y
 		sta	<muladdr+1
 
-		clc
-		ldy	<mul16c+1
-		lda	[muladdr],y
-		adc	<div16work
-		sta	<div16work
+		ldy	<sqrt64a
+		lda	[muladdr], y
+		sta	<sqrt64b
 
-		ldy	<mul16d
-		lda	[muladdr],y
-		adc	<div16work+1
-		sta	<div16work+1
+		ldy	<sqrt64a+1
+		lda	[muladdr], y
+		sta	<sqrt64b+1
 
-		pla
-		clc
-		adc	#8
+		ldy	<sqrt64a+2
+		lda	[muladdr], y
+		sta	<sqrt64b+2
+
+		lda	<mulbank
+		adc	#8		;carry clear
 		tam	#$02
 
-		clc
+		ldy	<sqrt64a
+		lda	[muladdr], y
+		adc	<sqrt64b+1
+		sta	<sqrt64b+1
+
+		ldy	<sqrt64a+1
+		lda	[muladdr], y
+		adc	<sqrt64b+2
+		sta	<sqrt64b+2
+
+		ldy	<sqrt64a+2
+		lda	[muladdr], y
+		adc	#0		;carry clear
+		sta	<sqrt64b+3
+
+;mul mul16c high byte
 		ldy	<mul16c+1
-		lda	[muladdr],y
-		adc	<div16work+1
-		sta	<div16work+1
+		lda	mulbankdata, y
 
-		lda	<div16work
-		sta	<div16a
-		lda	<div16work+1
-		sta	<div16a+1
+		sta	<mulbank
+		tam	#$02
 
+		lda	muladdrdata, y
+		sta	<muladdr+1
+
+		ldy	<sqrt64a
+		lda	[muladdr], y
+		adc	<sqrt64b+1
+		sta	<sqrt64b+1
+
+		ldy	<sqrt64a+1
+		lda	[muladdr], y
+		adc	<sqrt64b+2
+		sta	<sqrt64b+2
+
+		ldy	<sqrt64a+2
+		lda	[muladdr], y
+		adc	<sqrt64b+3	;carry clear
+		sta	<sqrt64b+3
+
+		lda	<mulbank
+		adc	#8		;carry clear
+		tam	#$02
+
+		ldy	<sqrt64a
+		lda	[muladdr], y
+		adc	<sqrt64b+2
+		sta	<sqrt64b+2
+
+		ldy	<sqrt64a+1
+		lda	[muladdr], y
+		adc	<sqrt64b+3
+		sta	<sqrt64b+3
+
+		movw	<mul16a, <sqrt64b+2
+
+		pla
+		bpl	.jp01
+;ans neg
+		sec
+		cla
+		sbc	<mul16a
+		sta	<mul16a
+
+		cla
+		sbc	<mul16a+1
+		sta	<mul16a+1
+.jp01:
+;pull y
 		ply
-		plx
 		rts
 
 
 ;----------------------------
 clip2D:
 ;
+		clx
+		ldy	<clip2D0Count
+.loop0:
+		lda	clip2D0+1, x
+		bne	.clipOut
+
+		lda	clip2D0+3, x
+		bne	.clipOut
+
+		lda	clip2D0+2, x
+		cmp	#192
+		bcs	.clipOut
+
+		inx
+		inx
+		inx
+		inx
+
+		dey
+		bne	.loop0
+
+		lda	<clip2D0Count
+		rts
+
+.clipOut:
 		jsr	clip2DY0
 		lda	<clip2D1Count
 		beq	.clip2DEnd
@@ -4103,14 +4833,14 @@ clip2DX255:
 		tax
 
 		lda	clip2D1		;X0
-		sta	clip2D1,x	;last X
+		sta	clip2D1, x	;last X
 		lda	clip2D1+1
-		sta	clip2D1+1,x
+		sta	clip2D1+1, x
 
 		lda	clip2D1+2	;Y0
-		sta	clip2D1+2,x	;last Y
+		sta	clip2D1+2, x	;last Y
 		lda	clip2D1+3
-		sta	clip2D1+3,x
+		sta	clip2D1+3, x
 
 		clx
 		cly
@@ -4120,48 +4850,45 @@ clip2DX255:
 		stz	<clip2DFlag
 
 		sec
-		lda	clip2D1,x	;X0
+		lda	clip2D1, x	;X0
 		sbc	#$00
-		lda	clip2D1+1,x
+		lda	clip2D1+1, x
 		sbc	#$01
 		bmi	.clip2DX255Jump00
 		smb0	<clip2DFlag
 .clip2DX255Jump00:
 
 		sec
-		lda	clip2D1+4,x	;X1
+		lda	clip2D1+4, x	;X1
 		sbc	#$00
-		lda	clip2D1+5,x
+		lda	clip2D1+5, x
 		sbc	#$01
 		bmi	.clip2DX255Jump01
 		smb1	<clip2DFlag
 .clip2DX255Jump01:
 
 		lda	<clip2DFlag
-		bne	.clip2DX255Jump05
-		jmp	.clip2DX255Jump02
-.clip2DX255Jump05:
+		jeq	.clip2DX255Jump02
+
 		cmp	#$03
-		bne	.clip2DX255Jump06
-		jmp	.clip2DX255Jump03
-.clip2DX255Jump06:
+		jeq	.clip2DX255Jump03
 
 ;(255-X0) to mul16a
 		sec
 		lda	#255
-		sbc	clip2D1,x	;X0
+		sbc	clip2D1, x	;X0
 		sta	<mul16a
 		lda	#0
-		sbc	clip2D1+1,x
+		sbc	clip2D1+1, x
 		sta	<mul16a+1
 
 ;(Y1-Y0) to mul16b
 		sec
-		lda	clip2D1+6,x	;Y1
-		sbc	clip2D1+2,x	;Y0
+		lda	clip2D1+6, x	;Y1
+		sbc	clip2D1+2, x	;Y0
 		sta	<mul16b
-		lda	clip2D1+7,x
-		sbc	clip2D1+3,x
+		lda	clip2D1+7, x
+		sbc	clip2D1+3, x
 		sta	<mul16b+1
 
 ;(255-X0)*(Y1-Y0) to mul16d:mul16c
@@ -4169,11 +4896,11 @@ clip2DX255:
 
 ;(X1-X0) to mul16a
 		sec
-		lda	clip2D1+4,x	;X1
-		sbc	clip2D1,x	;X0
+		lda	clip2D1+4, x	;X1
+		sbc	clip2D1, x	;X0
 		sta	<mul16a
-		lda	clip2D1+5,x
-		sbc	clip2D1+1,x
+		lda	clip2D1+5, x
+		sbc	clip2D1+1, x
 		sta	<mul16a+1
 
 ;(255-X0)*(Y1-Y0)/(X1-X0)
@@ -4182,23 +4909,23 @@ clip2DX255:
 ;(255-X0)*(Y1-Y0)/(X1-X0)+Y0
 		clc
 		lda	<mul16a
-		adc	clip2D1+2,x	;Y0
+		adc	clip2D1+2, x	;Y0
 		sta	<mul16a
 		lda	<mul16a+1
-		adc	clip2D1+3,x
+		adc	clip2D1+3, x
 		sta	<mul16a+1
 
-		bbs1	<clip2DFlag,.clip2DX255Jump04
+		bbs1	<clip2DFlag, .clip2DX255Jump04
 ;X0>255 X1<=255
 		lda	#$FF
-		sta	clip2D0,y	;X0
+		sta	clip2D0, y	;X0
 		lda	#$00
-		sta	clip2D0+1,y
+		sta	clip2D0+1, y
 
 		lda	<mul16a
-		sta	clip2D0+2,y	;Y0
+		sta	clip2D0+2, y	;Y0
 		lda	<mul16a+1
-		sta	clip2D0+3,y
+		sta	clip2D0+3, y
 
 		inc	<clip2D0Count
 
@@ -4211,30 +4938,27 @@ clip2DX255:
 
 .clip2DX255Jump04:
 ;X0<=255 X1>255
-		lda	clip2D1,x	;X0
-		sta	clip2D0,y	;X0
-		lda	clip2D1+1,x
-		sta	clip2D0+1,y
+		lda	clip2D1, x	;X0
+		sta	clip2D0, y	;X0
+		lda	clip2D1+1, x
+		sta	clip2D0+1, y
 
-		lda	clip2D1+2,x	;Y0
-		sta	clip2D0+2,y	;Y0
-		lda	clip2D1+3,x
-		sta	clip2D0+3,y
+		lda	clip2D1+2, x	;Y0
+		sta	clip2D0+2, y	;Y0
+		lda	clip2D1+3, x
+		sta	clip2D0+3, y
 
 		lda	#$FF
-		sta	clip2D0+4,y	;X1
+		sta	clip2D0+4, y	;X1
 		lda	#$00
-		sta	clip2D0+5,y
+		sta	clip2D0+5, y
 
 		lda	<mul16a
-		sta	clip2D0+6,y	;Y1
+		sta	clip2D0+6, y	;Y1
 		lda	<mul16a+1
-		sta	clip2D0+7,y
+		sta	clip2D0+7, y
 
-		clc
-		lda	<clip2D0Count
-		adc	#$02
-		sta	<clip2D0Count
+		add	<clip2D0Count, #$02
 
 		clc
 		tya
@@ -4245,15 +4969,15 @@ clip2DX255:
 
 .clip2DX255Jump02:
 ;X0<=255 X1<=255
-		lda	clip2D1,x	;X0
-		sta	clip2D0,y	;X0
-		lda	clip2D1+1,x
-		sta	clip2D0+1,y
+		lda	clip2D1, x	;X0
+		sta	clip2D0, y	;X0
+		lda	clip2D1+1, x
+		sta	clip2D0+1, y
 
-		lda	clip2D1+2,x	;Y0
-		sta	clip2D0+2,y	;Y0
-		lda	clip2D1+3,x
-		sta	clip2D0+3,y
+		lda	clip2D1+2, x	;Y0
+		sta	clip2D0+2, y	;Y0
+		lda	clip2D1+3, x
+		sta	clip2D0+3, y
 
 		inc	<clip2D0Count
 
@@ -4270,9 +4994,7 @@ clip2DX255:
 		tax
 
 		dec	<clip2D1Count
-		beq	.clip2DX255Jump07
-		jmp	.clip2DX255Loop0
-.clip2DX255Jump07:
+		jne	.clip2DX255Loop0
 
 		rts
 
@@ -4286,14 +5008,14 @@ clip2DX0:
 		tax
 
 		lda	clip2D0		;X0
-		sta	clip2D0,x	;last X
+		sta	clip2D0, x	;last X
 		lda	clip2D0+1
-		sta	clip2D0+1,x
+		sta	clip2D0+1, x
 
 		lda	clip2D0+2	;Y0
-		sta	clip2D0+2,x	;last Y
+		sta	clip2D0+2, x	;last Y
 		lda	clip2D0+3
-		sta	clip2D0+3,x
+		sta	clip2D0+3, x
 
 		clx
 		cly
@@ -4313,30 +5035,27 @@ clip2DX0:
 .clip2DX0Jump01:
 
 		lda	<clip2DFlag
-		bne	.clip2DX0Jump05
-		jmp	.clip2DX0Jump02
-.clip2DX0Jump05:
+		jeq	.clip2DX0Jump02
+
 		cmp	#$03
-		bne	.clip2DX0Jump06
-		jmp	.clip2DX0Jump03
-.clip2DX0Jump06:
+		jeq	.clip2DX0Jump03
 
 ;(0-X0) to mul16a
 		sec
 		lda	#0
-		sbc	clip2D0,x	;X0
+		sbc	clip2D0, x	;X0
 		sta	<mul16a
 		lda	#0
-		sbc	clip2D0+1,x
+		sbc	clip2D0+1, x
 		sta	<mul16a+1
 
 ;(Y1-Y0) to mul16b
 		sec
-		lda	clip2D0+6,x	;Y1
-		sbc	clip2D0+2,x	;Y0
+		lda	clip2D0+6, x	;Y1
+		sbc	clip2D0+2, x	;Y0
 		sta	<mul16b
-		lda	clip2D0+7,x
-		sbc	clip2D0+3,x
+		lda	clip2D0+7, x
+		sbc	clip2D0+3, x
 		sta	<mul16b+1
 
 ;(0-X0)*(Y1-Y0) to mul16d:mul16c
@@ -4344,11 +5063,11 @@ clip2DX0:
 
 ;(X1-X0) to mul16a
 		sec
-		lda	clip2D0+4,x	;X1
-		sbc	clip2D0,x	;X0
+		lda	clip2D0+4, x	;X1
+		sbc	clip2D0, x	;X0
 		sta	<mul16a
-		lda	clip2D0+5,x
-		sbc	clip2D0+1,x
+		lda	clip2D0+5, x
+		sbc	clip2D0+1, x
 		sta	<mul16a+1
 
 ;(0-X0)*(Y1-Y0)/(X1-X0)
@@ -4357,23 +5076,23 @@ clip2DX0:
 ;(0-X0)*(Y1-Y0)/(X1-X0)+Y0
 		clc
 		lda	<mul16a
-		adc	clip2D0+2,x	;Y0
+		adc	clip2D0+2, x	;Y0
 		sta	<mul16a
 		lda	<mul16a+1
-		adc	clip2D0+3,x
+		adc	clip2D0+3, x
 		sta	<mul16a+1
 
-		bbs1	<clip2DFlag,.clip2DX0Jump04
+		bbs1	<clip2DFlag, .clip2DX0Jump04
 ;X0<0 X1>=0
 		lda	#$00
-		sta	clip2D1,y	;X0
+		sta	clip2D1, y	;X0
 		lda	#$00
-		sta	clip2D1+1,y
+		sta	clip2D1+1, y
 
 		lda	<mul16a
-		sta	clip2D1+2,y	;Y0
+		sta	clip2D1+2, y	;Y0
 		lda	<mul16a+1
-		sta	clip2D1+3,y
+		sta	clip2D1+3, y
 
 		inc	<clip2D1Count
 
@@ -4386,30 +5105,27 @@ clip2DX0:
 
 .clip2DX0Jump04:
 ;X0>=0 X1<0
-		lda	clip2D0,x	;X0
-		sta	clip2D1,y	;X0
-		lda	clip2D0+1,x
-		sta	clip2D1+1,y
+		lda	clip2D0, x	;X0
+		sta	clip2D1, y	;X0
+		lda	clip2D0+1, x
+		sta	clip2D1+1, y
 
-		lda	clip2D0+2,x	;Y0
-		sta	clip2D1+2,y	;Y0
-		lda	clip2D0+3,x
-		sta	clip2D1+3,y
+		lda	clip2D0+2, x	;Y0
+		sta	clip2D1+2, y	;Y0
+		lda	clip2D0+3, x
+		sta	clip2D1+3, y
 
 		lda	#$00
-		sta	clip2D1+4,y	;X1
+		sta	clip2D1+4, y	;X1
 		lda	#$00
-		sta	clip2D1+5,y
+		sta	clip2D1+5, y
 
 		lda	<mul16a
-		sta	clip2D1+6,y	;Y1
+		sta	clip2D1+6, y	;Y1
 		lda	<mul16a+1
-		sta	clip2D1+7,y
+		sta	clip2D1+7, y
 
-		clc
-		lda	<clip2D1Count
-		adc	#$02
-		sta	<clip2D1Count
+		add	<clip2D1Count, #$02
 
 		clc
 		tya
@@ -4420,15 +5136,15 @@ clip2DX0:
 
 .clip2DX0Jump02:
 ;X0>=0 X1>=0
-		lda	clip2D0,x	;X0
-		sta	clip2D1,y	;X0
-		lda	clip2D0+1,x
-		sta	clip2D1+1,y
+		lda	clip2D0, x	;X0
+		sta	clip2D1, y	;X0
+		lda	clip2D0+1, x
+		sta	clip2D1+1, y
 
-		lda	clip2D0+2,x	;Y0
-		sta	clip2D1+2,y	;Y0
-		lda	clip2D0+3,x
-		sta	clip2D1+3,y
+		lda	clip2D0+2, x	;Y0
+		sta	clip2D1+2, y	;Y0
+		lda	clip2D0+3, x
+		sta	clip2D1+3, y
 
 		inc	<clip2D1Count
 
@@ -4445,9 +5161,7 @@ clip2DX0:
 		tax
 
 		dec	<clip2D0Count
-		beq	.clip2DX0Jump07
-		jmp	.clip2DX0Loop0
-.clip2DX0Jump07:
+		jne	.clip2DX0Loop0
 
 		rts
 
@@ -4461,14 +5175,14 @@ clip2DY255:
 		tax
 
 		lda	clip2D1		;X0
-		sta	clip2D1,x	;last X
+		sta	clip2D1, x	;last X
 		lda	clip2D1+1
-		sta	clip2D1+1,x
+		sta	clip2D1+1, x
 
 		lda	clip2D1+2	;Y0
-		sta	clip2D1+2,x	;last Y
+		sta	clip2D1+2, x	;last Y
 		lda	clip2D1+3
-		sta	clip2D1+3,x
+		sta	clip2D1+3, x
 
 		clx
 		cly
@@ -4478,48 +5192,45 @@ clip2DY255:
 		stz	<clip2DFlag
 
 		sec
-		lda	clip2D1+2,x	;Y0
+		lda	clip2D1+2, x	;Y0
 		sbc	#192
-		lda	clip2D1+3,x
+		lda	clip2D1+3, x
 		sbc	#0
 		bmi	.clip2DY255Jump00
 		smb0	<clip2DFlag
 .clip2DY255Jump00:
 
 		sec
-		lda	clip2D1+6,x	;Y1
+		lda	clip2D1+6, x	;Y1
 		sbc	#192
-		lda	clip2D1+7,x
+		lda	clip2D1+7, x
 		sbc	#0
 		bmi	.clip2DY255Jump01
 		smb1	<clip2DFlag
 .clip2DY255Jump01:
 
 		lda	<clip2DFlag
-		bne	.clip2DY255Jump05
-		jmp	.clip2DY255Jump02
-.clip2DY255Jump05:
-		cmp	#$03
-		bne	.clip2DY255Jump06
-		jmp	.clip2DY255Jump03
-.clip2DY255Jump06:
+		jeq	.clip2DY255Jump02
 
+		cmp	#$03
+		jeq	.clip2DY255Jump03
+.
 ;(191-Y0) to mul16a
 		sec
 		lda	#191
-		sbc	clip2D1+2,x	;Y0
+		sbc	clip2D1+2, x	;Y0
 		sta	<mul16a
 		lda	#0
-		sbc	clip2D1+3,x
+		sbc	clip2D1+3, x
 		sta	<mul16a+1
 
 ;(X1-X0) to mul16b
 		sec
-		lda	clip2D1+4,x	;X1
-		sbc	clip2D1,x	;X0
+		lda	clip2D1+4, x	;X1
+		sbc	clip2D1, x	;X0
 		sta	<mul16b
-		lda	clip2D1+5,x
-		sbc	clip2D1+1,x
+		lda	clip2D1+5, x
+		sbc	clip2D1+1, x
 		sta	<mul16b+1
 
 ;(191-Y0)*(X1-X0) to mul16d:mul16c
@@ -4527,11 +5238,11 @@ clip2DY255:
 
 ;(Y1-Y0) to mul16a
 		sec
-		lda	clip2D1+6,x	;Y1
-		sbc	clip2D1+2,x	;Y0
+		lda	clip2D1+6, x	;Y1
+		sbc	clip2D1+2, x	;Y0
 		sta	<mul16a
-		lda	clip2D1+7,x
-		sbc	clip2D1+3,x
+		lda	clip2D1+7, x
+		sbc	clip2D1+3, x
 		sta	<mul16a+1
 
 ;(191-Y0)*(X1-X0)/(Y1-Y0)
@@ -4540,23 +5251,23 @@ clip2DY255:
 ;(191-Y0)*(X1-X0)/(Y1-Y0)+X0
 		clc
 		lda	<mul16a
-		adc	clip2D1,x	;X0
+		adc	clip2D1, x	;X0
 		sta	<mul16a
 		lda	<mul16a+1
-		adc	clip2D1+1,x
+		adc	clip2D1+1, x
 		sta	<mul16a+1
 
-		bbs1	<clip2DFlag,.clip2DY255Jump04
+		bbs1	<clip2DFlag, .clip2DY255Jump04
 ;Y0>191 Y1<=191
 		lda	<mul16a
-		sta	clip2D0,y	;X0
+		sta	clip2D0, y	;X0
 		lda	<mul16a+1
-		sta	clip2D0+1,y
+		sta	clip2D0+1, y
 
 		lda	#191
-		sta	clip2D0+2,y	;Y0
+		sta	clip2D0+2, y	;Y0
 		lda	#0
-		sta	clip2D0+3,y
+		sta	clip2D0+3, y
 
 		inc	<clip2D0Count
 
@@ -4569,30 +5280,27 @@ clip2DY255:
 
 .clip2DY255Jump04:
 ;Y0<=191 Y1>191
-		lda	clip2D1,x	;X0
-		sta	clip2D0,y	;X0
-		lda	clip2D1+1,x
-		sta	clip2D0+1,y
+		lda	clip2D1, x	;X0
+		sta	clip2D0, y	;X0
+		lda	clip2D1+1, x
+		sta	clip2D0+1, y
 
-		lda	clip2D1+2,x	;Y0
-		sta	clip2D0+2,y	;Y0
-		lda	clip2D1+3,x
-		sta	clip2D0+3,y
+		lda	clip2D1+2, x	;Y0
+		sta	clip2D0+2, y	;Y0
+		lda	clip2D1+3, x
+		sta	clip2D0+3, y
 
 		lda	<mul16a
-		sta	clip2D0+4,y	;X1
+		sta	clip2D0+4, y	;X1
 		lda	<mul16a+1
-		sta	clip2D0+5,y
+		sta	clip2D0+5, y
 
 		lda	#191
-		sta	clip2D0+6,y	;Y1
+		sta	clip2D0+6, y	;Y1
 		lda	#0
-		sta	clip2D0+7,y
+		sta	clip2D0+7, y
 
-		clc
-		lda	<clip2D0Count
-		adc	#$02
-		sta	<clip2D0Count
+		add	<clip2D0Count, #$02
 
 		clc
 		tya
@@ -4603,15 +5311,15 @@ clip2DY255:
 
 .clip2DY255Jump02:
 ;Y0<=191 Y1<=191
-		lda	clip2D1,x	;X0
-		sta	clip2D0,y	;X0
-		lda	clip2D1+1,x
-		sta	clip2D0+1,y
+		lda	clip2D1, x	;X0
+		sta	clip2D0, y	;X0
+		lda	clip2D1+1, x
+		sta	clip2D0+1, y
 
-		lda	clip2D1+2,x	;Y0
-		sta	clip2D0+2,y	;Y0
-		lda	clip2D1+3,x
-		sta	clip2D0+3,y
+		lda	clip2D1+2, x	;Y0
+		sta	clip2D0+2, y	;Y0
+		lda	clip2D1+3, x
+		sta	clip2D0+3, y
 
 		inc	<clip2D0Count
 
@@ -4628,9 +5336,7 @@ clip2DY255:
 		tax
 
 		dec	<clip2D1Count
-		beq	.clip2DY255Jump07
-		jmp	.clip2DY255Loop0
-.clip2DY255Jump07:
+		jne	.clip2DY255Loop0
 
 		rts
 
@@ -4644,14 +5350,14 @@ clip2DY0:
 		tax
 
 		lda	clip2D0		;X0
-		sta	clip2D0,x	;last X
+		sta	clip2D0, x	;last X
 		lda	clip2D0+1
-		sta	clip2D0+1,x
+		sta	clip2D0+1, x
 
 		lda	clip2D0+2	;Y0
-		sta	clip2D0+2,x	;last Y
+		sta	clip2D0+2, x	;last Y
 		lda	clip2D0+3
-		sta	clip2D0+3,x
+		sta	clip2D0+3, x
 
 		clx
 		cly
@@ -4660,41 +5366,38 @@ clip2DY0:
 .clip2DY0Loop0:
 		stz	<clip2DFlag
 
-		lda	clip2D0+3,x	;Y0
+		lda	clip2D0+3, x	;Y0
 		bpl	.clip2DY0Jump00
 		smb0	<clip2DFlag
 .clip2DY0Jump00:
 
-		lda	clip2D0+7,x	;Y1
+		lda	clip2D0+7, x	;Y1
 		bpl	.clip2DY0Jump01
 		smb1	<clip2DFlag
 .clip2DY0Jump01:
 
 		lda	<clip2DFlag
-		bne	.clip2DY0Jump05
-		jmp	.clip2DY0Jump02
-.clip2DY0Jump05:
-		cmp	#$03
-		bne	.clip2DY0Jump06
-		jmp	.clip2DY0Jump03
-.clip2DY0Jump06:
+		jeq	.clip2DY0Jump02
 
+		cmp	#$03
+		jeq	.clip2DY0Jump03
+.
 ;(0-Y0) to mul16a
 		sec
 		lda	#0
-		sbc	clip2D0+2,x	;Y0
+		sbc	clip2D0+2, x	;Y0
 		sta	<mul16a
 		lda	#0
-		sbc	clip2D0+3,x
+		sbc	clip2D0+3, x
 		sta	<mul16a+1
 
 ;(X1-X0) to mul16b
 		sec
-		lda	clip2D0+4,x	;X1
-		sbc	clip2D0,x	;X0
+		lda	clip2D0+4, x	;X1
+		sbc	clip2D0, x	;X0
 		sta	<mul16b
-		lda	clip2D0+5,x
-		sbc	clip2D0+1,x
+		lda	clip2D0+5, x
+		sbc	clip2D0+1, x
 		sta	<mul16b+1
 
 ;(0-Y0)*(X1-X0) to mul16d:mul16c
@@ -4702,11 +5405,11 @@ clip2DY0:
 
 ;(Y1-Y0) to mul16a
 		sec
-		lda	clip2D0+6,x	;Y1
-		sbc	clip2D0+2,x	;Y0
+		lda	clip2D0+6, x	;Y1
+		sbc	clip2D0+2, x	;Y0
 		sta	<mul16a
-		lda	clip2D0+7,x
-		sbc	clip2D0+3,x
+		lda	clip2D0+7, x
+		sbc	clip2D0+3, x
 		sta	<mul16a+1
 
 ;(0-Y0)*(X1-X0)/(Y1-Y0)
@@ -4715,23 +5418,23 @@ clip2DY0:
 ;(0-Y0)*(X1-X0)/(Y1-Y0)+X0
 		clc
 		lda	<mul16a
-		adc	clip2D0,x	;X0
+		adc	clip2D0, x	;X0
 		sta	<mul16a
 		lda	<mul16a+1
-		adc	clip2D0+1,x
+		adc	clip2D0+1, x
 		sta	<mul16a+1
 
-		bbs1	<clip2DFlag,.clip2DY0Jump04
+		bbs1	<clip2DFlag, .clip2DY0Jump04
 ;Y0<0 Y1>=0
 		lda	<mul16a
-		sta	clip2D1,y	;X0
+		sta	clip2D1, y	;X0
 		lda	<mul16a+1
-		sta	clip2D1+1,y
+		sta	clip2D1+1, y
 
 		lda	#$00
-		sta	clip2D1+2,y	;Y0
+		sta	clip2D1+2, y	;Y0
 		lda	#$00
-		sta	clip2D1+3,y
+		sta	clip2D1+3, y
 
 		inc	<clip2D1Count
 
@@ -4744,30 +5447,27 @@ clip2DY0:
 
 .clip2DY0Jump04:
 ;Y0>=0 Y1<0
-		lda	clip2D0,x	;X0
-		sta	clip2D1,y	;X0
-		lda	clip2D0+1,x
-		sta	clip2D1+1,y
+		lda	clip2D0, x	;X0
+		sta	clip2D1, y	;X0
+		lda	clip2D0+1, x
+		sta	clip2D1+1, y
 
-		lda	clip2D0+2,x	;Y0
-		sta	clip2D1+2,y	;Y0
-		lda	clip2D0+3,x
-		sta	clip2D1+3,y
+		lda	clip2D0+2, x	;Y0
+		sta	clip2D1+2, y	;Y0
+		lda	clip2D0+3, x
+		sta	clip2D1+3, y
 
 		lda	<mul16a
-		sta	clip2D1+4,y	;X1
+		sta	clip2D1+4, y	;X1
 		lda	<mul16a+1
-		sta	clip2D1+5,y
+		sta	clip2D1+5, y
 
 		lda	#$00
-		sta	clip2D1+6,y	;Y1
+		sta	clip2D1+6, y	;Y1
 		lda	#$00
-		sta	clip2D1+7,y
+		sta	clip2D1+7, y
 
-		clc
-		lda	<clip2D1Count
-		adc	#$02
-		sta	<clip2D1Count
+		add	<clip2D1Count, #$02
 
 		clc
 		tya
@@ -4778,15 +5478,15 @@ clip2DY0:
 
 .clip2DY0Jump02:
 ;Y0>=0 Y1>=0
-		lda	clip2D0,x	;X0
-		sta	clip2D1,y	;X0
-		lda	clip2D0+1,x
-		sta	clip2D1+1,y
+		lda	clip2D0, x	;X0
+		sta	clip2D1, y	;X0
+		lda	clip2D0+1, x
+		sta	clip2D1+1, y
 
-		lda	clip2D0+2,x	;Y0
-		sta	clip2D1+2,y	;Y0
-		lda	clip2D0+3,x
-		sta	clip2D1+3,y
+		lda	clip2D0+2, x	;Y0
+		sta	clip2D1+2, y	;Y0
+		lda	clip2D0+3, x
+		sta	clip2D1+3, y
 
 		inc	<clip2D1Count
 
@@ -4803,9 +5503,7 @@ clip2DY0:
 		tax
 
 		dec	<clip2D0Count
-		beq	.clip2DY0Jump07
-		jmp	.clip2DY0Loop0
-.clip2DY0Jump07:
+		jne	.clip2DY0Loop0
 
 		rts
 
@@ -4818,20 +5516,30 @@ calcEdge_putPoly:
 		asl	a
 		tax
 		lda	clip2D0
-		sta	clip2D0,x
+		sta	clip2D0, x
 		lda	clip2D0+2
-		sta	clip2D0+2,x
+		sta	clip2D0+2, x
+
+		mov	<minEdgeY, #$FF
 
 		jsr	initCalcEdge
+
 		clx
+
 .calcEdge_putPolyLoop0:
-		lda	clip2D0,x
+		lda	clip2D0, x
 		sta	<edgeX0
-		lda	clip2D0+2,x
+		lda	clip2D0+2, x
 		sta	<edgeY0
-		lda	clip2D0+4,x
+
+		cmp	<minEdgeY
+		jcs	.calcEdge_putPolyJump2
+		sta	<minEdgeY
+
+.calcEdge_putPolyJump2:
+		lda	clip2D0+4, x
 		sta	<edgeX1
-		lda	clip2D0+6,x
+		lda	clip2D0+6, x
 		sta	<edgeY1
 
 		phx
@@ -4846,25 +5554,7 @@ calcEdge_putPoly:
 		dec	<clip2D0Count
 		bne	.calcEdge_putPolyLoop0
 
-		cly
-.calcEdge_putPolyLoop2
-		lda	edgeCount,y
-		bpl	.calcEdge_putPolyJump1
-		iny
-		bra	.calcEdge_putPolyLoop2
-
-.calcEdge_putPolyLoop1:
-		lda	edgeCount,y
-		bmi	.calcEdge_putPolyEnd
-
-.calcEdge_putPolyJump1:
 		jsr	putPolyLine
-
-.calcEdge_putPolyJump0:
-		iny
-		bra	.calcEdge_putPolyLoop1
-
-.calcEdge_putPolyEnd:
 		rts
 
 
@@ -4877,13 +5567,13 @@ calcEdge:
 		beq	.edgeJump6
 
 		sta	<edgeSlopeY
-		bcs	.edgeJump7
+		jcs	.edgeJump7
 
 		eor	#$FF
 		inc	a
 		sta	<edgeSlopeY
 
-;edgeY0 > edgeY1 exchange X0 X1 Y0 Y1
+;edgeY0 > edgeY1 exchange X0<->X1 Y0<->Y1
 		lda	<edgeX0
 		ldx	<edgeX1
 		sta	<edgeX1
@@ -4894,16 +5584,16 @@ calcEdge:
 		sta	<edgeY1
 		stx	<edgeY0
 
-		bra	.edgeJump7
+		jmp	.edgeJump7
 
 .edgeJump6:
 ;edgeY0 = edgeY1
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		ldy	<edgeX1
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		rts
 
 .edgeJump7:
@@ -4921,8 +5611,7 @@ calcEdge:
 		inc	a
 		sta	<edgeSlopeX
 
-		lda	#$FF
-		sta	<edgeSigneX
+		mov	<edgeSigneX, #$FF
 
 		bra	.edgeJump3
 
@@ -4931,7 +5620,7 @@ calcEdge:
 		ldy	<edgeX0
 		ldx	<edgeY0
 .edgeLoop0:
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		cpx	<edgeY1
 		beq	.edgeJump9
 		inx
@@ -4943,7 +5632,7 @@ calcEdge:
 ;edgeSlope compare
 		lda	<edgeSlopeY
 		cmp	<edgeSlopeX
-		bcs	.edgeJump4
+		jcs	.edgeJump4
 
 ;edgeSlopeX > edgeSlopeY
 ;edgeSlope initialize
@@ -4959,7 +5648,7 @@ calcEdge:
 		ldx	<edgeY0
 .edgeXLoop0:
 		pha
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		pla
 .edgeXLoop1:
 		cpy	<edgeX1
@@ -4982,7 +5671,7 @@ calcEdge:
 
 .edgeXLoop4:
 		pha
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		pla
 .edgeXLoop5:
 		cpy	<edgeX0
@@ -5014,7 +5703,7 @@ calcEdge:
 ;edgeSigneX plus
 .edgeYLoop0:
 		pha
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		pla
 .edgeYLoop1:
 		cpx	<edgeY1
@@ -5033,7 +5722,7 @@ calcEdge:
 ;edgeSigneX minus
 .edgeYLoop4:
 		pha
-		jsr	setEdgeBuffer
+		setEdgeBufferm
 		pla
 .edgeYLoop5:
 		cpx	<edgeY1
@@ -5051,56 +5740,6 @@ calcEdge:
 
 
 ;----------------------------
-setEdgeBuffer:
-;set edge buffer
-		lda	edgeCount,x
-
-		beq	.setEdgeBufferJump0	;count 1
-		bpl	.setEdgeBufferJump1	;count 2
-
-;count 0
-		tya
-		sta	edgeLeft,x
-		inc	edgeCount,x
-		rts
-
-;count 1
-.setEdgeBufferJump0:
-		tya
-		cmp	edgeLeft,x
-		bcs	.setEdgeBufferJump4	;a >= edgeLeft,x
-
-		lda	edgeLeft,x
-		sta	edgeRight,x
-		tya
-		sta	edgeLeft,x
-
-		inc	edgeCount,x
-		rts
-
-.setEdgeBufferJump4:
-		sta	edgeRight,x
-		inc	edgeCount,x
-		rts
-
-;count 2
-.setEdgeBufferJump1:
-		tya
-		cmp	edgeLeft,x
-		bcs	.setEdgeBufferJump3	;a >= edgeLeft,x
-		sta	edgeLeft,x
-		rts
-
-.setEdgeBufferJump3:
-		cmp	edgeRight,x
-		bcc	.setEdgeBufferJump2	;a < edgeRight,x
-		sta	edgeRight,x
-
-.setEdgeBufferJump2:
-		rts
-
-
-;----------------------------
 initCalcEdge:
 ;initialize calculation edge
 		lda	#$FF
@@ -5113,6 +5752,20 @@ initCalcEdge:
 ;----------------------------
 putPolyLine:
 ;put poly line
+		ldy	<minEdgeY
+		bra	.loopStart
+;loop
+.loop0:
+		cli
+
+		iny
+
+.loopStart:	lda	edgeCount, y
+		bpl	.putPolyProc
+		rts
+
+.putPolyProc:
+		sei
 
 ;set poly color
 		tya
@@ -5120,38 +5773,34 @@ putPolyLine:
 		ora	<polyLineColorNo
 		tax
 
-		lda	polyLineColorData0,x
+		lda	polyLineColorData0, x
 		sta	<polyLineColorDataWork0
 
-		lda	polyLineColorData1,x
+		lda	polyLineColorData1, x
 		sta	<polyLineColorDataWork1
 
-		lda	polyLineColorData2,x
+		lda	polyLineColorData2, x
 		sta	<polyLineColorDataWork2
 
-		lda	polyLineColorData3,x
+		lda	polyLineColorData3, x
 		sta	<polyLineColorDataWork3
 
 ;calation vram address
 ;left
+;left address
 		ldx	edgeLeft,y
-		lda	polyLineAddrConvYLow0,y
-		ora	polyLineAddrConvXLow0,x
+		lda	polyLineAddrConvYLow0, y
+		ora	polyLineAddrConvXLow0, x
 		sta	<polyLineLeftAddr
 
-		lda	polyLineAddrConvYHigh0,y
-		ora	polyLineAddrConvXHigh0,x
+		lda	polyLineAddrConvYHigh0, y
+		ora	polyLineAddrConvXHigh0, x
 		sta	<polyLineLeftAddr+1
 
-		lda	polyLineAddrConvYBank,y
-		tam	#$02
-
-		lda	polyLineAddrConvX,x
+		lda	polyLineAddrConvX, x
 		sta	<polyLineCount
 
-		lda	polyLineAddrConvXShift,x
-		tax
-		lda	polyLineLeftDatas,x
+		lda	polyLineLeftDatas, x
 		sta	<polyLineLeftData
 		eor	#$FF
 		sta	<polyLineLeftMask
@@ -5159,322 +5808,689 @@ putPolyLine:
 ;right
 		ldx	edgeRight,y
 
+;calation counts
 		sec
-		lda	polyLineAddrConvX,x
+		lda	polyLineAddrConvX, x
 		sbc	<polyLineCount
-		beq	.polyLineJump03
+
+;count 0
+		jeq	.polyLineJump03
+
 		sta	<polyLineCount
 
-		lda	polyLineAddrConvXShift,x
-		tax
-		lda	polyLineRightDatas,x
+;right address
+		lda	polyLineAddrConvYLow0, y
+		ora	polyLineAddrConvXLow0, x
+		sta	<polyLineRightAddr
+
+		lda	polyLineAddrConvYHigh0, y
+		ora	polyLineAddrConvXHigh0, x
+		sta	<polyLineRightAddr+1
+
+		lda	polyLineRightDatas, x
 		sta	<polyLineRightData
 		eor	#$FF
 		sta	<polyLineRightMask
 
-		jsr	putPolyLine01Left
+;put line
+		lda	<selectVdc
+		cmp	#VDC2
+		jeq	.vdc2Jp
+
+;VDC1
+.vdc1Jp:
+		stz	VPC_6		;select VDC#1
+
+;center jump index
+		lda	<polyLineCount
+		asl	a
+		tax
+
 		phy
-		jsr	putPolyLine00
-		jsr	putPolyLine01Right
+
+;VDC1 left 0 1
+		lda	<polyLineLeftAddr
+		ldy	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$01
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$02
+
+		lda	VDC1_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC1_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork0
+		and	<polyLineLeftData
+		ora	<polyLineDataLow
+		sta	VDC1_2
+
+		lda	<polyLineColorDataWork1
+		and	<polyLineLeftData
+		ora	<polyLineDataHigh
+		sta	VDC1_3
+
+;VDC1 center 0 1
+		lda	<polyLineColorDataWork0
+		ldy	<polyLineColorDataWork1
+
+		jmp	[.centerVDC1_01Addr, x]
+.centerVDC1_01:
+		putPolyLineV1lm
+
+;VDC1 right 0 1
+		lda	<polyLineRightAddr
+		ldy	<polyLineRightAddr+1
+		st0	#$00
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$01
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$02
+
+		lda	VDC1_2
+		and	<polyLineRightMask
+		sta	<polyLineDataLow
+
+		lda	VDC1_3
+		and	<polyLineRightMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork0
+		and	<polyLineRightData
+		ora	<polyLineDataLow
+		sta	VDC1_2
+
+		lda	<polyLineColorDataWork1
+		and	<polyLineRightData
+		ora	<polyLineDataHigh
+		sta	VDC1_3
+
+;VDC1 left 2 3
+		lda	<polyLineLeftAddr
+		ora	#$08
+		ldy	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$01
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$02
+
+		lda	VDC1_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC1_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork2
+		and	<polyLineLeftData
+		ora	<polyLineDataLow
+		sta	VDC1_2
+
+		lda	<polyLineColorDataWork3
+		and	<polyLineLeftData
+		ora	<polyLineDataHigh
+		sta	VDC1_3
+
+;VDC1 center 2 3
+		lda	<polyLineColorDataWork2
+		ldy	<polyLineColorDataWork3
+		jmp	[.centerVDC1_02Addr, x]
+.centerVDC1_02:
+		putPolyLineV1lm
+
+;VDC1 right 2 3
+		lda	<polyLineRightAddr
+		ora	#$08
+		ldy	<polyLineRightAddr+1
+		st0	#$00
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$01
+		sta	VDC1_2
+		sty	VDC1_3
+
+		st0	#$02
+
+		lda	VDC1_2
+		and	<polyLineRightMask
+		sta	<polyLineDataLow
+
+		lda	VDC1_3
+		and	<polyLineRightMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork2
+		and	<polyLineRightData
+		ora	<polyLineDataLow
+		sta	VDC1_2
+
+		lda	<polyLineColorDataWork3
+		and	<polyLineRightData
+		ora	<polyLineDataHigh
+		sta	VDC1_3
+
 		ply
 
-		rts
+;loop jump
+		jmp	.loop0
 
-.polyLineJump03:
-		lda	polyLineAddrConvXShift,x
+;VDC2
+.vdc2Jp:
+		lda	#$01
+		sta	VPC_6		;select VDC#2
+
+		lda	<polyLineCount
+		asl	a
 		tax
+
+		phy
+
+;VDC2 left 0 1
+		lda	<polyLineLeftAddr
+		ldy	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$01
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$02
+
+		lda	VDC2_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC2_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork0
+		and	<polyLineLeftData
+		ora	<polyLineDataLow
+		sta	VDC2_2
+
+		lda	<polyLineColorDataWork1
+		and	<polyLineLeftData
+		ora	<polyLineDataHigh
+		sta	VDC2_3
+
+;VDC2 center 0 1
+		lda	<polyLineColorDataWork0
+		ldy	<polyLineColorDataWork1
+		jmp	[.centerVDC2_01Addr, x]
+.centerVDC2_01:
+		putPolyLineV2lm
+
+;VDC2 right 0 1
+		lda	<polyLineRightAddr
+		ldy	<polyLineRightAddr+1
+		st0	#$00
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$01
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$02
+
+		lda	VDC2_2
+		and	<polyLineRightMask
+		sta	<polyLineDataLow
+
+		lda	VDC2_3
+		and	<polyLineRightMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork0
+		and	<polyLineRightData
+		ora	<polyLineDataLow
+		sta	VDC2_2
+
+		lda	<polyLineColorDataWork1
+		and	<polyLineRightData
+		ora	<polyLineDataHigh
+		sta	VDC2_3
+
+;VDC2 left 2 3
+		lda	<polyLineLeftAddr
+		ora	#$08
+		ldy	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$01
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$02
+
+		lda	VDC2_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC2_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork2
+		and	<polyLineLeftData
+		ora	<polyLineDataLow
+		sta	VDC2_2
+
+		lda	<polyLineColorDataWork3
+		and	<polyLineLeftData
+		ora	<polyLineDataHigh
+		sta	VDC2_3
+
+;VDC2 center 2 3
+		lda	<polyLineColorDataWork2
+		ldy	<polyLineColorDataWork3
+		jmp	[.centerVDC2_02Addr, x]
+.centerVDC2_02:
+		putPolyLineV2lm
+
+;VDC2 right 2 3
+		lda	<polyLineRightAddr
+		ora	#$08
+		ldy	<polyLineRightAddr+1
+		st0	#$00
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$01
+		sta	VDC2_2
+		sty	VDC2_3
+
+		st0	#$02
+
+		lda	VDC2_2
+		and	<polyLineRightMask
+		sta	<polyLineDataLow
+
+		lda	VDC2_3
+		and	<polyLineRightMask
+		sta	<polyLineDataHigh
+
+		lda	<polyLineColorDataWork2
+		and	<polyLineRightData
+		ora	<polyLineDataLow
+		sta	VDC2_2
+
+		lda	<polyLineColorDataWork3
+		and	<polyLineRightData
+		ora	<polyLineDataHigh
+		sta	VDC2_3
+
+		ply
+
+;loop jump
+		jmp	.loop0
+
+;put line same address
+.polyLineJump03:
 		lda	<polyLineLeftData
 		and	polyLineRightDatas,x
 		sta	<polyLineLeftData
 		eor	#$FF
 		sta	<polyLineLeftMask
 
-		jsr	putPolyLine01Left
+		lda	<selectVdc
+		cmp	#VDC2
+		beq	.vdc2Jp2
 
-.polyLineJump04:
-		rts
+;VDC1
+.vdc1Jp2:
+		stz	VPC_6		;select VDC#1
 
+;VDC1 left 0 1
+		lda	<polyLineLeftAddr
+		ldx	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC1_2
+		stx	VDC1_3
 
-;----------------------------
-putPolyLine01Left:
-;put left poly line
+		st0	#$01
+		sta	VDC1_2
+		stx	VDC1_3
+
+		st0	#$02
+
+		lda	VDC1_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC1_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
+
 		lda	<polyLineColorDataWork0
 		and	<polyLineLeftData
-		sta	<polyLineColorDataWork
-
-		lda	[polyLineLeftAddr]
-		and	<polyLineLeftMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
-
-		inc	<polyLineLeftAddr
+		ora	<polyLineDataLow
+		sta	VDC1_2
 
 		lda	<polyLineColorDataWork1
 		and	<polyLineLeftData
-		sta	<polyLineColorDataWork
+		ora	<polyLineDataHigh
+		sta	VDC1_3
 
-		lda	[polyLineLeftAddr]
-		and	<polyLineLeftMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
-
-		clc
+;VDC1 left 2 3
 		lda	<polyLineLeftAddr
-		adc	#$0F
-		sta	<polyLineLeftAddr
+		ora	#$08
+		ldx	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC1_2
+		stx	VDC1_3
+
+		st0	#$01
+		sta	VDC1_2
+		stx	VDC1_3
+
+		st0	#$02
+
+		lda	VDC1_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC1_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
 
 		lda	<polyLineColorDataWork2
 		and	<polyLineLeftData
-		sta	<polyLineColorDataWork
-
-		lda	[polyLineLeftAddr]
-		and	<polyLineLeftMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
-
-		inc	<polyLineLeftAddr
+		ora	<polyLineDataLow
+		sta	VDC1_2
 
 		lda	<polyLineColorDataWork3
 		and	<polyLineLeftData
-		sta	<polyLineColorDataWork
+		ora	<polyLineDataHigh
+		sta	VDC1_3
 
-		lda	[polyLineLeftAddr]
+;loop jump
+		jmp	.loop0
+
+;VDC2
+.vdc2Jp2:
+		lda	#$01
+		sta	VPC_6		;select VDC#2
+
+;VDC2 left 0 1
+		lda	<polyLineLeftAddr
+		ldx	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC2_2
+		stx	VDC2_3
+
+		st0	#$01
+		sta	VDC2_2
+		stx	VDC2_3
+
+		st0	#$02
+
+		lda	VDC2_2
 		and	<polyLineLeftMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr]
+		sta	<polyLineDataLow
 
-		rts
+		lda	VDC2_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
 
-
-;----------------------------
-putPolyLine01Right:
-;put right poly line
 		lda	<polyLineColorDataWork0
-		and	<polyLineRightData
-		sta	<polyLineColorDataWork
-
-		lda	[polyLineLeftAddr],y
-		and	<polyLineRightMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr],y
-
-		iny
+		and	<polyLineLeftData
+		ora	<polyLineDataLow
+		sta	VDC2_2
 
 		lda	<polyLineColorDataWork1
-		and	<polyLineRightData
-		sta	<polyLineColorDataWork
+		and	<polyLineLeftData
+		ora	<polyLineDataHigh
+		sta	VDC2_3
 
-		lda	[polyLineLeftAddr],y
-		and	<polyLineRightMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr],y
+;VDC2 left 2 3
+		lda	<polyLineLeftAddr
+		ora	#$08
+		ldx	<polyLineLeftAddr+1
+		st0	#$00
+		sta	VDC2_2
+		stx	VDC2_3
 
-		clc
-		tya
-		adc	#$0F
-		tay
+		st0	#$01
+		sta	VDC2_2
+		stx	VDC2_3
+
+		st0	#$02
+
+		lda	VDC2_2
+		and	<polyLineLeftMask
+		sta	<polyLineDataLow
+
+		lda	VDC2_3
+		and	<polyLineLeftMask
+		sta	<polyLineDataHigh
 
 		lda	<polyLineColorDataWork2
-		and	<polyLineRightData
-		sta	<polyLineColorDataWork
-
-		lda	[polyLineLeftAddr],y
-		and	<polyLineRightMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr],y
-
-		iny
+		and	<polyLineLeftData
+		ora	<polyLineDataLow
+		sta	VDC2_2
 
 		lda	<polyLineColorDataWork3
-		and	<polyLineRightData
-		sta	<polyLineColorDataWork
+		and	<polyLineLeftData
+		ora	<polyLineDataHigh
+		sta	VDC2_3
 
-		lda	[polyLineLeftAddr],y
-		and	<polyLineRightMask
-		ora	<polyLineColorDataWork
-		sta	[polyLineLeftAddr],y
+;loop jump
+		jmp	.loop0
 
-		rts
+;--------
+.centerVDC1_01Addr:
+			dw	.centerVDC1_01 +6*30	;-1
+			dw	.centerVDC1_01 +6*30	;0
 
+			dw	.centerVDC1_01 +6*29	;1
+			dw	.centerVDC1_01 +6*28	;2
+			dw	.centerVDC1_01 +6*27	;3
+			dw	.centerVDC1_01 +6*26	;4
+			dw	.centerVDC1_01 +6*25	;5
+			dw	.centerVDC1_01 +6*24	;6
+			dw	.centerVDC1_01 +6*23	;7
+			dw	.centerVDC1_01 +6*22	;8
+			dw	.centerVDC1_01 +6*21	;9
 
-;----------------------------
-putPolyLine00:
-;put left to right poly line
-		lda	<polyLineLeftAddr
-		adc	#$0F
-		tay
-		bcc	.putPolyLine00Jump0
-		inc	<polyLineLeftAddr+1
-.putPolyLine00Jump0:
-		stz	<polyLineLeftAddr
+			dw	.centerVDC1_01 +6*20	;10
+			dw	.centerVDC1_01 +6*19	;11
+			dw	.centerVDC1_01 +6*18	;12
+			dw	.centerVDC1_01 +6*17	;13
+			dw	.centerVDC1_01 +6*16	;14
+			dw	.centerVDC1_01 +6*15	;15
+			dw	.centerVDC1_01 +6*14	;16
+			dw	.centerVDC1_01 +6*13	;17
+			dw	.centerVDC1_01 +6*12	;18
+			dw	.centerVDC1_01 +6*11	;19
 
-		lda	<polyLineCount
-		asl	a
-		tax
-		jmp	[putPolyJumpAddr, x]
+			dw	.centerVDC1_01 +6*10	;20
+			dw	.centerVDC1_01 +6*9	;21
+			dw	.centerVDC1_01 +6*8	;22
+			dw	.centerVDC1_01 +6*7	;23
+			dw	.centerVDC1_01 +6*6	;24
+			dw	.centerVDC1_01 +6*5	;25
+			dw	.centerVDC1_01 +6*4	;26
+			dw	.centerVDC1_01 +6*3	;27
+			dw	.centerVDC1_01 +6*2	;28
+			dw	.centerVDC1_01 +6*1	;29
 
-putPolyLine30:
-		putPolyLine00m
-putPolyLine29:
-		putPolyLine00m
-putPolyLine28:
-		putPolyLine00m
-putPolyLine27:
-		putPolyLine00m
-putPolyLine26:
-		putPolyLine00m
-putPolyLine25:
-		putPolyLine00m
-putPolyLine24:
-		putPolyLine00m
-putPolyLine23
-		putPolyLine00m
-putPolyLine22:
-		putPolyLine00m
-putPolyLine21:
-		putPolyLine00m
+			dw	.centerVDC1_01 +6*0	;30
 
-putPolyLine20:
-		putPolyLine00m
-putPolyLine19:
-		putPolyLine00m
-putPolyLine18:
-		putPolyLine00m
-putPolyLine17:
-		putPolyLine00m
-putPolyLine16:
-		putPolyLine00m
-putPolyLine15:
-		putPolyLine00m
-putPolyLine14:
-		putPolyLine00m
-putPolyLine13
-		putPolyLine00m
-putPolyLine12:
-		putPolyLine00m
-putPolyLine11:
-		putPolyLine00m
+;--------
+.centerVDC1_02Addr:
+			dw	.centerVDC1_02 +6*30	;-1
+			dw	.centerVDC1_02 +6*30	;0
 
-putPolyLine10:
-		putPolyLine00m
-putPolyLine09:
-		putPolyLine00m
-putPolyLine08:
-		putPolyLine00m
-putPolyLine07:
-		putPolyLine00m
-putPolyLine06:
-		putPolyLine00m
-putPolyLine05:
-		putPolyLine00m
-putPolyLine04:
-		putPolyLine00m
-putPolyLine03
-		putPolyLine00m
-putPolyLine02:
-		putPolyLine00m
-putPolyLine01:
-		putPolyLine00m
+			dw	.centerVDC1_02 +6*29	;1
+			dw	.centerVDC1_02 +6*28	;2
+			dw	.centerVDC1_02 +6*27	;3
+			dw	.centerVDC1_02 +6*26	;4
+			dw	.centerVDC1_02 +6*25	;5
+			dw	.centerVDC1_02 +6*24	;6
+			dw	.centerVDC1_02 +6*23	;7
+			dw	.centerVDC1_02 +6*22	;8
+			dw	.centerVDC1_02 +6*21	;9
 
-putPolyLineEnd:
-		rts
+			dw	.centerVDC1_02 +6*20	;10
+			dw	.centerVDC1_02 +6*19	;11
+			dw	.centerVDC1_02 +6*18	;12
+			dw	.centerVDC1_02 +6*17	;13
+			dw	.centerVDC1_02 +6*16	;14
+			dw	.centerVDC1_02 +6*15	;15
+			dw	.centerVDC1_02 +6*14	;16
+			dw	.centerVDC1_02 +6*13	;17
+			dw	.centerVDC1_02 +6*12	;18
+			dw	.centerVDC1_02 +6*11	;19
 
+			dw	.centerVDC1_02 +6*10	;20
+			dw	.centerVDC1_02 +6*9	;21
+			dw	.centerVDC1_02 +6*8	;22
+			dw	.centerVDC1_02 +6*7	;23
+			dw	.centerVDC1_02 +6*6	;24
+			dw	.centerVDC1_02 +6*5	;25
+			dw	.centerVDC1_02 +6*4	;26
+			dw	.centerVDC1_02 +6*3	;27
+			dw	.centerVDC1_02 +6*2	;28
+			dw	.centerVDC1_02 +6*1	;29
 
-;----------------------------
-clearRam:
-;
-		lda	#$F9
-		tam	#$02
-		tii	clearRamData0, $4000, $20
-		tii	$4000, $4020, $2000-$20
+			dw	.centerVDC1_02 +6*0	;30
 
-		lda	#$FA
-		tam	#$02
-		tii	clearRamData0, $4000, $20
-		tii	$4000, $4020, $1000-$20
-		tii	clearRamData1, $5000, $20
-		tii	$5000, $5020, $1000-$20
+;--------
+.centerVDC2_01Addr:
+			dw	.centerVDC2_01 +6*30	;-1
+			dw	.centerVDC2_01 +6*30	;0
 
-		lda	#$FB
-		tam	#$02
-		tii	clearRamData1, $4000, $20
-		tii	$4000, $4020, $2000-$20
+			dw	.centerVDC2_01 +6*29	;1
+			dw	.centerVDC2_01 +6*28	;2
+			dw	.centerVDC2_01 +6*27	;3
+			dw	.centerVDC2_01 +6*26	;4
+			dw	.centerVDC2_01 +6*25	;5
+			dw	.centerVDC2_01 +6*24	;6
+			dw	.centerVDC2_01 +6*23	;7
+			dw	.centerVDC2_01 +6*22	;8
+			dw	.centerVDC2_01 +6*21	;9
 
-		rts
+			dw	.centerVDC2_01 +6*20	;10
+			dw	.centerVDC2_01 +6*19	;11
+			dw	.centerVDC2_01 +6*18	;12
+			dw	.centerVDC2_01 +6*17	;13
+			dw	.centerVDC2_01 +6*16	;14
+			dw	.centerVDC2_01 +6*15	;15
+			dw	.centerVDC2_01 +6*14	;16
+			dw	.centerVDC2_01 +6*13	;17
+			dw	.centerVDC2_01 +6*12	;18
+			dw	.centerVDC2_01 +6*11	;19
 
+			dw	.centerVDC2_01 +6*10	;20
+			dw	.centerVDC2_01 +6*9	;21
+			dw	.centerVDC2_01 +6*8	;22
+			dw	.centerVDC2_01 +6*7	;23
+			dw	.centerVDC2_01 +6*6	;24
+			dw	.centerVDC2_01 +6*5	;25
+			dw	.centerVDC2_01 +6*4	;26
+			dw	.centerVDC2_01 +6*3	;27
+			dw	.centerVDC2_01 +6*2	;28
+			dw	.centerVDC2_01 +6*1	;29
 
-;----------------------------
-ramToChar:
-;move ram to vram
-		lda	#$F9
-		tam	#$02
+			dw	.centerVDC2_01 +6*0	;30
 
-		sei
-		st0	#$00
-		st1	#$00
-		st2	#$20
-		st0	#$02
-		tia	$4000, $0002, $2000
-		cli
+;--------
+.centerVDC2_02Addr:
+			dw	.centerVDC2_02 +6*30	;-1
+			dw	.centerVDC2_02 +6*30	;0
 
-		lda	#$FA
-		tam	#$02
+			dw	.centerVDC2_02 +6*29	;1
+			dw	.centerVDC2_02 +6*28	;2
+			dw	.centerVDC2_02 +6*27	;3
+			dw	.centerVDC2_02 +6*26	;4
+			dw	.centerVDC2_02 +6*25	;5
+			dw	.centerVDC2_02 +6*24	;6
+			dw	.centerVDC2_02 +6*23	;7
+			dw	.centerVDC2_02 +6*22	;8
+			dw	.centerVDC2_02 +6*21	;9
 
-		sei
-		st0	#$00
-		st1	#$00
-		st2	#$30
-		st0	#$02
-		tia	$4000, $0002, $2000
-		cli
+			dw	.centerVDC2_02 +6*20	;10
+			dw	.centerVDC2_02 +6*19	;11
+			dw	.centerVDC2_02 +6*18	;12
+			dw	.centerVDC2_02 +6*17	;13
+			dw	.centerVDC2_02 +6*16	;14
+			dw	.centerVDC2_02 +6*15	;15
+			dw	.centerVDC2_02 +6*14	;16
+			dw	.centerVDC2_02 +6*13	;17
+			dw	.centerVDC2_02 +6*12	;18
+			dw	.centerVDC2_02 +6*11	;19
 
-		lda	#$FB
-		tam	#$02
+			dw	.centerVDC2_02 +6*10	;20
+			dw	.centerVDC2_02 +6*9	;21
+			dw	.centerVDC2_02 +6*8	;22
+			dw	.centerVDC2_02 +6*7	;23
+			dw	.centerVDC2_02 +6*6	;24
+			dw	.centerVDC2_02 +6*5	;25
+			dw	.centerVDC2_02 +6*4	;26
+			dw	.centerVDC2_02 +6*3	;27
+			dw	.centerVDC2_02 +6*2	;28
+			dw	.centerVDC2_02 +6*1	;29
 
-		sei
-		st0	#$00
-		st1	#$00
-		st2	#$40
-		st0	#$02
-		tia	$4000, $0002, $2000
-		cli
-
-		rts
+			dw	.centerVDC2_02 +6*0	;30
 
 
 ;----------------------------
 setBAT:
 ;set BAT
-		stz	setBatWork
-		lda	#$02
-		sta	setBatWork+1
 
-		st0	#$00
-		st1	#$00
-		st2	#$00
-		st0	#$02
+		mov	VDC1_0, #$00
+		movw	VDC1_2, #$0000
+		mov	VDC1_0, #$02
 
-		ldy	#24
-.setBatLoop0:
-		ldx	#32
-.setBatLoop1:
-		lda	setBatWork
-		sta	$0002
-		lda	setBatWork+1
-		sta	$0003
+		mov	VDC2_0, #$00
+		movw	VDC2_2, #$0000
+		mov	VDC2_0, #$02
 
-		clc
-		lda	setBatWork
-		adc	#1
-		sta	setBatWork
-		bcc	.setBatJump0
-		inc	setBatWork+1
+		movw	<setBatWork, #$0400
+.clearbatloop0:
+		movw	VDC1_2, <setBatWork
 
-.setBatJump0:
-		dex
-		bne	.setBatLoop1
-		dey
-		bne	.setBatLoop0
+		movw	VDC2_2, <setBatWork
+
+		addw	<setBatWork, #$0002
+		cmpw	<setBatWork, #$0800
+		bcc	.clearbatloop0
+
+		movw	<setBatWork, #$0401
+.clearbatloop1:
+		movw	VDC1_2, <setBatWork
+
+		movw	VDC2_2, <setBatWork
+
+		addw	<setBatWork, #$0002
+		cmpw	<setBatWork, #$0801
+		bcc	.clearbatloop1
 
 		rts
 
@@ -5485,127 +6501,43 @@ setBAT:
 		.org	$C000
 
 ;----------------------------
-putPolyJumpAddr:
-			dw	putPolyLineEnd
-			dw	putPolyLineEnd
-
-			dw	putPolyLine01
-			dw	putPolyLine02
-			dw	putPolyLine03
-			dw	putPolyLine04
-			dw	putPolyLine05
-			dw	putPolyLine06
-			dw	putPolyLine07
-			dw	putPolyLine08
-			dw	putPolyLine09
-
-			dw	putPolyLine10
-			dw	putPolyLine11
-			dw	putPolyLine12
-			dw	putPolyLine13
-			dw	putPolyLine14
-			dw	putPolyLine15
-			dw	putPolyLine16
-			dw	putPolyLine17
-			dw	putPolyLine18
-			dw	putPolyLine19
-
-			dw	putPolyLine20
-			dw	putPolyLine21
-			dw	putPolyLine22
-			dw	putPolyLine23
-			dw	putPolyLine24
-			dw	putPolyLine25
-			dw	putPolyLine26
-			dw	putPolyLine27
-			dw	putPolyLine28
-			dw	putPolyLine29
-
-			dw	putPolyLine30
-
-
-;----------------------------
-clearRamData0:
-		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF,\
-			$FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-
-
-;----------------------------
-clearRamData1:
-		.db	$00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF, $00, $FF,\
-			$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-
-
-;----------------------------
-divbankdata:
-		.db	$14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14,\
-			$14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14, $14,\
-			$15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15,\
-			$15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15, $15,\
-			$16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16,\
-			$16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16,\
-			$17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17,\
-			$17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17, $17
-
-
-;----------------------------
-polyLineAddrConvYBank:
-		.db	$F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9,\
-			$F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9,\
-			$F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9,\
-			$F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9, $F9,\
-			$FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA,\
-			$FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA,\
-			$FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA,\
-			$FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA, $FA,\
-			$FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB,\
-			$FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB,\
-			$FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB,\
-			$FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB, $FB,\
-			$FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC,\
-			$FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC,\
-			$FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC,\
-			$FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC, $FC
-
-
-;----------------------------
 polyLineAddrConvYHigh0:
 		.db	$40, $40, $40, $40, $40, $40, $40, $40, $44, $44, $44, $44, $44, $44, $44, $44,\
 			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
 			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
 			$58, $58, $58, $58, $58, $58, $58, $58, $5C, $5C, $5C, $5C, $5C, $5C, $5C, $5C,\
+			$60, $60, $60, $60, $60, $60, $60, $60, $64, $64, $64, $64, $64, $64, $64, $64,\
+			$68, $68, $68, $68, $68, $68, $68, $68, $6C, $6C, $6C, $6C, $6C, $6C, $6C, $6C,\
+			$70, $70, $70, $70, $70, $70, $70, $70, $74, $74, $74, $74, $74, $74, $74, $74,\
+			$78, $78, $78, $78, $78, $78, $78, $78, $7C, $7C, $7C, $7C, $7C, $7C, $7C, $7C,\
 			$40, $40, $40, $40, $40, $40, $40, $40, $44, $44, $44, $44, $44, $44, $44, $44,\
 			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
 			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
 			$58, $58, $58, $58, $58, $58, $58, $58, $5C, $5C, $5C, $5C, $5C, $5C, $5C, $5C,\
-			$40, $40, $40, $40, $40, $40, $40, $40, $44, $44, $44, $44, $44, $44, $44, $44,\
-			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
-			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
-			$58, $58, $58, $58, $58, $58, $58, $58, $5C, $5C, $5C, $5C, $5C, $5C, $5C, $5C,\
-			$40, $40, $40, $40, $40, $40, $40, $40, $44, $44, $44, $44, $44, $44, $44, $44,\
-			$48, $48, $48, $48, $48, $48, $48, $48, $4C, $4C, $4C, $4C, $4C, $4C, $4C, $4C,\
-			$50, $50, $50, $50, $50, $50, $50, $50, $54, $54, $54, $54, $54, $54, $54, $54,\
-			$58, $58, $58, $58, $58, $58, $58, $58, $5C, $5C, $5C, $5C, $5C, $5C, $5C, $5C
+			$60, $60, $60, $60, $60, $60, $60, $60, $64, $64, $64, $64, $64, $64, $64, $64,\
+			$68, $68, $68, $68, $68, $68, $68, $68, $6C, $6C, $6C, $6C, $6C, $6C, $6C, $6C,\
+			$70, $70, $70, $70, $70, $70, $70, $70, $74, $74, $74, $74, $74, $74, $74, $74,\
+			$78, $78, $78, $78, $78, $78, $78, $78, $7C, $7C, $7C, $7C, $7C, $7C, $7C, $7C
 
 
 ;----------------------------
 polyLineAddrConvYLow0:
-		.db	$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E,\
-			$00, $02, $04, $06, $08, $0A, $0C, $0E, $00, $02, $04, $06, $08, $0A, $0C, $0E
+		.db	$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
+			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17
 
 
 ;----------------------------
@@ -5669,33 +6601,43 @@ polyLineAddrConvX:
 
 
 ;----------------------------
-polyLineAddrConvXShift:
-		.db	$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
-			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07
-
-
-;----------------------------
 polyLineLeftDatas:
-		.db	$FF, $7F, $3F, $1F, $0F, $07, $03, $01
+		.db	$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01,\
+			$FF, $7F, $3F, $1F, $0F, $07, $03, $01, $FF, $7F, $3F, $1F, $0F, $07, $03, $01
 
 
 ;----------------------------
 polyLineRightDatas:
-		.db	$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF
+		.db	$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF,\
+			$80, $C0, $E0, $F0, $F8, $FC, $FE, $FF, $80, $C0, $E0, $F0, $F8, $FC, $FE, $FF
 
 
 ;----------------------------
@@ -5814,4 +6756,4 @@ cosDataLow:
 		.bank	3
 		INCBIN	"char.dat"		;    8K  3    $03
 		INCBIN	"mul.dat"		;  128K  4~19 $04~$13
-		INCBIN	"div.dat"		;   64K 20~27 $14~$1B
+		INCBIN	"div.dat"		;   96K 20~31 $14~$1F
