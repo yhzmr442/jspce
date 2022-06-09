@@ -1471,6 +1471,13 @@ moveToTransform2DWork0:
 
 
 ;----------------------------
+setPolygonColorIndex:
+;
+		sta	<polygonColorIndex
+		rts
+
+
+;----------------------------
 putPolygonBuffer:
 ;
 		phx

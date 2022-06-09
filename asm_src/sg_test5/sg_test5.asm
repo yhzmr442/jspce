@@ -1,4 +1,4 @@
-;sg_test5.asm
+;main.asm
 ;//////////////////////////////////
 ;Sound effect Files
 ;Taira Komori All Rights Reserved. 制作・著作 小森平  komoritaira@gmail.com
@@ -110,6 +110,7 @@ wallDeltaZWork		.ds	2
 ;----------------------------
 main:
 ;
+
 ;initialize system
 		jsr	initializeSystem
 
@@ -169,7 +170,8 @@ main:
 		jsr	checkHitShotEnemy
 
 ;set polygon color index
-		stz	<polygonColorIndex
+		cla
+		jsr	setPolygonColorIndex
 
 ;set model
 		jsr	setEnemyModel
