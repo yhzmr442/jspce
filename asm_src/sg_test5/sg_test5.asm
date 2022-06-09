@@ -1,4 +1,4 @@
-;main.asm
+;sg_test5.asm
 ;//////////////////////////////////
 ;Sound effect Files
 ;Taira Komori All Rights Reserved. 制作・著作 小森平  komoritaira@gmail.com
