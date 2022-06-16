@@ -110,7 +110,6 @@ wallDeltaZWork		.ds	2
 ;----------------------------
 main:
 ;
-
 ;initialize system
 		jsr	initializeSystem
 
@@ -259,23 +258,24 @@ checkPad:
 
 .checkPadEnd:
 
-.checkShipLeft:
-		cmpw2	shipX, #-1024+128
-		bpl	.checkShipRight
-		movw	shipX, #-1024+128
-.checkShipRight:
-		cmpw2	shipX, #1024-128
-		bmi	.checkShipTop
-		movw	shipX, #1024-128
-.checkShipTop:
-		cmpw2	shipY, #1024-128
-		bmi	.checkShipBottom
-		movw	shipY, #1024-128
-.checkShipBottom:
-		cmpw2	shipY, #-1024+128
-		bpl	.checkShipEnd
-		movw	shipY, #-1024+128
-.checkShipEnd:
+;.checkShipLeft:
+;		cmpw2	shipX, #-1024+128
+;		bpl	.checkShipRight
+;		movw	shipX, #-1024+128
+;.checkShipRight:
+;		cmpw2	shipX, #1024-128
+;		bmi	.checkShipTop
+;		movw	shipX, #1024-128
+;.checkShipTop:
+;		cmpw2	shipY, #1024-128
+;		bmi	.checkShipBottom
+;		movw	shipY, #1024-128
+;.checkShipBottom:
+;		cmpw2	shipY, #-1024+128
+;		bpl	.checkShipEnd
+;		movw	shipY, #-1024+128
+;.checkShipEnd:
+
 		rts
 
 
@@ -968,6 +968,14 @@ setEnemy:
 .jpX:
 		sta	enemyX+1, x
 
+		clc
+		lda	enemyX, x
+		adc	shipX
+		sta	enemyX, x
+		lda	enemyX+1, x
+		adc	shipX+1
+		sta	enemyX+1, x
+
 		jsr	getRandom
 		sta	enemyY, x
 		jsr	getRandom
@@ -977,6 +985,14 @@ setEnemy:
 .jpYmi:
 		ora	#$FC
 .jpY:
+		sta	enemyY+1, x
+
+		clc
+		lda	enemyY, x
+		adc	shipY
+		sta	enemyY, x
+		lda	enemyY+1, x
+		adc	shipY+1
 		sta	enemyY+1, x
 
 		lda	#$00
@@ -1460,34 +1476,9 @@ initializeSystem:
 ;initialize random
 		jsr	initializeRandom
 
-		rts
-
-
-;----------------------------
-_initializePsg:
-;
-		stz	PSG_0
-		stz	PSG_1
-		stz	PSG_8
-		stz	PSG_9
-
-		cla
-.loop
-		sta	PSG_0
-		stz	PSG_2
-		stz	PSG_3
-		stz	PSG_4
-		stz	PSG_5
-		stz	PSG_6
-		inc	a
-		cmp	#6
-		bne	.loop
-
-		mov	PSG_0, #4
-		stz	PSG_7
-
-		mov	PSG_0, #5
-		stz	PSG_7
+;disable interrupt IRQ2
+		lda	#%00000001
+		jsr	setInterruptDisable
 
 		rts
 
@@ -1518,8 +1509,10 @@ _irq1:
 		phx
 		phy
 
+;////////////////////////////////////////
 ;execute polygon function first
 		jsr	irq1PolygonFunction
+;////////////////////////////////////////
 
 ;call vsync function
 		bbr5	<vdpStatus, .skip
@@ -1555,8 +1548,8 @@ _reset:
 
 		stz	TIMER_CONTROL_REG
 
-;disable interrupts IRQ2
-		lda	#$01
+;disable interrupts
+		lda	#%00000111
 		sta	INTERRUPT_DISABLE_REG
 
 ;jump main
@@ -1573,8 +1566,10 @@ _timer:
 ;timer acknowledge
 		stz	INTERRUPT_STATE_REG
 
+;////////////////////////////////////////
 ;play DDA
 		jsr	timerPlayDdaFunction
+;////////////////////////////////////////
 
 		ply
 		plx

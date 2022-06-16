@@ -3455,6 +3455,13 @@ setBat:
 
 
 ;----------------------------
+setInterruptDisable:
+;
+		sta	INTERRUPT_DISABLE_REG
+		rts
+
+
+;----------------------------
 irq1PolygonFunction:
 ;
 		lda	VDC1_0
@@ -4278,7 +4285,7 @@ sinDataLow:
 
 ;----------------------------
 atanDataHigh:
-;tan(a + 0.5) * 512
+;tan(a) * 512
 		.db	$00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00,\
 			$00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01,\
 			$02, $02, $02, $02, $02, $02, $02, $02, $03, $03, $03, $03, $03, $04, $04, $04,\
@@ -4287,7 +4294,7 @@ atanDataHigh:
 
 ;----------------------------
 atanDataLow:
-;tan(a + 0.5) * 512
+;tan(a) * 512
 		.db	$06, $13, $1F, $2C, $39, $46, $52, $5F, $6C, $7A, $87, $94, $A2, $B0, $BE, $CD,\
 			$DB, $EB, $FA, $0A, $1A, $2A, $3B, $4D, $5F, $72, $86, $9A, $AF, $C5, $DC, $F4,\
 			$0D, $27, $43, $60, $80, $A1, $C4, $EA, $13, $3F, $6E, $A2, $DB, $19, $5E, $AA,\
@@ -5657,74 +5664,66 @@ putPolyLineProc:
 ;set poly color
 ;calation vram address
 ;left
-;left address
-		ldx	edgeLeft, y
-		txa
-		and	#$38
-		asl	a
-		asl	a
-		ora	polyLineAddrConvYLow0, y
-		sta	<polyLineLeftAddr
-
-		txa
+;calation counts
+		lda	edgeLeft, y
 		lsr	a
 		lsr	a
 		lsr	a
 		sta	<polyLineCount
 
-		lsr	a
-		lsr	a
-		lsr	a
-		ora	polyLineAddrConvYHigh0, y
+;left address
+		tax
+		lda	polyLineAddrConvXLow, x
+		ora	polyLineAddrConvYLow, y
+		sta	<polyLineLeftAddr
+
+		lda	polyLineAddrConvXHigh, x
+		ora	polyLineAddrConvYHigh, y
+		clc
+		adc	<polygonTopAddress
 		sta	<polyLineLeftAddr+1
 
-		add	<polyLineLeftAddr+1, <polygonTopAddress
-
-		txa
+;left put data
+		lda	edgeLeft, y
 		and	#$07
 		tax
+
 		lda	polyLineLeftDatas, x
 		sta	<polyLineLeftData
 		eor	#$FF
 		sta	<polyLineLeftMask
 
 ;right
-		ldx	edgeRight,y
-
 ;calation counts
-		txa
+		lda	edgeRight, y
 		lsr	a
 		lsr	a
 		lsr	a
+		tax
 		sec
 		sbc	<polyLineCount
 
-;count 0
+;count 0 then
 		jeq	.polyLineJump03
 
 		sta	<polyLineCount
 
 ;right address
-		txa
-		and	#$38
-		asl	a
-		asl	a
-		ora	polyLineAddrConvYLow0, y
+		lda	polyLineAddrConvXLow, x
+		ora	polyLineAddrConvYLow, y
 		sta	<polyLineRightAddr
 
-		txa
-		rol	a
-		rol	a
-		rol	a
-		and	#$03
-		ora	polyLineAddrConvYHigh0, y
+		lda	polyLineAddrConvXHigh, x
+		ora	polyLineAddrConvYHigh, y
+		clc
+		adc	<polygonTopAddress
 		sta	<polyLineRightAddr+1
 
-		add	<polyLineRightAddr+1, <polygonTopAddress
-
-		txa
+;right put data
+		lda	edgeRight, y
 		and	#$07
 		tax
+
 		lda	polyLineRightDatas, x
 		sta	<polyLineRightData
 		eor	#$FF
@@ -6045,7 +6044,7 @@ putPolyLineProc:
 
 ;put line same address
 .polyLineJump03:
-		txa
+		lda	edgeRight, y
 		and	#$07
 		tax
 		lda	polyLineRightDatas, x
@@ -6352,7 +6351,7 @@ putPolyLineProc:
 
 
 ;----------------------------
-polyLineAddrConvYHigh0:
+polyLineAddrConvYHigh:
 		.db	$00, $00, $00, $00, $00, $00, $00, $00, $04, $04, $04, $04, $04, $04, $04, $04,\
 			$08, $08, $08, $08, $08, $08, $08, $08, $0C, $0C, $0C, $0C, $0C, $0C, $0C, $0C,\
 			$10, $10, $10, $10, $10, $10, $10, $10, $14, $14, $14, $14, $14, $14, $14, $14,\
@@ -6368,7 +6367,7 @@ polyLineAddrConvYHigh0:
 
 
 ;----------------------------
-polyLineAddrConvYLow0:
+polyLineAddrConvYLow:
 		.db	$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
 			$00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07,\
@@ -6382,6 +6381,17 @@ polyLineAddrConvYLow0:
 			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17,\
 			$10, $11, $12, $13, $14, $15, $16, $17, $10, $11, $12, $13, $14, $15, $16, $17
 
+
+;----------------------------
+polyLineAddrConvXHigh:
+		.db	$00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $01,\
+			$02, $02, $02, $02, $02, $02, $02, $02, $03, $03, $03, $03, $03, $03, $03, $03
+
+
+;----------------------------
+polyLineAddrConvXLow:
+		.db	$00, $20, $40, $60, $80, $A0, $C0, $E0, $00, $20, $40, $60, $80, $A0, $C0, $E0,\
+			$00, $20, $40, $60, $80, $A0, $C0, $E0, $00, $20, $40, $60, $80, $A0, $C0, $E0
 
 ;----------------------------
 polyLineLeftDatas:
