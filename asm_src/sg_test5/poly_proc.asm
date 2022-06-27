@@ -73,6 +73,60 @@
 		.org	$A000
 
 ;----------------------------
+initializePolygonFunction:
+;
+;set tia tii function
+		jsr	setTiaTiiFunction
+
+;initialize VDC
+		jsr	initializeVdc
+
+;initialize VPC
+		jsr	initializeVpc
+
+;initialize SATB
+		jsr	initializeSat
+
+;initialize PAD
+		jsr	initializePad
+
+;initialize PSG
+		jsr	initializePsg
+
+;set BAT
+		jsr	setBat
+
+;set VRAM Address for polygon
+		lda	#$20
+		jsr	setPolygonTopAddress
+
+;clear VRAM buffer
+		movw	<argw0, #$5000
+		movw	<argw1, #vramClearData
+		ldy	#VDC1
+		jsr	clearVramBuffer
+
+		ldy	#VDC2
+		jsr	clearVramBuffer
+
+;set main volume
+		lda	#$EE
+		jsr	setMainVolume
+
+;initialize DDA
+		jsr	initializeDda
+
+;initialize random
+		jsr	initializeRandom
+
+;disable interrupt IRQ2
+		lda	#%00000001
+		jsr	setInterruptDisable
+
+		rts
+
+
+;----------------------------
 setMainVolume:
 ;
 		sta	PSG_1
@@ -1143,7 +1197,7 @@ vertexTranslation2:
 
 
 ;----------------------------
-transform2D2:
+transform2D:
 ;
 		phx
 		phy
@@ -1155,7 +1209,7 @@ transform2D2:
 		ldx	<vertexCount
 		cly
 
-.transform2D2Loop0:
+.transform2DLoop0:
 ;Z0 < 128 check
 		sec
 		lda	transform2DWork0+4, y	;Z0
@@ -1165,10 +1219,10 @@ transform2D2:
 		sta	transform2DWork1+5, y
 		sbc	#00
 
-		bpl	.transform2D2Jump05
-		jmp	.transform2D2Jump00
+		bpl	.transform2DJump05
+		jmp	.transform2DJump00
 
-.transform2D2Jump05:
+.transform2DJump05:
 ;X0 to mul16c
 		lda	transform2DWork0, y
 		sta	transform2DWork1, y
@@ -1223,9 +1277,9 @@ transform2D2:
 		sbc	<mul16a+1
 		sta	transform2DWork0+3, y
 
-		jmp	.transform2D2Jump01
+		jmp	.transform2DJump01
 
-.transform2D2Jump00:
+.transform2DJump00:
 		lda	transform2DWork0, y
 		sta	transform2DWork1, y
 		lda	transform2DWork0+1, y
@@ -1242,12 +1296,12 @@ transform2D2:
 		lda	#$80
 		sta	transform2DWork0+5, y
 
-.transform2D2Jump01:
+.transform2DJump01:
 		lda	intTable+6, y
 		tay
 
 		dex
-		jne	.transform2D2Loop0
+		jne	.transform2DLoop0
 
 ;set MPR2 data
 		pla
@@ -1620,20 +1674,20 @@ putPolygonBuffer:
 
 
 ;----------------------------
-setModel2:
+setModel:
 ;
 		phx
 		phy
 ;rotation
 		ldy	#$03
-		lda	[modelAddr], y		;vertex data address
+		lda	[modelAddress], y		;vertex data address
 		sta	<vertex0Addr
 		iny
-		lda	[modelAddr], y
+		lda	[modelAddress], y
 		sta	<vertex0Addr+1
 
 		iny
-		lda	[modelAddr], y		;vertex count
+		lda	[modelAddress], y		;vertex count
 		sta	<vertexCount
 
 		jsr	moveToTransform2DWork0
@@ -1689,9 +1743,9 @@ setModel2:
 		jsr	selectVertexRotation
 
 ;transform2D
-		jsr	transform2D2
+		jsr	transform2D
 
-		jsr	setModelProc2
+		jsr	setModelProc
 
 		ply
 		plx
@@ -1699,17 +1753,17 @@ setModel2:
 
 
 ;----------------------------
-setModelProc2:
+setModelProc:
 ;
 		cly
-		lda	[modelAddr], y
+		lda	[modelAddress], y
 		sta	<modelAddrWork		;ModelData Polygon Addr
 		iny
-		lda	[modelAddr], y
+		lda	[modelAddress], y
 		sta	<modelAddrWork+1
 
 		ldy	#$02
-		lda	[modelAddr], y		;Polygon Count
+		lda	[modelAddress], y		;Polygon Count
 		sta	<modelPolygonCount
 
 		cly

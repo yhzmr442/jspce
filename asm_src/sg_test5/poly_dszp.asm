@@ -1,16 +1,16 @@
 ;poly_dszp.asm
 ;//////////////////////////////////
 ;----------------------------
-sqr32a
-mul16a
-div16a			.ds	2
-mul16b
-div16b			.ds	2
+mul16a			.ds	2
+mul16b			.ds	2
+div16a			equ	mul16a		;2Byte
+div16b			equ	mul16b		;2Byte
+sqr32a			equ	mul16a		;4Byte
 
-mul16c
-div16c			.ds	2
-mul16d
-div16d			.ds	2
+mul16c			.ds	2
+mul16d			.ds	2
+div16c			equ	mul16c		;2Byte
+div16d			equ	mul16d		;2Byte
 
 mulAddr			.ds	2
 
@@ -37,73 +37,132 @@ clip2D1Count		.ds	1
 clip2DFlag		.ds	1
 
 ;---------------------
-clipFrontX		;.ds	2
-polyLineLeftAddr	;.ds	2
-circleX			;.ds	2
+;---------------------
+;share area
+;---------------------
+shareAreaTop
 edgeX0			.ds	1
 edgeY0			.ds	1
-
-clipFrontY		;.ds	2
-polyLineRightAddr	;.ds	2
-circleY			;.ds	2
 edgeX1			.ds	1
 edgeY1			.ds	1
-
-polyLineYAddr		;.ds	2
-circleD			;.ds	2
-frontClipFlag		;.ds	1
 edgeSlopeX		.ds	1
-frontClipCount		;.ds	1
 edgeSlopeY		.ds	1
-
-work8a			;.ds	8
-work4a			;.ds	4
-circleDH		;.ds	2
-frontClipData0		;.ds	1
 edgeSigneX		.ds	1
-frontClipData1		;.ds	1
+calcEdgeLastAddr	.ds	1
 polyLineColorDataWork	.ds	1
-
-circleDD		;.ds	2
-calcEdgeLastAddr	;.ds	1
 polyLineX0		.ds	1
 polyLineX1		.ds	1
-
-work4b			;.ds	4
-circleRadius		;.ds	2
 polyLineY		.ds	1
 polyLineCount		.ds	1
-
-circleCenterX		;.ds	2
 polyLineLeftData	.ds	1
 polyLineLeftMask	.ds	1
-
-work8b			;.ds	8
-work4c			;.ds	4
-circleCenterY		;.ds	2
 polyLineRightData	.ds	1
 polyLineRightMask	.ds	1
-
-circleYTop		;.ds	2
-circleXLeft		;.ds	2
 polyLineColorDataWork0	.ds	1
 polyLineColorDataWork1	.ds	1
-
-work4d			;.ds	4
-circleYBottom		;.ds	2
-circleXRight		;.ds	2
 polyLineColorDataWork2	.ds	1
 polyLineColorDataWork3	.ds	1
-
-circleYWork		;.ds	2
 polyLineDataLow		.ds	1
 polyLineDataHigh	.ds	1
-
-frontClipDataWork	;.ds	1
-circleTmp		.ds	1
+shareAreaBottom
+;			total 23 Byte
 
 ;---------------------
-polygonTopAddress		.ds	1
+			.org	shareAreaTop
+circleX			.ds	2
+circleY			.ds	2
+circleD			.ds	2
+circleDH		.ds	2
+circleDD		.ds	2
+circleRadius		.ds	2
+circleCenterX		.ds	2
+circleCenterY		.ds	2
+circleYTop		.ds	2
+circleXLeft		equ	circleYTop	;2Byte
+circleYBottom		.ds	2
+circleXRight		equ	circleYBottom	;2Byte
+circleYWork		.ds	2
+circleTmp		.ds	1
+;			total 23 Byte
+
+;---------------------
+			.org	shareAreaTop
+clipFrontX		.ds	2
+clipFrontY		.ds	2
+frontClipFlag		.ds	1
+frontClipCount		.ds	1
+frontClipData0		.ds	1
+frontClipData1		.ds	1
+frontClipDataWork	.ds	1
+;			total 9 Byte
+
+;---------------------
+			.org	shareAreaTop
+polyLineLeftAddr	.ds	2
+polyLineRightAddr	.ds	2
+polyLineYAddr		.ds	2
+work4a			.ds	4
+work4b			.ds	4
+work8a			equ	work4a		;8Byte
+work4c			.ds	4
+work4d			.ds	4
+work8b			equ	work4c		;8Byte
+;			total 22 Byte
+
+;---------------------
+			.org	shareAreaTop
+angleX0			.ds	2
+angleX1			.ds	2
+angleY0			.ds	2
+angleY1			.ds	2
+angleZ0			.ds	2
+angleZ1			.ds	2
+ansAngleX		.ds	1
+ansAngleY		.ds	1
+;			total 14 Byte
+
+;---------------------
+			.org	shareAreaTop
+arg0			.ds	1
+arg1			.ds	1
+argw0			equ	arg0			;2Byte
+si			equ	arg0			;2Byte
+
+arg2			.ds	1
+arg3			.ds	1
+argw1			equ	arg2			;2Byte
+di			equ	arg2			;2Byte
+
+arg4			.ds	1
+arg5			.ds	1
+argw2			equ	arg4			;2Byte
+
+arg6			.ds	1
+arg7			.ds	1
+argw3			equ	arg6			;2Byte
+
+temp0			.ds	1
+temp1			.ds	1
+tempw0			equ	temp0			;2Byte
+
+temp2			.ds	1
+temp3			.ds	1
+tempw1			equ	temp2			;2Byte
+
+temp4			.ds	1
+temp5			.ds	1
+tempw2			equ	temp4			;2Byte
+;			total 14 Byte
+
+;---------------------
+			.org	shareAreaBottom
+;---------------------
+;share area
+;---------------------
+;---------------------
+
+;---------------------
+polygonTopAddress	.ds	1
 
 ;---------------------
 minEdgeY		.ds	1
@@ -121,7 +180,6 @@ translationX		.ds	2
 translationY		.ds	2
 translationZ		.ds	2
 
-;---------------------
 rotationX		.ds	1
 rotationY		.ds	1
 rotationZ		.ds	1
@@ -143,38 +201,6 @@ eyeRotationZ		.ds	1
 eyeRotationSelect	.ds	1
 
 ;---------------------
-angleX0			;.ds	2
-argw0			;.ds	2
-arg0			.ds	1
-arg1			.ds	1
-
-angleX1			;.ds	2
-argw1			;.ds	2
-arg2			.ds	1
-arg3			.ds	1
-
-angleY0			;.ds	2
-argw2			;.ds	2
-arg4			.ds	1
-arg5			.ds	1
-
-angleY1			;.ds	2
-argw3			;.ds	2
-arg6			.ds	1
-arg7			.ds	1
-
-tempw0			;.ds	2
-angleZ0			.ds	2
-tempw1			;.ds	2
-angleZ1			.ds	2
-
-tempw2			;.ds	2
-temp4			;.ds	1
-ansAngleX		.ds	1
-temp5			;.ds	1
-ansAngleY		.ds	1
-
-;---------------------
 polyBufferAddr		.ds	2
 polyBufferZ0Work0	.ds	2
 polyBufferZ0Work1	.ds	2
@@ -183,7 +209,7 @@ polyBufferNow		.ds	2
 polyBufferNext		.ds	2
 
 ;---------------------
-modelAddr		.ds	2
+modelAddress		.ds	2
 modelAddrWork		.ds	2
 modelPolygonCount	.ds	1
 setModelCount		.ds	1

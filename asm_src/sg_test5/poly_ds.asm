@@ -45,7 +45,6 @@ polygonColorP1		.ds	64
 polygonColorP2		.ds	64
 polygonColorP3		.ds	64
 
-
 ;---------------------
 edgeLeft		.ds	192
 edgeRight		.ds	192

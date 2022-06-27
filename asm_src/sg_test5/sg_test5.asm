@@ -291,9 +291,9 @@ setWall:
 		mov	<rotationZ, #0
 		mov	<rotationSelect, #$12
 
-		movw	<modelAddr, #modelData007
+		movw	<modelAddress, #modelData007
 
-		jsr	setModel2
+		jsr	setModel
 		rts
 
 
@@ -313,9 +313,9 @@ setDeltaWall:
 		mov	<rotationZ, #0
 		mov	<rotationSelect, #$12
 
-		movw	<modelAddr, #modelData009
+		movw	<modelAddress, #modelData009
 
-		jsr	setModel2
+		jsr	setModel
 
 		addw	wallDeltaZWork, #2048
 
@@ -917,9 +917,9 @@ setEnemyShotModel:
 		mov	<rotationZ, #0
 		mov	<rotationSelect, #$12
 
-		movw	<modelAddr, #modelData003
+		movw	<modelAddress, #modelData003
 
-		jsr	setModel2
+		jsr	setModel
 
 .jp0:
 		lda	intTable+4, x
@@ -1097,24 +1097,24 @@ setEnemyModel:
 		lda	enemyState, x
 		bne	.jp01
 
-		movw	<modelAddr, #modelData001
+		movw	<modelAddress, #modelData001
 		bra	.jp99
 .jp01:
 		lda	enemyState+1, x
 		cmp	#8
 		bcc	.jp02
-		movw	<modelAddr, #modelData004
+		movw	<modelAddress, #modelData004
 		bra	.jp99
 .jp02:
 		cmp	#4
 		bcc	.jp03
-		movw	<modelAddr, #modelData005
+		movw	<modelAddress, #modelData005
 		bra	.jp99
 .jp03:
-		movw	<modelAddr, #modelData006
+		movw	<modelAddress, #modelData006
 
 .jp99:
-		jsr	setModel2
+		jsr	setModel
 
 .jp0:		inx
 		inx
@@ -1262,9 +1262,9 @@ setObjectModel:
 		mov	<rotationZ, #0
 		mov	<rotationSelect, #$12
 
-		movw	<modelAddr, #modelData002
+		movw	<modelAddress, #modelData002
 
-		jsr	setModel2
+		jsr	setModel
 
 .jp0:		inx
 		inx
@@ -1383,9 +1383,9 @@ setShotModel:
 		mov	<rotationZ, #0
 		mov	<rotationSelect, #$12
 
-		movw	<modelAddr, #modelData000
+		movw	<modelAddress, #modelData000
 
-		jsr	setModel2
+		jsr	setModel
 
 .jp0:		inx
 		inx
@@ -1402,30 +1402,8 @@ initializeSystem:
 		lda	#polygonFunctionBank
 		tam	#polygonFunctionMap
 
-;set tia tii function
-		jsr	setTiaTiiFunction
-
-;initialize VDC
-		jsr	initializeVdc
-
-;initialize VPC
-		jsr	initializeVpc
-
-;initialize SATB
-		jsr	initializeSat
-
-;initialize PAD
-		jsr	initializePad
-
-;initialize PSG
-		jsr	initializePsg
-
-;set BAT
-		jsr	setBat
-
-;set VRAM Address for polygon
-		lda	#$20
-		jsr	setPolygonTopAddress
+;initialize polygon function
+		jsr	initializePolygonFunction
 
 ;set all palettes
 		movw	<argw0, #paletteData
@@ -1456,29 +1434,6 @@ initializeSystem:
 
 		mov	<arg2, #VDC2
 		jsr	setCgCharData
-
-;set Clear VRAM buffer
-		movw	<argw0, #$5000
-		movw	<argw1, #vramClearData
-		ldy	#VDC1
-		jsr	clearVramBuffer
-
-		ldy	#VDC2
-		jsr	clearVramBuffer
-
-;set main volume
-		lda	#$EE
-		jsr	setMainVolume
-
-;initialize DDA
-		jsr	initializeDda
-
-;initialize random
-		jsr	initializeRandom
-
-;disable interrupt IRQ2
-		lda	#%00000001
-		jsr	setInterruptDisable
 
 		rts
 
