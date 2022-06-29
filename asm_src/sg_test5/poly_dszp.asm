@@ -41,6 +41,25 @@ clip2DFlag		.ds	1
 ;share area
 ;---------------------
 shareAreaTop
+circleX			.ds	2
+circleY			.ds	2
+circleD			.ds	2
+circleDH		.ds	2
+circleDD		.ds	2
+circleRadius		.ds	2
+circleCenterX		.ds	2
+circleCenterY		.ds	2
+circleXLeft0		.ds	2
+circleYTop		equ	circleXLeft0	;2Byte
+circleXRight0		.ds	2
+circleXLeft1		.ds	2
+circleXRight1		.ds	2
+circleYWork		.ds	2
+;			total 26 Byte
+shareAreaBottom
+
+;---------------------
+			.org	shareAreaTop
 edgeX0			.ds	1
 edgeY0			.ds	1
 edgeX1			.ds	1
@@ -64,25 +83,6 @@ polyLineColorDataWork2	.ds	1
 polyLineColorDataWork3	.ds	1
 polyLineDataLow		.ds	1
 polyLineDataHigh	.ds	1
-shareAreaBottom
-;			total 23 Byte
-
-;---------------------
-			.org	shareAreaTop
-circleX			.ds	2
-circleY			.ds	2
-circleD			.ds	2
-circleDH		.ds	2
-circleDD		.ds	2
-circleRadius		.ds	2
-circleCenterX		.ds	2
-circleCenterY		.ds	2
-circleYTop		.ds	2
-circleXLeft		equ	circleYTop	;2Byte
-circleYBottom		.ds	2
-circleXRight		equ	circleYBottom	;2Byte
-circleYWork		.ds	2
-circleTmp		.ds	1
 ;			total 23 Byte
 
 ;---------------------

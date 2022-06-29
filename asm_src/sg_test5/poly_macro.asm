@@ -664,6 +664,26 @@ subq		.macro
 
 
 ;----------------------------
+adx		.macro
+;x = x + \1
+		txa
+		clc
+		adc	\1
+		tax
+		.endm
+
+
+;----------------------------
+ady		.macro
+;y = y + \1
+		tya
+		clc
+		adc	\1
+		tay
+		.endm
+
+
+;----------------------------
 stzw		.macro
 ;\1 = 0
 		stz	\1

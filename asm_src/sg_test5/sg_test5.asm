@@ -200,6 +200,40 @@ main:
 		ldy	<selectVdc
 		jsr	putHex
 
+		ldx	#4
+		ldy	#24
+		jsr	calBatAddressXY
+
+		lda	<selectVdc
+		jsr	setWriteVramAddress
+
+		lda	shipX+1
+		ldx	#$00
+		ldy	<selectVdc
+		jsr	putHex
+
+		lda	shipX
+		ldx	#$00
+		ldy	<selectVdc
+		jsr	putHex
+
+		ldx	#10
+		ldy	#24
+		jsr	calBatAddressXY
+
+		lda	<selectVdc
+		jsr	setWriteVramAddress
+
+		lda	shipY+1
+		ldx	#$00
+		ldy	<selectVdc
+		jsr	putHex
+
+		lda	shipY
+		ldx	#$00
+		ldy	<selectVdc
+		jsr	putHex
+
 ;set SATB DMA
 		jsr	setSatbDma
 

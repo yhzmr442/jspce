@@ -1614,9 +1614,7 @@ putPolygonBuffer:
 		sta	<circleRadius+1
 
 		jsr	initCalcEdge
-		jsr	calcCircle
-		jsr	putPolyLine
-
+		jsr	calcCircle_putPoly
 		bra	.nextData
 
 .polygonProc:
@@ -4467,7 +4465,7 @@ calcEdge_putPoly:
 
 
 ;----------------------------
-calcCircle:
+calcCircle_putPoly:
 ;
 ;top < 192
 		sec
@@ -4538,18 +4536,25 @@ calcCircle:
 
 		stzw	<circleY
 
+		addw	<circleXRight0, <circleCenterX, <circleX
+		subw	<circleXLeft0, <circleCenterX, <circleX
+
+		movw	<circleXRight1, <circleCenterX
+		movw	<circleXLeft1, <circleCenterX
+
 .loop0:
 		sec
-		lda	<circleY
-		sbc	<circleX
-		sta	<circleTmp
+		lda	<circleX
+		sbc	<circleY
+		lda	<circleX+1
+		sbc	<circleY+1
+		bpl	.jp00
 
-		lda	<circleY+1
-		sbc	<circleX+1
-		bmi	.jp00
-		ora	<circleTmp
-		beq	.jp00
-
+		lda	<minEdgeY
+		cmp	#$FF
+		beq	.jp03
+		jsr	putPolyLine
+.jp03:
 		rts
 
 .jp00:
@@ -4572,43 +4577,32 @@ calcCircle:
 
 		decw	<circleX
 
+		decw	<circleXRight0
+		incw	<circleXLeft0
+
 .jp02:
-;----------------
-		addw	<circleXRight, <circleCenterX, <circleX
-
-		subw	<circleXLeft, <circleCenterX, <circleX
-
 		addw	<circleYWork, <circleCenterY, <circleY
+		jsr	setCircleEdge0
 
-		jsr	setCircleEdge
-
-;----------------
 		subw	<circleYWork, <circleCenterY, <circleY
-
-		jsr	setCircleEdge
-
-;----------------
-		addw	<circleXRight, <circleCenterX, <circleY
-
-		subw	<circleXLeft, <circleCenterX, <circleY
+		jsr	setCircleEdge0
 
 		addw	<circleYWork, <circleCenterY, <circleX
+		jsr	setCircleEdge1
 
-		jsr	setCircleEdge
-
-;----------------
 		subw	<circleYWork, <circleCenterY, <circleX
+		jsr	setCircleEdge1
 
-		jsr	setCircleEdge
-
-;----------------
 		incw	<circleY
+
+		incw	<circleXRight1
+		decw	<circleXLeft1
 
 		jmp	.loop0
 
 
 ;----------------------------
-setCircleEdge:
+setCircleEdge0:
 ;
 		lda	<circleYWork+1
 		bne	.endSet
@@ -4617,18 +4611,18 @@ setCircleEdge:
 		cpy	#192
 		bcs	.endSet
 
-		lda	<circleXLeft+1
+		lda	<circleXLeft0+1
 		beq	.jp00
 		bpl	.endSet
 
-		stz	<circleXLeft
+		stz	<circleXLeft0
 
 .jp00:
-		lda	<circleXRight+1
+		lda	<circleXRight0+1
 		bmi	.endSet
 		beq	.jp01
 
-		mov	<circleXRight, #$FF
+		mov	<circleXRight0, #$FF
 
 .jp01:
 		cpy	<minEdgeY
@@ -4640,10 +4634,53 @@ setCircleEdge:
 		lda	#2
 		sta	edgeCount, y
 
-		lda	<circleXLeft
+		lda	<circleXLeft0
 		sta	edgeLeft, y
 
-		lda	<circleXRight
+		lda	<circleXRight0
+		sta	edgeRight, y
+
+.endSet:
+		rts
+
+
+;----------------------------
+setCircleEdge1:
+;
+		lda	<circleYWork+1
+		bne	.endSet
+
+		ldy	<circleYWork
+		cpy	#192
+		bcs	.endSet
+
+		lda	<circleXLeft1+1
+		beq	.jp00
+		bpl	.endSet
+
+		stz	<circleXLeft1
+
+.jp00:
+		lda	<circleXRight1+1
+		bmi	.endSet
+		beq	.jp01
+
+		mov	<circleXRight1, #$FF
+
+.jp01:
+		cpy	<minEdgeY
+		jcs	.jp02
+
+		sty	<minEdgeY
+
+.jp02:
+		lda	#2
+		sta	edgeCount, y
+
+		lda	<circleXLeft1
+		sta	edgeLeft, y
+
+		lda	<circleXRight1
 		sta	edgeRight, y
 
 .endSet:
