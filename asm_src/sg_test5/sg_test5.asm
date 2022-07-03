@@ -95,6 +95,7 @@ checkHitWork		.ds	2
 wallDeltaZ		.ds	2
 wallDeltaZWork		.ds	2
 
+
 ;---------------------
 		INCLUDE	"poly_ds.asm"
 
@@ -190,7 +191,7 @@ main:
 
 		ldx	#0
 		ldy	#24
-		jsr	calBatAddressXY
+		jsr	calcBatAddressXY
 
 		lda	<selectVdc
 		jsr	setWriteVramAddress
@@ -202,7 +203,7 @@ main:
 
 		ldx	#4
 		ldy	#24
-		jsr	calBatAddressXY
+		jsr	calcBatAddressXY
 
 		lda	<selectVdc
 		jsr	setWriteVramAddress
@@ -219,7 +220,7 @@ main:
 
 		ldx	#10
 		ldy	#24
-		jsr	calBatAddressXY
+		jsr	calcBatAddressXY
 
 		lda	<selectVdc
 		jsr	setWriteVramAddress
@@ -732,8 +733,10 @@ initializeEnemyShot:
 .loop:		lda	#$FF
 		sta	enemyShotState, x
 
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 		cpx	#enemyShotMAX*4
 		bne	.loop
 
@@ -841,8 +844,11 @@ setEnemyShot:
 
 		bra	.jp1
 
-.jp0:		lda	intTable+4, y
-		tay
+.jp0:
+		iny
+		iny
+		iny
+		iny
 		cpy	#enemyShotMAX*4
 		jne	.loop
 
@@ -915,8 +921,10 @@ moveEnemyShot:
 		sta	enemyShotState, x
 
 .jp0:
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 		cpx	#enemyShotMAX*4
 		jne	.loop
 
@@ -956,8 +964,10 @@ setEnemyShotModel:
 		jsr	setModel
 
 .jp0:
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 		cpx	#enemyShotMAX*4
 		jne	.loop
 

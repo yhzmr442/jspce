@@ -155,6 +155,14 @@ tempw2			equ	temp4			;2Byte
 ;			total 14 Byte
 
 ;---------------------
+			.org	shareAreaTop
+matrix0			.ds	2			;2Byte
+matrix1			.ds	2			;2Byte
+matrix2			.ds	2			;2Byte
+matrixTemp		.ds	4			;4Byte
+;			total 10 Byte
+
+;---------------------
 			.org	shareAreaBottom
 ;---------------------
 ;share area

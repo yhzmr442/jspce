@@ -73,6 +73,285 @@
 		.org	$A000
 
 ;----------------------------
+setZeroMatrix:
+;
+		phy
+
+		cla
+		cly
+.loop0:
+		sta	[matrix0], y
+		iny
+		cpy	#18
+		bne	.loop0
+
+		ply
+		rts
+
+
+;----------------------------
+setMatrixRotationZ:
+;
+		phx
+		phy
+
+		jsr	setZeroMatrix
+
+		ldy	#(0*3+1)*2
+		lda	sinDataLow,x			;sin
+		sta	<vertexRotationSin
+		sta	[matrix0], y
+		iny
+		lda	sinDataHigh,x
+		sta	<vertexRotationSin+1
+		sta	[matrix0], y
+
+		ldy	#(1*3+0)*2
+		sec
+		cla
+		sbc	<vertexRotationSin
+		sta	[matrix0], y
+		iny
+		cla
+		sbc	<vertexRotationSin+1
+		sta	[matrix0], y
+
+		txa
+		clc
+		adc	#64
+		tax
+		ldy	#(0*3+0)*2
+		lda	sinDataLow,x			;cos
+		sta	<vertexRotationCos
+		sta	[matrix0], y
+		iny
+		lda	sinDataHigh,x
+		sta	<vertexRotationCos+1
+		sta	[matrix0], y
+
+		ldy	#(1*3+1)*2
+		lda	<vertexRotationCos
+		sta	[matrix0], y
+		iny
+		lda	<vertexRotationCos+1
+		sta	[matrix0], y
+
+		ldy	#(2*3+2)*2
+		cla
+		sta	[matrix0], y
+		iny
+		lda	#$40
+		sta	[matrix0], y
+
+		ply
+		plx
+		rts
+
+
+;----------------------------
+setMatrixRotationY:
+;
+		phx
+		phy
+
+		jsr	setZeroMatrix
+
+		ldy	#(0*3+2)*2
+		lda	sinDataLow,x			;sin
+		sta	<vertexRotationSin
+		sta	[matrix0], y
+		iny
+		lda	sinDataHigh,x
+		sta	<vertexRotationSin+1
+		sta	[matrix0], y
+
+		ldy	#(2*3+0)*2
+		sec
+		cla
+		sbc	<vertexRotationSin
+		sta	[matrix0], y
+		iny
+		cla
+		sbc	<vertexRotationSin+1
+		sta	[matrix0], y
+
+		txa
+		clc
+		adc	#64
+		tax
+		ldy	#(0*3+0)*2
+		lda	sinDataLow,x			;cos
+		sta	<vertexRotationCos
+		sta	[matrix0], y
+		iny
+		lda	sinDataHigh,x
+		sta	<vertexRotationCos+1
+		sta	[matrix0], y
+
+		ldy	#(2*3+2)*2
+		lda	<vertexRotationCos
+		sta	[matrix0], y
+		iny
+		lda	<vertexRotationCos+1
+		sta	[matrix0], y
+
+		ldy	#(1*3+1)*2
+		cla
+		sta	[matrix0], y
+		iny
+		lda	#$40
+		sta	[matrix0], y
+
+		ply
+		plx
+		rts
+
+
+;----------------------------
+setMatrixRotationX:
+;
+		phx
+		phy
+
+		jsr	setZeroMatrix
+
+		ldy	#(2*3+1)*2
+		lda	sinDataLow,x			;sin
+		sta	<vertexRotationSin
+		sta	[matrix0], y
+		iny
+		lda	sinDataHigh,x
+		sta	<vertexRotationSin+1
+		sta	[matrix0], y
+
+		ldy	#(1*3+2)*2
+		sec
+		cla
+		sbc	<vertexRotationSin
+		sta	[matrix0], y
+		iny
+		cla
+		sbc	<vertexRotationSin+1
+		sta	[matrix0], y
+
+		txa
+		clc
+		adc	#64
+		tax
+		ldy	#(1*3+1)*2
+		lda	sinDataLow,x			;cos
+		sta	<vertexRotationCos
+		sta	[matrix0], y
+		iny
+		lda	sinDataHigh,x
+		sta	<vertexRotationCos+1
+		sta	[matrix0], y
+
+		ldy	#(2*3+2)*2
+		lda	<vertexRotationCos
+		sta	[matrix0], y
+		iny
+		lda	<vertexRotationCos+1
+		sta	[matrix0], y
+
+		ldy	#(0*3+0)*2
+		cla
+		sta	[matrix0], y
+		iny
+		lda	#$40
+		sta	[matrix0], y
+
+		ply
+		plx
+		rts
+
+
+;----------------------------
+vertexMultiply:
+;
+		phx
+		phy
+
+		clx
+.loop0:
+		phx
+		cly
+
+		stzq	<matrixTemp
+
+.loop1:
+		lda	[matrix0], y
+		sta	<mul16a
+		iny
+		lda	[matrix0], y
+		sta	<mul16a+1
+		iny
+
+		sxy
+
+		lda	[matrix1], y
+		sta	<mul16b
+		iny
+		lda	[matrix1], y
+		sta	<mul16b+1
+		iny
+
+		jsr	smul16
+
+		addq	<matrixTemp, <mul16c, <matrixTemp
+
+		iny
+		iny
+		iny
+		iny
+
+		sxy
+		cpy	#6
+		bne	.loop1
+
+		plx
+
+		txa
+		tay
+
+		lda	<matrixTemp+2
+		asl	<matrixTemp+1
+		rol	a
+		rol	<matrixTemp+3
+		asl	<matrixTemp+1
+		rol	a
+		rol	<matrixTemp+3
+		sta	[matrix2], y
+		iny
+		lda	<matrixTemp+3
+		sta	[matrix2], y
+
+		inx
+		inx
+		cpx	#6
+		bne	.loop0
+
+		ply
+		plx
+		rts
+
+
+;----------------------------
+matrixMultiply:
+;
+		jsr	vertexMultiply
+
+		addw	<matrix0, #6
+		addw	<matrix2, #6
+		jsr	vertexMultiply
+
+		addw	<matrix0, #6
+		addw	<matrix2, #6
+		jsr	vertexMultiply
+
+		rts
+
+;----------------------------
 initializePolygonFunction:
 ;
 ;set tia tii function
@@ -890,8 +1169,7 @@ vertexRotationZ:
 		sta	transform2DWork0+1, y
 
 ;----------------
-		lda	intTable+6, y
-		tay
+		ady	#6
 
 		dex
 		jne	.vertexRotationZLoop
@@ -1013,8 +1291,7 @@ vertexRotationY:
 		sta	transform2DWork0+1, y
 
 ;----------------
-		lda	intTable+6, y
-		tay
+		ady	#6
 
 		dex
 		jne	.vertexRotationYLoop
@@ -1136,8 +1413,7 @@ vertexRotationX:
 		sta	transform2DWork0+3, y
 
 ;----------------
-		lda	intTable+6, y
-		tay
+		ady	#6
 
 		dex
 		jne	.vertexRotationXLoop
@@ -1149,17 +1425,17 @@ vertexRotationX:
 
 
 ;----------------------------
-vertexTranslation2:
+vertexTranslation:
 ;
 		phx
 		phy
 
 		ldx	<vertexCount
-		beq	.vertexTranslation2End
+		beq	.vertexTranslationEnd
 
 		cly
 
-.vertexTranslation2Loop:
+.vertexTranslationLoop:
 		clc
 		lda	transform2DWork0, y
 		adc	<translationX
@@ -1184,13 +1460,12 @@ vertexTranslation2:
 		adc	<translationZ+1
 		sta	transform2DWork0+5, y
 
-		lda	intTable+6, y
-		tay
+		ady	#6
 
 		dex
-		bne	.vertexTranslation2Loop
+		bne	.vertexTranslationLoop
 
-.vertexTranslation2End:
+.vertexTranslationEnd:
 		ply
 		plx
 		rts
@@ -1297,8 +1572,7 @@ transform2D:
 		sta	transform2DWork0+5, y
 
 .transform2DJump01:
-		lda	intTable+6, y
-		tay
+		ady	#6
 
 		dex
 		jne	.transform2DLoop0
@@ -1715,7 +1989,7 @@ setModel:
 
 		subw	<translationZ, <eyeTranslationZ
 
-		jsr	vertexTranslation2
+		jsr	vertexTranslation
 
 ;eye rotation
 		mov	<rotationX, <eyeRotationX
@@ -2123,8 +2397,9 @@ setModelProc:
 		inc	<polyBufferAddr+1
 
 .setModelJump0:
-		plx
-		ldy	intTable+8, x
+		pla
+		add	#8
+		tay
 
 		dec	<modelPolygonCount
 		jne	.setModelLoop3
@@ -2366,8 +2641,10 @@ clip2D:
 		cmp	#192
 		bcs	.clipOut
 
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 
 		dey
 		bne	.loop0
@@ -2502,8 +2779,10 @@ clip2DX255:
 
 		inc	<clip2D0Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 		bra	.clip2DX255Jump03
 
@@ -2531,8 +2810,7 @@ clip2DX255:
 
 		add	<clip2D0Count, #$02
 
-		lda	intTable+8, y
-		tay
+		ady	#8
 
 		bra	.clip2DX255Jump03
 
@@ -2550,13 +2828,17 @@ clip2DX255:
 
 		inc	<clip2D0Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 .clip2DX255Jump03:
 ;X0>255 X1>255
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 
 		dec	<clip2D1Count
 		jne	.clip2DX255Loop0
@@ -2661,8 +2943,10 @@ clip2DX0:
 
 		inc	<clip2D1Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 		bra	.clip2DX0Jump03
 
@@ -2690,8 +2974,7 @@ clip2DX0:
 
 		add	<clip2D1Count, #$02
 
-		lda	intTable+8, y
-		tay
+		ady	#8
 
 		bra	.clip2DX0Jump03
 
@@ -2709,13 +2992,17 @@ clip2DX0:
 
 		inc	<clip2D1Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 .clip2DX0Jump03:
 ;X0<0 X1<0
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 
 		dec	<clip2D0Count
 		jne	.clip2DX0Loop0
@@ -2828,8 +3115,10 @@ clip2DY255:
 
 		inc	<clip2D0Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 		bra	.clip2DY255Jump03
 
@@ -2857,8 +3146,7 @@ clip2DY255:
 
 		add	<clip2D0Count, #$02
 
-		lda	intTable+8, y
-		tay
+		ady	#8
 
 		bra	.clip2DY255Jump03
 
@@ -2876,13 +3164,17 @@ clip2DY255:
 
 		inc	<clip2D0Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 .clip2DY255Jump03:
 ;Y0>191 Y1>191
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 
 		dec	<clip2D1Count
 		jne	.clip2DY255Loop0
@@ -2987,8 +3279,10 @@ clip2DY0:
 
 		inc	<clip2D1Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 		bra	.clip2DY0Jump03
 
@@ -3016,8 +3310,7 @@ clip2DY0:
 
 		add	<clip2D1Count, #$02
 
-		lda	intTable+8, y
-		tay
+		ady	#8
 
 		bra	.clip2DY0Jump03
 
@@ -3035,13 +3328,17 @@ clip2DY0:
 
 		inc	<clip2D1Count
 
-		lda	intTable+4, y
-		tay
+		iny
+		iny
+		iny
+		iny
 
 .clip2DY0Jump03:
 ;Y0<0 Y1<0
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 
 		dec	<clip2D0Count
 		jne	.clip2DY0Loop0
@@ -3629,8 +3926,7 @@ clearSatBuffer:
 		stz	satBuffer+256+6, x
 		stz	satBuffer+256+7, x
 
-		lda	intTable+8, x
-		tax
+		adx	#8
 		bne	.loop0
 
 		movw	satBufferAddr, #satBuffer
@@ -4111,7 +4407,7 @@ setCgToSgData:
 
 
 ;----------------------------
-calBatAddressXY:
+calcBatAddressXY:
 ;x:X, y:Y
 		stx	<tempw0
 		sty	<tempw0+1
@@ -4273,29 +4569,6 @@ vdcData:
 
 
 ;----------------------------
-intTable:
-		.db	$00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
-			$10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $1A, $1B, $1C, $1D, $1E, $1F,\
-			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $2A, $2B, $2C, $2D, $2E, $2F,\
-			$30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $3A, $3B, $3C, $3D, $3E, $3F,\
-			$40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $4A, $4B, $4C, $4D, $4E, $4F,\
-			$50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $5A, $5B, $5C, $5D, $5E, $5F,\
-			$60, $61, $62, $63, $64, $65, $66, $67, $68, $69, $6A, $6B, $6C, $6D, $6E, $6F,\
-			$70, $71, $72, $73, $74, $75, $76, $77, $78, $79, $7A, $7B, $7C, $7D, $7E, $7F,\
-			$80, $81, $82, $83, $84, $85, $86, $87, $88, $89, $8A, $8B, $8C, $8D, $8E, $8F,\
-			$90, $91, $92, $93, $94, $95, $96, $97, $98, $99, $9A, $9B, $9C, $9D, $9E, $9F,\
-			$A0, $A1, $A2, $A3, $A4, $A5, $A6, $A7, $A8, $A9, $AA, $AB, $AC, $AD, $AE, $AF,\
-			$B0, $B1, $B2, $B3, $B4, $B5, $B6, $B7, $B8, $B9, $BA, $BB, $BC, $BD, $BE, $BF,\
-			$C0, $C1, $C2, $C3, $C4, $C5, $C6, $C7, $C8, $C9, $CA, $CB, $CC, $CD, $CE, $CF,\
-			$D0, $D1, $D2, $D3, $D4, $D5, $D6, $D7, $D8, $D9, $DA, $DB, $DC, $DD, $DE, $DF,\
-			$E0, $E1, $E2, $E3, $E4, $E5, $E6, $E7, $E8, $E9, $EA, $EB, $EC, $ED, $EE, $EF,\
-			$F0, $F1, $F2, $F3, $F4, $F5, $F6, $F7, $F8, $F9, $FA, $FB, $FC, $FD, $FE, $FF
-
-		.db	$00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F,\
-			$10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $1A, $1B, $1C, $1D, $1E, $1F
-
-
-;----------------------------
 sinDataHigh:
 		.db	$00, $01, $03, $04, $06, $07, $09, $0A, $0C, $0E, $0F, $11, $12, $14, $15, $17,\
 			$18, $19, $1B, $1C, $1E, $1F, $20, $22, $23, $24, $26, $27, $28, $29, $2A, $2C,\
@@ -4390,8 +4663,10 @@ calcEdge_putPoly:
 		txa
 		tay
 .minJp:
-		lda	intTable+4, x
-		tax
+		inx
+		inx
+		inx
+		inx
 		cpx	<calcEdgeLastAddr
 		bne	.minLoop
 
@@ -4419,8 +4694,12 @@ calcEdge_putPoly:
 
 		phx
 		jsr	calcEdge0
-		ply
-		ldx	intTable+4, y
+		plx
+
+		inx
+		inx
+		inx
+		inx
 
 		dec	<clip2D0Count
 
@@ -4447,8 +4726,12 @@ calcEdge_putPoly:
 
 		phx
 		jsr	calcEdge
-		ply
-		ldx	intTable+4, y
+		plx
+
+		inx
+		inx
+		inx
+		inx
 
 		dec	<clip2D0Count
 		beq	.loopEnd
