@@ -3,7 +3,6 @@
 ;----------------------------
 edgeSigneXPlus0m	.macro
 		iny
-		clc
 		adc	<edgeSlopeY
 		bcc	.jp_\@
 
@@ -13,6 +12,7 @@ edgeSigneXPlus0m	.macro
 		pha
 		setEdgeBuffer0m
 		pla
+		clc
 
 .jp_\@:
 		.endm
@@ -21,7 +21,6 @@ edgeSigneXPlus0m	.macro
 ;----------------------------
 edgeSigneXMinus0m	.macro
 		iny
-		clc
 		adc	<edgeSlopeY
 		bcc	.jp_\@
 
@@ -31,6 +30,7 @@ edgeSigneXMinus0m	.macro
 		pha
 		setEdgeBuffer0m
 		pla
+		clc
 
 .jp_\@:
 		.endm
@@ -39,7 +39,6 @@ edgeSigneXMinus0m	.macro
 ;----------------------------
 edgeSigneYPlus0m	.macro
 		inx
-		clc
 		adc	<edgeSlopeX
 		bcc	.jp_\@
 
@@ -50,6 +49,7 @@ edgeSigneYPlus0m	.macro
 		pha
 		setEdgeBuffer0m
 		pla
+		clc
 
 		.endm
 
@@ -57,7 +57,6 @@ edgeSigneYPlus0m	.macro
 ;----------------------------
 edgeSigneYMinus0m	.macro
 		inx
-		clc
 		adc	<edgeSlopeX
 		bcc	.jp_\@
 
@@ -68,6 +67,7 @@ edgeSigneYMinus0m	.macro
 		pha
 		setEdgeBuffer0m
 		pla
+		clc
 
 		.endm
 
@@ -75,7 +75,6 @@ edgeSigneYMinus0m	.macro
 ;----------------------------
 edgeSigneXPlusm	.macro
 		iny
-		clc
 		adc	<edgeSlopeY
 		bcc	.jp_\@
 
@@ -85,6 +84,7 @@ edgeSigneXPlusm	.macro
 		pha
 		setEdgeBufferm
 		pla
+		clc
 
 .jp_\@:
 		.endm
@@ -93,7 +93,6 @@ edgeSigneXPlusm	.macro
 ;----------------------------
 edgeSigneXMinusm	.macro
 		iny
-		clc
 		adc	<edgeSlopeY
 		bcc	.jp_\@
 
@@ -103,6 +102,7 @@ edgeSigneXMinusm	.macro
 		pha
 		setEdgeBufferm
 		pla
+		clc
 
 .jp_\@:
 		.endm
@@ -111,7 +111,6 @@ edgeSigneXMinusm	.macro
 ;----------------------------
 edgeSigneYPlusm	.macro
 		inx
-		clc
 		adc	<edgeSlopeX
 		bcc	.jp_\@
 
@@ -122,6 +121,7 @@ edgeSigneYPlusm	.macro
 		pha
 		setEdgeBufferm
 		pla
+		clc
 
 		.endm
 
@@ -129,7 +129,6 @@ edgeSigneYPlusm	.macro
 ;----------------------------
 edgeSigneYMinusm	.macro
 		inx
-		clc
 		adc	<edgeSlopeX
 		bcc	.jp_\@
 
@@ -140,6 +139,7 @@ edgeSigneYMinusm	.macro
 		pha
 		setEdgeBufferm
 		pla
+		clc
 
 		.endm
 

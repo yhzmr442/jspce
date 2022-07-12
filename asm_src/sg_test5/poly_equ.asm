@@ -63,3 +63,6 @@ polygonSubFunctionMap	.equ	2
 charDataBank		.equ	3
 mulDataBank		.equ	4
 divDataBank		.equ	20
+
+;----------------------------
+SCREEN_Z		.equ	128
