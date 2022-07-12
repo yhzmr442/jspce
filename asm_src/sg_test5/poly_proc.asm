@@ -2767,8 +2767,7 @@ clip2DX255:
 ;X0>255 X1<=255
 		lda	#$FF
 		sta	clip2D0, x	;X0
-		cla
-		sta	clip2D0+1, x
+		stz	clip2D0+1, x
 
 		lda	<mul16a
 		sta	clip2D0+2, x	;Y0
