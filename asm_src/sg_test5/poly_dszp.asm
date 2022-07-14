@@ -55,7 +55,9 @@ circleXRight0		.ds	2
 circleXLeft1		.ds	2
 circleXRight1		.ds	2
 circleYWork		.ds	2
-;			total 26 Byte
+circleXLeftWork		.ds	1
+circleXRightWork	.ds	1
+;			total 28 Byte
 shareAreaBottom
 
 ;---------------------

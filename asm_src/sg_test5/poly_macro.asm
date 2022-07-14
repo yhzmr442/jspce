@@ -2,6 +2,7 @@
 ;//////////////////////////////////
 ;----------------------------
 edgeSigneXPlus0m	.macro
+;
 		iny
 		adc	<edgeSlopeY
 		bcc	.jp_\@
@@ -9,10 +10,7 @@ edgeSigneXPlus0m	.macro
 		sbc	<edgeSlopeX
 		inx
 
-		pha
 		setEdgeBuffer0m
-		pla
-		clc
 
 .jp_\@:
 		.endm
@@ -20,6 +18,7 @@ edgeSigneXPlus0m	.macro
 
 ;----------------------------
 edgeSigneXMinus0m	.macro
+;
 		iny
 		adc	<edgeSlopeY
 		bcc	.jp_\@
@@ -27,10 +26,7 @@ edgeSigneXMinus0m	.macro
 		sbc	<edgeSlopeX
 		dex
 
-		pha
 		setEdgeBuffer0m
-		pla
-		clc
 
 .jp_\@:
 		.endm
@@ -38,6 +34,7 @@ edgeSigneXMinus0m	.macro
 
 ;----------------------------
 edgeSigneYPlus0m	.macro
+;
 		inx
 		adc	<edgeSlopeX
 		bcc	.jp_\@
@@ -46,16 +43,14 @@ edgeSigneYPlus0m	.macro
 		iny
 
 .jp_\@:
-		pha
 		setEdgeBuffer0m
-		pla
-		clc
 
 		.endm
 
 
 ;----------------------------
 edgeSigneYMinus0m	.macro
+;
 		inx
 		adc	<edgeSlopeX
 		bcc	.jp_\@
@@ -64,16 +59,14 @@ edgeSigneYMinus0m	.macro
 		dey
 
 .jp_\@:
-		pha
 		setEdgeBuffer0m
-		pla
-		clc
 
 		.endm
 
 
 ;----------------------------
 edgeSigneXPlusm	.macro
+;
 		iny
 		adc	<edgeSlopeY
 		bcc	.jp_\@
@@ -81,10 +74,7 @@ edgeSigneXPlusm	.macro
 		sbc	<edgeSlopeX
 		inx
 
-		pha
 		setEdgeBufferm
-		pla
-		clc
 
 .jp_\@:
 		.endm
@@ -92,6 +82,7 @@ edgeSigneXPlusm	.macro
 
 ;----------------------------
 edgeSigneXMinusm	.macro
+;
 		iny
 		adc	<edgeSlopeY
 		bcc	.jp_\@
@@ -99,10 +90,7 @@ edgeSigneXMinusm	.macro
 		sbc	<edgeSlopeX
 		dex
 
-		pha
 		setEdgeBufferm
-		pla
-		clc
 
 .jp_\@:
 		.endm
@@ -110,6 +98,7 @@ edgeSigneXMinusm	.macro
 
 ;----------------------------
 edgeSigneYPlusm	.macro
+;
 		inx
 		adc	<edgeSlopeX
 		bcc	.jp_\@
@@ -118,16 +107,14 @@ edgeSigneYPlusm	.macro
 		iny
 
 .jp_\@:
-		pha
 		setEdgeBufferm
-		pla
-		clc
 
 		.endm
 
 
 ;----------------------------
 edgeSigneYMinusm	.macro
+;
 		inx
 		adc	<edgeSlopeX
 		bcc	.jp_\@
@@ -136,16 +123,14 @@ edgeSigneYMinusm	.macro
 		dey
 
 .jp_\@:
-		pha
 		setEdgeBufferm
-		pla
-		clc
 
 		.endm
 
 
 ;----------------------------
 putPolyLineV1m	.macro
+;
 		sta	VDC1_2
 		sty	VDC1_3
 		.endm
@@ -153,6 +138,7 @@ putPolyLineV1m	.macro
 
 ;----------------------------
 putPolyLineV2m	.macro
+;
 		sta	VDC2_2
 		sty	VDC2_3
 		.endm
@@ -160,6 +146,7 @@ putPolyLineV2m	.macro
 
 ;----------------------------
 putPolyLineV1lm	.macro
+;
 		putPolyLineV1m		;30
 
 		putPolyLineV1m		;29
@@ -198,6 +185,7 @@ putPolyLineV1lm	.macro
 
 ;----------------------------
 putPolyLineV2lm	.macro
+;
 		putPolyLineV2m		;30
 
 		putPolyLineV2m		;29
@@ -237,16 +225,27 @@ putPolyLineV2lm	.macro
 ;----------------------------
 setEdgeBuffer0m	.macro
 ;
-		tya
-		sta	edgeLeft,x
-		inc	edgeCount,x
+		say
+		sta	edgeLeft, x
+		inc	edgeCount, x
+		say
+		.endm
+
+
+;----------------------------
+setEdgeBuffer1m	.macro
+;
+		sta	edgeLeft, x
+		inc	edgeCount, x
 		.endm
 
 
 ;----------------------------
 setEdgeBufferm	.macro
 ;set edge buffer
-		lda	edgeCount,x
+		pha
+
+		lda	edgeCount, x
 
 		beq	.jpCount1_\@			;count 1
 		bpl	.jpCount2_\@			;count 2
@@ -254,41 +253,96 @@ setEdgeBufferm	.macro
 ;count 0
 .jpCount0_\@:
 		tya
-		sta	edgeLeft,x
-		inc	edgeCount,x
-		bra	.jp2_\@
+		sta	edgeLeft, x
+		inc	edgeCount, x
+		bra	.jp5_\@
 
 ;count 1
 .jpCount1_\@:
 		tya
-		cmp	edgeLeft,x
+		cmp	edgeLeft, x
 		bcc	.jp4_\@			;a < edgeLeft,x
 
-		sta	edgeRight,x
-		inc	edgeCount,x
-		bra	.jp2_\@
+		sta	edgeRight, x
+		inc	edgeCount, x
+		bra	.jp5_\@
 
 .jp4_\@:
-		lda	edgeLeft,x
-		sta	edgeRight,x
+		lda	edgeLeft, x
+		sta	edgeRight, x
 		tya
-		sta	edgeLeft,x
+		sta	edgeLeft, x
 
-		inc	edgeCount,x
+		inc	edgeCount, x
 		bra	.jp2_\@
 
 ;count 2
 .jpCount2_\@:
 		tya
-		cmp	edgeLeft,x
+		cmp	edgeLeft, x
 		bcs	.jp3_\@			;a >= edgeLeft,x
-		sta	edgeLeft,x
+		sta	edgeLeft, x
 		bra	.jp2_\@
 
 .jp3_\@:
-		cmp	edgeRight,x
+		cmp	edgeRight, x
 		bcc	.jp2_\@			;a < edgeRight,x
-		sta	edgeRight,x
+		sta	edgeRight, x
+
+.jp5_\@:
+		clc
+
+.jp2_\@:
+		pla
+		.endm
+
+
+;----------------------------
+setEdgeBufferm2	.macro
+;set edge buffer
+		lda	edgeCount, x
+
+		beq	.jpCount1_\@			;count 1
+		bpl	.jpCount2_\@			;count 2
+
+;count 0
+.jpCount0_\@:
+		tya
+		sta	edgeLeft, x
+		inc	edgeCount, x
+		bra	.jp2_\@
+
+;count 1
+.jpCount1_\@:
+		tya
+		cmp	edgeLeft, x
+		bcc	.jp4_\@			;a < edgeLeft,x
+
+		sta	edgeRight, x
+		inc	edgeCount, x
+		bra	.jp2_\@
+
+.jp4_\@:
+		lda	edgeLeft, x
+		sta	edgeRight, x
+		tya
+		sta	edgeLeft, x
+
+		inc	edgeCount, x
+		bra	.jp2_\@
+
+;count 2
+.jpCount2_\@:
+		tya
+		cmp	edgeLeft, x
+		bcs	.jp3_\@			;a >= edgeLeft,x
+		sta	edgeLeft, x
+		bra	.jp2_\@
+
+.jp3_\@:
+		cmp	edgeRight, x
+		bcc	.jp2_\@			;a < edgeRight,x
+		sta	edgeRight, x
 
 .jp2_\@:
 		.endm

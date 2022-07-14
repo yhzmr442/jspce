@@ -4850,18 +4850,60 @@ calcCircle_putPoly:
 		incw	<circleXLeft0
 
 .jp02:
+		lda	<circleXLeft0
+		sta	<circleXLeftWork
+
+		lda	<circleXLeft0+1
+		beq	.jp20
+		bpl	.jp04
+
+		stz	<circleXLeftWork
+
+.jp20:
+		lda	<circleXRight0
+		sta	<circleXRightWork
+
+		lda	<circleXRight0+1
+		bmi	.jp04
+		beq	.jp21
+
+		mov	<circleXRightWork, #$FF
+
+.jp21:
 		addw	<circleYWork, <circleCenterY, <circleY
 		jsr	setCircleEdge0
 
 		subw	<circleYWork, <circleCenterY, <circleY
 		jsr	setCircleEdge0
 
+.jp04:
+		lda	<circleXLeft1
+		sta	<circleXLeftWork
+
+		lda	<circleXLeft1+1
+		beq	.jp22
+		bpl	.jp05
+
+		stz	<circleXLeftWork
+
+.jp22:
+		lda	<circleXRight1
+		sta	<circleXRightWork
+
+		lda	<circleXRight1+1
+		bmi	.jp05
+		beq	.jp23
+
+		mov	<circleXRightWork, #$FF
+
+.jp23:
 		addw	<circleYWork, <circleCenterY, <circleX
 		jsr	setCircleEdge1
 
 		subw	<circleYWork, <circleCenterY, <circleX
 		jsr	setCircleEdge1
 
+.jp05:
 		incw	<circleY
 
 		incw	<circleXRight1
@@ -4880,33 +4922,19 @@ setCircleEdge0:
 		cpy	#192
 		bcs	.endSet
 
-		lda	<circleXLeft0+1
-		beq	.jp00
-		bpl	.endSet
-
-		stz	<circleXLeft0
-
-.jp00:
-		lda	<circleXRight0+1
-		bmi	.endSet
-		beq	.jp01
-
-		mov	<circleXRight0, #$FF
-
-.jp01:
 		cpy	<minEdgeY
 		jcs	.jp02
 
 		sty	<minEdgeY
 
 .jp02:
-		lda	#2
+		lda	#1
 		sta	edgeCount, y
 
-		lda	<circleXLeft0
+		lda	<circleXLeftWork
 		sta	edgeLeft, y
 
-		lda	<circleXRight0
+		lda	<circleXRightWork
 		sta	edgeRight, y
 
 .endSet:
@@ -4923,33 +4951,19 @@ setCircleEdge1:
 		cpy	#192
 		bcs	.endSet
 
-		lda	<circleXLeft1+1
-		beq	.jp00
-		bpl	.endSet
-
-		stz	<circleXLeft1
-
-.jp00:
-		lda	<circleXRight1+1
-		bmi	.endSet
-		beq	.jp01
-
-		mov	<circleXRight1, #$FF
-
-.jp01:
 		cpy	<minEdgeY
 		jcs	.jp02
 
 		sty	<minEdgeY
 
 .jp02:
-		lda	#2
+		lda	#1
 		sta	edgeCount, y
 
-		lda	<circleXLeft1
+		lda	<circleXLeftWork
 		sta	edgeLeft, y
 
-		lda	<circleXRight1
+		lda	<circleXRightWork
 		sta	edgeRight, y
 
 .endSet:
@@ -4983,16 +4997,27 @@ calcEdge0:
 		sta	<edgeY1
 		stx	<edgeY0
 
-		jmp	.edgeJump7
+		bra	.edgeJump7
 
 .edgeJump6:
 ;edgeY0 = edgeY1
-		ldy	<edgeX0
 		ldx	<edgeY0
+		lda	#$01
+		sta	edgeCount, x
 
-		setEdgeBuffer0m
-		ldy	<edgeX1
-		setEdgeBufferm
+		lda	<edgeX1
+		cmp	<edgeX0
+		bcc	.edgeJump8			;edgeX1 < edgeX0
+
+		sta	edgeRight, x
+		lda	<edgeX0
+		sta	edgeLeft, x
+		rts
+
+.edgeJump8:
+		sta	edgeLeft, x
+		lda	<edgeX0
+		sta	edgeRight, x
 		rts
 
 .edgeJump7:
@@ -5072,35 +5097,35 @@ edgeXEqual0:
 		lsr	a
 		sta	<edgeLoopCount
 
-		ldy	<edgeX0
+		lda	<edgeX0
 		ldx	<edgeY0
 
 		jmp	[edgeLoopAddr]
 
 .loop0:
 .jp7:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp6:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp5:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp4:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp3:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp2:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp1:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 .jp0:
-		setEdgeBuffer0m
+		setEdgeBuffer1m
 		inx
 
 		dec	<edgeLoopCount
@@ -5136,7 +5161,8 @@ edgeSigneXPlus0:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		tya
+		setEdgeBuffer1m
 
 		sec
 		lda	<edgeX1
@@ -5220,7 +5246,8 @@ edgeSigneXMinus0:
 		ldy	<edgeX1
 		ldx	<edgeY1
 
-		setEdgeBufferm
+		tya
+		setEdgeBuffer1m
 
 		sec
 		lda	<edgeX0
@@ -5304,7 +5331,8 @@ edgeSigneYPlus0:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		tya
+		setEdgeBuffer1m
 
 		sec
 		lda	<edgeY1
@@ -5388,7 +5416,8 @@ edgeSigneYMinus0:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		tya
+		setEdgeBuffer1m
 
 		sec
 		lda	<edgeY1
@@ -5500,9 +5529,9 @@ calcEdge:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		setEdgeBufferm2
 		ldy	<edgeX1
-		setEdgeBufferm
+		setEdgeBufferm2
 		rts
 
 .edgeJump7:
@@ -5589,28 +5618,28 @@ edgeXEqual:
 
 .loop0:
 .jp7:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp6:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp5:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp4:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp3:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp2:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp1:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 .jp0:
-		setEdgeBufferm
+		setEdgeBufferm2
 		inx
 
 		dec	<edgeLoopCount
@@ -5646,7 +5675,7 @@ edgeSigneXPlus:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		setEdgeBufferm2
 
 		sec
 		lda	<edgeX1
@@ -5730,7 +5759,7 @@ edgeSigneXMinus:
 		ldy	<edgeX1
 		ldx	<edgeY1
 
-		setEdgeBufferm
+		setEdgeBufferm2
 
 		sec
 		lda	<edgeX0
@@ -5814,7 +5843,7 @@ edgeSigneYPlus:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		setEdgeBufferm2
 
 		sec
 		lda	<edgeY1
@@ -5898,7 +5927,7 @@ edgeSigneYMinus:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm
+		setEdgeBufferm2
 
 		sec
 		lda	<edgeY1
