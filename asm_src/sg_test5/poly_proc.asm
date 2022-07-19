@@ -1885,7 +1885,6 @@ putPolygonBuffer:
 		lda	[polyBufferAddr], y
 		sta	<circleRadius+1
 
-		jsr	initCalcEdge
 		jsr	calcCircle_putPoly
 		bra	.nextData
 
@@ -4789,6 +4788,8 @@ calcCircle_putPoly:
 		rts
 
 .jp14:
+		jsr	initCalcEdge
+
 		mov	<minEdgeY, #$FF
 
 		subw	<circleD, #1, <circleRadius
