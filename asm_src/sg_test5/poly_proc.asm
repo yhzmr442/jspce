@@ -48,6 +48,17 @@
 ; |
 ;-|-------+X
 
+;----------------------------
+;vertex
+;|v1 v2 v3|
+
+;----------------------------
+;matrix
+;|a11 a21 a31|
+;|a12 a22 a32|
+;|a13 a23 a33|
+
+;----------------------------
 ;memory map
 ;CPU
 ;$0000-$1FFF	I/O
@@ -59,6 +70,7 @@
 ;$C000-$DFFF	polygon function
 ;$E000-$FFFF	main
 
+;----------------------------
 ;VRAM
 ;$0000-$03FF	BAT
 ;$0400-$04FF	SAT
@@ -348,6 +360,9 @@ matrixMultiply:
 		addw	<matrix0, #6
 		addw	<matrix2, #6
 		jsr	vertexMultiply
+
+		subw	<matrix0, #12
+		subw	<matrix2, #12
 
 		rts
 
@@ -1943,7 +1958,7 @@ putPolygonBuffer:
 
 
 ;----------------------------
-setModel:
+setModelRotation:
 ;
 		phx
 		phy
@@ -2011,10 +2026,7 @@ setModel:
 		and	#3
 		jsr	selectVertexRotation
 
-;transform2D
-		jsr	transform2D
-
-		jsr	setModelProc
+		jsr	setModel
 
 		ply
 		plx
@@ -2022,8 +2034,14 @@ setModel:
 
 
 ;----------------------------
-setModelProc:
+setModel:
 ;
+;transform2D
+		phx
+		phy
+
+		jsr	transform2D
+
 		cly
 		lda	[modelAddress], y
 		sta	<modelAddrWork		;ModelData Polygon Addr
@@ -2031,8 +2049,8 @@ setModelProc:
 		lda	[modelAddress], y
 		sta	<modelAddrWork+1
 
-		ldy	#$02
-		lda	[modelAddress], y		;Polygon Count
+		iny
+		lda	[modelAddress], y	;Polygon Count
 		sta	<modelPolygonCount
 
 		cly
@@ -2092,7 +2110,7 @@ setModelProc:
 		lda	#$FF
 		sta	[polyBufferAddr], y	;COUNT
 
-		ldy	#4
+		dey
 		lda	<setModelFrontColor
 		ora	#$80
 		bbr6	<setModelAttr, .circleJp0
@@ -2401,6 +2419,8 @@ setModelProc:
 		dec	<modelPolygonCount
 		jne	.setModelLoop3
 
+		ply
+		plx
 		rts
 
 

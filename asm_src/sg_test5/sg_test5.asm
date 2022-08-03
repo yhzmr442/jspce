@@ -328,7 +328,7 @@ setWall:
 
 		movw	<modelAddress, #modelData007
 
-		jsr	setModel
+		jsr	setModelRotation
 		rts
 
 
@@ -350,7 +350,7 @@ setDeltaWall:
 
 		movw	<modelAddress, #modelData009
 
-		jsr	setModel
+		jsr	setModelRotation
 
 		addw	wallDeltaZWork, #2048
 
@@ -961,7 +961,7 @@ setEnemyShotModel:
 
 		movw	<modelAddress, #modelData003
 
-		jsr	setModel
+		jsr	setModelRotation
 
 .jp0:
 		inx
@@ -1158,7 +1158,7 @@ setEnemyModel:
 		movw	<modelAddress, #modelData006
 
 .jp99:
-		jsr	setModel
+		jsr	setModelRotation
 
 .jp0:		inx
 		inx
@@ -1308,7 +1308,7 @@ setObjectModel:
 
 		movw	<modelAddress, #modelData002
 
-		jsr	setModel
+		jsr	setModelRotation
 
 .jp0:		inx
 		inx
@@ -1429,7 +1429,7 @@ setShotModel:
 
 		movw	<modelAddress, #modelData000
 
-		jsr	setModel
+		jsr	setModelRotation
 
 .jp0:		inx
 		inx
@@ -1602,7 +1602,7 @@ modelData009Polygon
 		;	vertex index 1,
 		;	vertex index 2,
 		;	vertex index 3
-		.db	%00000010, $01, $00, $03, 0*6, 1*6, 2*6, 0*6
+		.db	ATTR_BACKCHECK_CXL, $01, $00, $03, 0*6, 1*6, 2*6, 0*6
 
 modelData009Vertex
 		.dw	    0,    0, -256
@@ -1619,11 +1619,11 @@ modelData008
 		.db	8
 
 modelData008Polygon
-		.db	%00000001, $19, $00, $04, 0*6, 1*6, 2*6, 3*6
-		.db	%00000001, $1A, $00, $04, 4*6, 5*6, 1*6, 0*6
-		.db	%00000001, $1B, $00, $04, 3*6, 2*6, 6*6, 7*6
-		.db	%00000001, $1C, $00, $04, 4*6, 0*6, 3*6, 7*6
-		.db	%00000001, $1D, $00, $04, 1*6, 5*6, 6*6, 2*6
+		.db	ATTR_BACKDRAW_CXL, $19, $00, $04, 0*6, 1*6, 2*6, 3*6
+		.db	ATTR_BACKDRAW_CXL, $1A, $00, $04, 4*6, 5*6, 1*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1B, $00, $04, 3*6, 2*6, 6*6, 7*6
+		.db	ATTR_BACKDRAW_CXL, $1C, $00, $04, 4*6, 0*6, 3*6, 7*6
+		.db	ATTR_BACKDRAW_CXL, $1D, $00, $04, 1*6, 5*6, 6*6, 2*6
 
 modelData008Vertex
 		.dw	 -128,  128, -128
@@ -1646,10 +1646,10 @@ modelData007
 		.db	16	;vertex count
 
 modelData007Polygon
-		.db	%00000010, $07, $00, $04, 0*6, 1*6, 2*6, 3*6
-		.db	%00000010, $07, $00, $04, 7*6, 6*6, 5*6, 4*6
-		.db	%00000010, $07, $00, $04, 8*6, 9*6,10*6,11*6
-		.db	%00000010, $07, $00, $04,15*6,14*6,13*6,12*6
+		.db	ATTR_BACKCHECK_CXL, $07, $00, $04, 0*6, 1*6, 2*6, 3*6
+		.db	ATTR_BACKCHECK_CXL, $07, $00, $04, 7*6, 6*6, 5*6, 4*6
+		.db	ATTR_BACKCHECK_CXL, $07, $00, $04, 8*6, 9*6,10*6,11*6
+		.db	ATTR_BACKCHECK_CXL, $07, $00, $04,15*6,14*6,13*6,12*6
 
 modelData007Vertex
 		.dw	 -1020,  1024,   128
@@ -1682,7 +1682,7 @@ modelData003
 		.db	1	;vertex count
 
 modelData003Polygon
-		.db	%10000000, $03, $80, $00, 0*6, 0*6, 0*6, 0*6
+		.db	ATTR_CIRCLE, $03, $80, $00, 0*6, 0*6, 0*6, 0*6
 
 modelData003Vertex
 		.dw	   0,   0,   0
@@ -1697,7 +1697,7 @@ modelData004
 		.db	1
 
 modelData004Polygon
-		.db	%11000000, $11, $00, $01, 0*6, 0*6, 0*6, 0*6
+		.db	ATTR_CIRCLE+ATTR_LINESKIP, $11, $00, $01, 0*6, 0*6, 0*6, 0*6
 
 modelData004Vertex
 		.dw	   0,   0,   0
@@ -1712,7 +1712,7 @@ modelData005
 		.db	1
 
 modelData005Polygon
-		.db	%11000000, $11, $80, $00, 0*6, 0*6, 0*6, 0*6
+		.db	ATTR_CIRCLE+ATTR_LINESKIP, $11, $80, $00, 0*6, 0*6, 0*6, 0*6
 
 modelData005Vertex
 		.dw	   0,   0,   0
@@ -1727,7 +1727,7 @@ modelData006
 		.db	1
 
 modelData006Polygon
-		.db	%11000000, $11, $40, $00, 0*6, 0*6, 0*6, 0*6
+		.db	ATTR_CIRCLE+ATTR_LINESKIP, $11, $40, $00, 0*6, 0*6, 0*6, 0*6
 
 modelData006Vertex
 		.dw	   0,    0,   0
@@ -1742,8 +1742,8 @@ modelData000
 		.db	6
 
 modelData000Polygon
-		.db	%00000010, $0C, $00, $03, 0*6, 2*6, 1*6, 0*6
-		.db	%00000010, $0C, $00, $03, 3*6, 5*6, 4*6, 0*6
+		.db	ATTR_BACKCHECK_CXL, $0C, $00, $03, 0*6, 2*6, 1*6, 0*6
+		.db	ATTR_BACKCHECK_CXL, $0C, $00, $03, 3*6, 5*6, 4*6, 0*6
 
 modelData000Vertex
 		.dw	 -128,  -32,    0
@@ -1763,12 +1763,12 @@ modelData001
 		.db	10
 
 modelData001Polygon
-		.db	%00000001, $19, $00, $03, 0*6, 2*6, 1*6, 0*6
-		.db	%00000001, $1A, $00, $03, 0*6, 1*6, 3*6, 0*6
-		.db	%00000001, $1B, $00, $03, 0*6, 3*6, 2*6, 0*6
-		.db	%00000001, $1C, $00, $03, 3*6, 1*6, 2*6, 0*6
-		.db	%00000010, $02, $00, $03, 4*6, 6*6, 5*6, 0*6
-		.db	%00000010, $02, $00, $03, 7*6, 9*6, 8*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $19, $00, $03, 0*6, 2*6, 1*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1A, $00, $03, 0*6, 1*6, 3*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1B, $00, $03, 0*6, 3*6, 2*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1C, $00, $03, 3*6, 1*6, 2*6, 0*6
+		.db	ATTR_BACKCHECK_CXL, $02, $00, $03, 4*6, 6*6, 5*6, 0*6
+		.db	ATTR_BACKCHECK_CXL, $02, $00, $03, 7*6, 9*6, 8*6, 0*6
 
 modelData001Vertex
 		.dw	    0,    0,  128
@@ -1794,10 +1794,10 @@ modelData002
 		.db	5
 
 modelData002Polygon
-		.db	%00000001, $1A, $00, $03, 0*6, 4*6, 1*6, 0*6
-		.db	%00000001, $19, $00, $03, 1*6, 4*6, 2*6, 0*6
-		.db	%00000001, $1B, $00, $03, 2*6, 4*6, 3*6, 0*6
-		.db	%00000001, $1C, $00, $03, 3*6, 4*6, 0*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1A, $00, $03, 0*6, 4*6, 1*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $19, $00, $03, 1*6, 4*6, 2*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1B, $00, $03, 2*6, 4*6, 3*6, 0*6
+		.db	ATTR_BACKDRAW_CXL, $1C, $00, $03, 3*6, 4*6, 0*6, 0*6
 
 modelData002Vertex
 		.dw	  -96,  192,    0

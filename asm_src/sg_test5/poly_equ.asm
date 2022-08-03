@@ -66,3 +66,30 @@ divDataBank		.equ	20
 
 ;----------------------------
 SCREEN_Z		.equ	128
+
+;----------------------------
+ATTR_CIRCLE		.equ	%10000000
+ATTR_LINESKIP		.equ	%01000000
+ATTR_FRONTCLIP_CXL	.equ	%00000100
+ATTR_BACKCHECK_CXL	.equ	%00000010
+ATTR_BACKDRAW_CXL	.equ	%00000001
+
+;----------------------------
+ROT_X			.equ	0
+ROT_Y			.equ	1
+ROT_Z			.equ	2
+ROT_FIRST		.equ	1
+ROT_SECOND		.equ	4
+ROT_THIRD		.equ	16
+
+ROT0_X			.equ	ROT_X*ROT_FIRST
+ROT1_X			.equ	ROT_X*ROT_SECOND
+ROT2_X			.equ	ROT_X*ROT_THIRD
+
+ROT0_Y			.equ	ROT_Y*ROT_FIRST
+ROT1_Y			.equ	ROT_Y*ROT_SECOND
+ROT2_Y			.equ	ROT_Y*ROT_THIRD
+
+ROT0_Z			.equ	ROT_Z*ROT_FIRST
+ROT1_Z			.equ	ROT_Z*ROT_SECOND
+ROT2_Z			.equ	ROT_Z*ROT_THIRD
