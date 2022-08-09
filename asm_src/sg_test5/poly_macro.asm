@@ -522,6 +522,7 @@ decw		.macro
 ;----------------------------
 addq		.macro
 ;\1 = \2 + \3
+;\1 = \1 + (\2:\3)
 ;\1 = \1 + \2
 		.if	(\# = 3)
 			.if	(\?2 = 2);Immediate
@@ -678,24 +679,44 @@ subwb		.macro
 ;----------------------------
 subq		.macro
 ;\1 = \2 - \3
+;\1 = \1 - (\2:\3)
 ;\1 = \1 - \2
 		.if	(\# = 3)
-			sec
-			lda	\2
-			sbc	\3
-			sta	\1
+			.if	(\?2 = 2);Immediate
+				sec
+				lda	\1
+				sbc	#LOW(\3)
+				sta	\1
 
-			lda	\2+1
-			sbc	\3+1
-			sta	\1+1
+				lda	\1+1
+				sbc	#HIGH(\3)
+				sta	\1+1
 
-			lda	\2+2
-			sbc	\3+2
-			sta	\1+2
+				lda	\1+2
+				sbc	#LOW(\2)
+				sta	\1+2
 
-			lda	\2+3
-			sbc	\3+3
-			sta	\1+3
+				lda	\1+3
+				sbc	#HIGH(\2)
+				sta	\1+3
+			.else
+				sec
+				lda	\2
+				sbc	\3
+				sta	\1
+
+				lda	\2+1
+				sbc	\3+1
+				sta	\1+1
+
+				lda	\2+2
+				sbc	\3+2
+				sta	\1+2
+
+				lda	\2+3
+				sbc	\3+3
+				sta	\1+3
+			.endif
 		.else
 			sec
 			lda	\1
@@ -720,20 +741,20 @@ subq		.macro
 ;----------------------------
 adx		.macro
 ;x = x + \1
-		txa
+		sax
 		clc
 		adc	\1
-		tax
+		sax
 		.endm
 
 
 ;----------------------------
 ady		.macro
 ;y = y + \1
-		tya
+		say
 		clc
 		adc	\1
-		tay
+		say
 		.endm
 
 
