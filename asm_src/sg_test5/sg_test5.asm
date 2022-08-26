@@ -1594,15 +1594,7 @@ modelData009
 		.db	3
 
 modelData009Polygon
-		;	attribute: circle($80 = circlre) + even line skip($40 = skip) + front clip($04 = cancel) + back check($02 = cancel) + back draw($01 = not draw : front side = counterclockwise) 
-		;	front color(0-63)
-		;	back color(0-63) or circle radius(1-8192) low byte
-		;	vertex count: count(3-4) or circle radius(1-8192) high byte
-		;	vertex index 0,
-		;	vertex index 1,
-		;	vertex index 2,
-		;	vertex index 3
-		.db	ATTR_BACKCHECK_CXL, $01, $00, $03, 0*6, 1*6, 2*6, 0*6
+		__polygonData	ATTR_NONE, $01, $01, 0, 1, 2
 
 modelData009Vertex
 		.dw	    0,    0, -256
@@ -1619,11 +1611,11 @@ modelData008
 		.db	8
 
 modelData008Polygon
-		.db	ATTR_BACKDRAW_CXL, $19, $00, $04, 0*6, 1*6, 2*6, 3*6
-		.db	ATTR_BACKDRAW_CXL, $1A, $00, $04, 4*6, 5*6, 1*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $1B, $00, $04, 3*6, 2*6, 6*6, 7*6
-		.db	ATTR_BACKDRAW_CXL, $1C, $00, $04, 4*6, 0*6, 3*6, 7*6
-		.db	ATTR_BACKDRAW_CXL, $1D, $00, $04, 1*6, 5*6, 6*6, 2*6
+		__polygonData	ATTR_BACKDRAW_CXL, $19, $00, 0, 1, 2, 3
+		__polygonData	ATTR_BACKDRAW_CXL, $1A, $00, 4, 5, 1, 0
+		__polygonData	ATTR_BACKDRAW_CXL, $1B, $00, 3, 2, 6, 7
+		__polygonData	ATTR_BACKDRAW_CXL, $1C, $00, 4, 0, 3, 7
+		__polygonData	ATTR_BACKDRAW_CXL, $1D, $00, 1, 5, 6, 2
 
 modelData008Vertex
 		.dw	 -128,  128, -128
@@ -1646,10 +1638,10 @@ modelData007
 		.db	16	;vertex count
 
 modelData007Polygon
-		.db	ATTR_BACKCHECK_CXL, $07, $00, $04, 0*6, 1*6, 2*6, 3*6
-		.db	ATTR_BACKCHECK_CXL, $07, $00, $04, 7*6, 6*6, 5*6, 4*6
-		.db	ATTR_BACKCHECK_CXL, $07, $00, $04, 8*6, 9*6,10*6,11*6
-		.db	ATTR_BACKCHECK_CXL, $07, $00, $04,15*6,14*6,13*6,12*6
+		__polygonData	ATTR_NONE, $07, $07,  0,  1,  2,  3
+		__polygonData	ATTR_NONE, $07, $07,  7,  6,  5,  4
+		__polygonData	ATTR_NONE, $07, $07,  8,  9, 10, 11
+		__polygonData	ATTR_NONE, $07, $07, 15, 14, 13, 12
 
 modelData007Vertex
 		.dw	 -1020,  1024,   128
@@ -1682,7 +1674,7 @@ modelData003
 		.db	1	;vertex count
 
 modelData003Polygon
-		.db	ATTR_CIRCLE, $03, $80, $00, 0*6, 0*6, 0*6, 0*6
+		__polygonData	ATTR_CIRCLE, $03, $0080
 
 modelData003Vertex
 		.dw	   0,   0,   0
@@ -1697,7 +1689,7 @@ modelData004
 		.db	1
 
 modelData004Polygon
-		.db	ATTR_CIRCLE+ATTR_LINESKIP, $11, $00, $01, 0*6, 0*6, 0*6, 0*6
+		__polygonData	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0100
 
 modelData004Vertex
 		.dw	   0,   0,   0
@@ -1712,7 +1704,7 @@ modelData005
 		.db	1
 
 modelData005Polygon
-		.db	ATTR_CIRCLE+ATTR_LINESKIP, $11, $80, $00, 0*6, 0*6, 0*6, 0*6
+		__polygonData	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0080
 
 modelData005Vertex
 		.dw	   0,   0,   0
@@ -1727,7 +1719,7 @@ modelData006
 		.db	1
 
 modelData006Polygon
-		.db	ATTR_CIRCLE+ATTR_LINESKIP, $11, $40, $00, 0*6, 0*6, 0*6, 0*6
+		__polygonData	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0040
 
 modelData006Vertex
 		.dw	   0,    0,   0
@@ -1742,8 +1734,8 @@ modelData000
 		.db	6
 
 modelData000Polygon
-		.db	ATTR_BACKCHECK_CXL, $0C, $00, $03, 0*6, 2*6, 1*6, 0*6
-		.db	ATTR_BACKCHECK_CXL, $0C, $00, $03, 3*6, 5*6, 4*6, 0*6
+		__polygonData	ATTR_NONE, $0C, $0C, 0, 2, 1
+		__polygonData	ATTR_NONE, $0C, $0C, 3, 5, 4
 
 modelData000Vertex
 		.dw	 -128,  -32,    0
@@ -1763,12 +1755,12 @@ modelData001
 		.db	10
 
 modelData001Polygon
-		.db	ATTR_BACKDRAW_CXL, $19, $00, $03, 0*6, 2*6, 1*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $1A, $00, $03, 0*6, 1*6, 3*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $1B, $00, $03, 0*6, 3*6, 2*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $1C, $00, $03, 3*6, 1*6, 2*6, 0*6
-		.db	ATTR_BACKCHECK_CXL, $02, $00, $03, 4*6, 6*6, 5*6, 0*6
-		.db	ATTR_BACKCHECK_CXL, $02, $00, $03, 7*6, 9*6, 8*6, 0*6
+		__polygonData	ATTR_BACKDRAW_CXL, $19, $00, 0, 2, 1
+		__polygonData	ATTR_BACKDRAW_CXL, $1A, $00, 0, 1, 3
+		__polygonData	ATTR_BACKDRAW_CXL, $1B, $00, 0, 3, 2
+		__polygonData	ATTR_BACKDRAW_CXL, $1C, $00, 3, 1, 2
+		__polygonData	ATTR_NONE, $02, $02, 4, 6, 5
+		__polygonData	ATTR_NONE, $02, $02, 7, 9, 8
 
 modelData001Vertex
 		.dw	    0,    0,  128
@@ -1794,10 +1786,10 @@ modelData002
 		.db	5
 
 modelData002Polygon
-		.db	ATTR_BACKDRAW_CXL, $1A, $00, $03, 0*6, 4*6, 1*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $19, $00, $03, 1*6, 4*6, 2*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $1B, $00, $03, 2*6, 4*6, 3*6, 0*6
-		.db	ATTR_BACKDRAW_CXL, $1C, $00, $03, 3*6, 4*6, 0*6, 0*6
+		__polygonData	ATTR_BACKDRAW_CXL, $1A, $00, 0, 4, 1
+		__polygonData	ATTR_BACKDRAW_CXL, $19, $00, 1, 4, 2
+		__polygonData	ATTR_BACKDRAW_CXL, $1B, $00, 2, 4, 3
+		__polygonData	ATTR_BACKDRAW_CXL, $1C, $00, 3, 4, 0
 
 modelData002Vertex
 		.dw	  -96,  192,    0

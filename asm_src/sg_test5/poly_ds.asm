@@ -29,6 +29,9 @@ clip2D0			.ds	(8+1)*4
 clip2D1			.ds	(8+1)*4
 
 ;---------------------
+backCheckWork		.ds	3*4
+
+;---------------------
 polyLineColorWork_H_P0	.ds	1
 polyLineColorWork_H_P1	.ds	1
 polyLineColorWork_H_P2	.ds	1
@@ -61,10 +64,11 @@ SAT_SIZE		.rs	0
 satBuffer		.ds	SAT_SIZE*64
 
 ;---------------------
+;Data is ordered counterclockwise
 ;NEXT ADDR 2Byte
 ;SAMPLE Z 2Byte
-;COLOR 1Byte COLOR:(0-63), CIRCLE:+$80, line skip:+$40
-;VERTEX COUNT 1Byte COUNT:(3-9) or CIRCLE:$FF or DATA END:$00
+;COLOR 1Byte COLOR:(0-63), CIRCLE:+$80, LINESKIP:+$40
+;VERTEX COUNT 1Byte (COUNT:(3-9) , BADDATALIST:+$40) or DATA END:$00
 ;X0 1Byte, Y0 1Byte or CIRCLE CENTER X 2Byte
 ;X1 1Byte, Y1 1Byte or CIRCLE CENTER Y 2Byte
 ;X2 1Byte, Y2 1Byte or CIRCLE RADIUS 2Byte (1-8192)

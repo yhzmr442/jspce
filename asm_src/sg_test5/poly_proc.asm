@@ -1908,6 +1908,8 @@ putPolygonBuffer:
 		lda	[polyBufferAddr], y	;COUNT
 		beq	.putPolyBufferEnd
 
+		sta	<clipFlag
+		and	#$0F
 		sta	<clip2D0Count
 		pha
 		clx
@@ -1931,7 +1933,13 @@ putPolygonBuffer:
 
 		pla
 		sta	<clip2D0Count
+
+		bbr6	<clipFlag, .jp0
 		jsr	calcEdge_putPoly
+		bra	.nextData
+
+.jp0:
+		jsr	calcEdge_putPolyEX
 
 .nextData:
 		cly
@@ -2107,14 +2115,14 @@ setModel:
 		mov	clip2D0+10, <mul16a+1
 
 		ldy	#5
-		lda	#$FF
+		lda	#$80
 		sta	[polyBufferAddr], y	;COUNT
 
 		dey
 		lda	<setModelFrontColor
-		ora	#$80
+		ora	#$80			;CIRCLE
 		bbr6	<setModelAttr, .circleJp0
-		ora	#$40
+		ora	#$40			;LINE SKIP
 .circleJp0:
 		sta	[polyBufferAddr], y	;COLOR
 
@@ -2129,6 +2137,8 @@ setModel:
 		sta	clip2D0+6
 
 		mov	<clip2D0Count, #3
+
+		stz	<backCheckFlag
 
 		jmp	.setBuffer
 
@@ -2145,6 +2155,8 @@ setModel:
 		stz	<model2DClipIndexWork
 
 		stz	<frontClipCount
+
+		stz	<clipFlag
 
 		stz	<polyBufferZ0Work0
 		stz	<polyBufferZ0Work0+1
@@ -2255,55 +2267,33 @@ setModel:
 
 .setModelJump8:
 		sta	<clip2D0Count
+		tii	clip2D0, backCheckWork, 3*4
 		jsr	clip2D
 		jeq	.setModelJump0
 
-;cancel back side check
-		bbs1	<setModelAttr, .setModelJump2
-
 ;back side check
-		sec
-		lda	clip2D0+8		;X2
-		sbc	clip2D0+4		;X1
-		sta	<mul16a
-		cla
-		sbc	#0
-		sta	<mul16a+1
-
-		sec
-		lda	clip2D0+2		;Y0
-		sbc	clip2D0+6		;Y1
-		sta	<mul16b
-		cla
-		sbc	#0
-		sta	<mul16b+1
-
+		stz	<backCheckFlag
+		subw	<mul16a, backCheckWork+8, backCheckWork+4	;X2-X1
+		subw	<mul16b, backCheckWork+2, backCheckWork+6	;Y0-Y1
 		jsr	smul16
-
 		movq	<work8a, <mul16c
 
-		sec
-		lda	clip2D0+10		;Y2
-		sbc	clip2D0+6		;Y1
-		sta	<mul16a
-		cla
-		sbc	#0
-		sta	<mul16a+1
-
-		sec
-		lda	clip2D0			;X0
-		sbc	clip2D0+4		;X1
-		sta	<mul16b
-		cla
-		sbc	#0
-		sta	<mul16b+1
-
+		subw	<mul16a, backCheckWork+10, backCheckWork+6	;Y2-Y1
+		subw	<mul16b, backCheckWork, backCheckWork+4		;X0-X1
 		jsr	smul16
 
-		cmpq2	<work8a, <mul16c
+		subq	<work8a, <mul16c
 		bmi	.setModelJump2
 
+		lda	<work8a
+		ora	<work8a+1
+		ora	<work8a+2
+		ora	<work8a+3
+		jeq	.setModelJump0
+
+.setModelJump13:
 ;back side
+		smb0	<backCheckFlag
 		bbr0	<setModelAttr, .setModelJump6
 		jmp	.setModelJump0
 
@@ -2324,6 +2314,7 @@ setModel:
 		sta	[polyBufferAddr], y	;COLOR
 
 		lda	<clip2D0Count
+		ora	<clipFlag
 
 		ldy	#5
 		sta	[polyBufferAddr], y	;COUNT
@@ -2385,16 +2376,18 @@ setModel:
 		sta	[polyBufferNow], y
 
 ;set data
+		bbs0	<backCheckFlag, .setModelJump11
+
 		clx
 		ldy	#6
 .setModelLoop2:
-		lda	clip2D0,x
+		lda	clip2D0, x
 		sta	[polyBufferAddr], y
 		inx
 		inx
 		iny
 
-		lda	clip2D0,x
+		lda	clip2D0, x
 		sta	[polyBufferAddr], y
 		inx
 		inx
@@ -2403,6 +2396,31 @@ setModel:
 		dec	<clip2D0Count
 		bne	.setModelLoop2
 
+		bra	.setModelJump12
+
+.setModelJump11:
+		lda	<clip2D0Count
+		dec	a
+		asl	a
+		asl	a
+		tax
+		ldy	#6
+.setModelLoop6:
+		lda	clip2D0, x
+		sta	[polyBufferAddr], y
+		inx
+		inx
+		iny
+
+		lda	clip2D0, x
+		sta	[polyBufferAddr], y
+		sbx	#6
+		iny
+
+		dec	<clip2D0Count
+		bne	.setModelLoop6
+
+.setModelJump12:
 ;next buffer address
 		clc
 		tya
@@ -2443,6 +2461,8 @@ clipFront:
 		jeq	.clipFrontJump9
 
 ;clip front
+		smb6	<clipFlag
+
 ;(128-Z0) to mul16a
 		sec
 		lda	#SCREEN_Z
@@ -2740,6 +2760,8 @@ clip2DX255:
 		cmp	#$03
 		jeq	.clip2DX255Jump03
 
+		smb6	<clipFlag
+
 ;(255-X0) to mul16a
 		sec
 		lda	#255
@@ -2901,6 +2923,8 @@ clip2DX0:
 
 		cmp	#$03
 		jeq	.clip2DX0Jump03
+
+		smb6	<clipFlag
 
 ;(0-X0) to mul16a
 		sec
@@ -3070,6 +3094,8 @@ clip2DY255:
 		cmp	#$03
 		jeq	.clip2DY255Jump03
 
+		smb6	<clipFlag
+
 ;(191-Y0) to mul16a
 		sec
 		lda	#191
@@ -3231,6 +3257,8 @@ clip2DY0:
 
 		cmp	#$03
 		jeq	.clip2DY0Jump03
+
+		smb6	<clipFlag
 
 ;(0-Y0) to mul16a
 		sec
@@ -4636,16 +4664,6 @@ atanDataLow:
 		.org	$4000
 
 ;----------------------------
-initCalcEdge:
-;initialize calculation edge
-		lda	#$FF
-		sta	edgeCount
-		tii	edgeCount, edgeCount+1, 193
-
-		rts
-
-
-;----------------------------
 calcEdge_putPoly:
 ;
 		lda	<clip2D0Count
@@ -4676,43 +4694,14 @@ calcEdge_putPoly:
 		bne	.minLoop
 
 		mov	<minEdgeY, #$FF
+		stz	<maxEdgeY
 
-		jsr	initCalcEdge
+		lda	#$FF
+		sta	edgeCount
+		tii	edgeCount, edgeCount+1, 193
 
 		sxy
 
-;first process
-		lda	clip2D0, x
-		sta	<edgeX0
-		lda	clip2D0+2, x
-		sta	<edgeY0
-
-		cmp	<minEdgeY
-		jcs	.calcEdge_putPolyJump3
-		sta	<minEdgeY
-
-.calcEdge_putPolyJump3:
-		lda	clip2D0+4, x
-		sta	<edgeX1
-		lda	clip2D0+6, x
-		sta	<edgeY1
-
-		phx
-		jsr	calcEdge0
-		plx
-
-		inx
-		inx
-		inx
-		inx
-
-		dec	<clip2D0Count
-
-;next process
-		cpx	<calcEdgeLastAddr
-		bne	.nextProc
-		clx
-.nextProc:
 .calcEdge_putPolyLoop0:
 		lda	clip2D0, x
 		sta	<edgeX0
@@ -4724,6 +4713,11 @@ calcEdge_putPoly:
 		sta	<minEdgeY
 
 .calcEdge_putPolyJump2:
+		cmp	<maxEdgeY
+		jcc	.calcEdge_putPolyJump6
+		sta	<maxEdgeY
+
+.calcEdge_putPolyJump6:
 		lda	clip2D0+4, x
 		sta	<edgeX1
 		lda	clip2D0+6, x
@@ -4753,13 +4747,92 @@ calcEdge_putPoly:
 
 
 ;----------------------------
+calcEdge_putPolyEX:
+;
+		lda	<clip2D0Count
+		asl	a
+		asl	a
+		sta	<calcEdgeLastAddr
+		tax
+		lda	clip2D0
+		sta	clip2D0, x
+		lda	clip2D0+2
+		sta	clip2D0+2, x
+
+		cly
+		ldx	#$04
+.minLoop:
+		lda	clip2D0+2, y
+		cmp	clip2D0+2, x
+		bcc	.minJp
+
+		txa
+		tay
+.minJp:
+		inx
+		inx
+		inx
+		inx
+		cpx	<calcEdgeLastAddr
+		bne	.minLoop
+
+		mov	<minEdgeY, #$FF
+		stz	<maxEdgeY
+
+		sxy
+
+.calcEdge_putPolyLoop0:
+		lda	clip2D0, x
+		sta	<edgeX0
+		lda	clip2D0+2, x
+		sta	<edgeY0
+
+		cmp	<minEdgeY
+		jcs	.calcEdge_putPolyJump2
+		sta	<minEdgeY
+
+.calcEdge_putPolyJump2:
+		cmp	<maxEdgeY
+		jcc	.calcEdge_putPolyJump6
+		sta	<maxEdgeY
+
+.calcEdge_putPolyJump6:
+		lda	clip2D0+4, x
+		sta	<edgeX1
+		lda	clip2D0+6, x
+		sta	<edgeY1
+
+		phx
+		jsr	calcEdgeEX
+		plx
+
+		inx
+		inx
+		inx
+		inx
+
+		dec	<clip2D0Count
+		beq	.loopEnd
+
+		cpx	<calcEdgeLastAddr
+		bne	.calcEdge_putPolyLoop0
+		clx
+		bra	.calcEdge_putPolyLoop0
+.loopEnd:
+
+		jsr	putPolyLine
+
+		rts
+
+
+;----------------------------
 calcCircle_putPoly:
 ;
 ;top < 192
 		sec
 		lda	<circleCenterY
 		sbc	<circleRadius
-		sta	<circleYTop
+		sta	<minEdgeY
 		lda	<circleCenterY+1
 		sbc	<circleRadius+1
 
@@ -4768,7 +4841,7 @@ calcCircle_putPoly:
 		rts
 
 .jp10:
-		lda	<circleYTop
+		lda	<minEdgeY
 		cmp	#192
 		jcc	.jp11
 		rts
@@ -4808,9 +4881,8 @@ calcCircle_putPoly:
 		rts
 
 .jp14:
-		jsr	initCalcEdge
-
 		mov	<minEdgeY, #$FF
+		stz	<maxEdgeY
 
 		subw	<circleD, #1, <circleRadius
 
@@ -4949,9 +5021,12 @@ setCircleEdge0:
 		sty	<minEdgeY
 
 .jp02:
-		lda	#1
-		sta	edgeCount, y
+		cpy	<maxEdgeY
+		jcc	.jp03
 
+		sty	<maxEdgeY
+
+.jp03:
 		lda	<circleXLeftWork
 		sta	edgeLeft, y
 
@@ -4978,9 +5053,12 @@ setCircleEdge1:
 		sty	<minEdgeY
 
 .jp02:
-		lda	#1
-		sta	edgeCount, y
+		cpy	<maxEdgeY
+		jcc	.jp03
 
+		sty	<maxEdgeY
+
+.jp03:
 		lda	<circleXLeftWork
 		sta	edgeLeft, y
 
@@ -4992,533 +5070,21 @@ setCircleEdge1:
 
 
 ;----------------------------
-calcEdge0:
+calcEdgeEX:
 ;
-;calculation edge Y
-		sec
 		lda	<edgeY1
-		sbc	<edgeY0
-		beq	.edgeJump6
-
-		sta	<edgeSlopeY
-		jcs	.edgeJump7
-
-		eor	#$FF
-		inc	a
-		sta	<edgeSlopeY
-
-;edgeY0 > edgeY1 exchange X0<->X1 Y0<->Y1
-		lda	<edgeX0
-		ldx	<edgeX1
-		sta	<edgeX1
-		stx	<edgeX0
-
-		lda	<edgeY0
-		ldx	<edgeY1
-		sta	<edgeY1
-		stx	<edgeY0
-
-		bra	.edgeJump7
-
-.edgeJump6:
-;edgeY0 = edgeY1
-		ldx	<edgeY0
-		lda	#$01
-		sta	edgeCount, x
-
-		lda	<edgeX1
-		cmp	<edgeX0
-		bcc	.edgeJump8			;edgeX1 < edgeX0
-
-		sta	edgeRight, x
-		lda	<edgeX0
-		sta	edgeLeft, x
+		cmp	<edgeY0
+		bcc	.jp00
+		jsr	calcEdgeL
 		rts
 
-.edgeJump8:
-		sta	edgeLeft, x
-		lda	<edgeX0
-		sta	edgeRight, x
+.jp00:
+		jsr	calcEdgeR
 		rts
-
-.edgeJump7:
-;calculation edge X
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-		beq	.edgeJump1
-
-		sta	<edgeSlopeX
-		stz	<edgeSigneX
-		bcs	.edgeJump3
-
-		eor	#$FF
-		inc	a
-		sta	<edgeSlopeX
-
-		mov	<edgeSigneX, #$FF
-
-		bra	.edgeJump3
-
-.edgeJump1:
-;edgeX0 = edgeX1
-		jmp	edgeXEqual0
-
-.edgeJump3:
-;edgeSlope compare
-		lda	<edgeSlopeY
-		cmp	<edgeSlopeX
-		jcs	.edgeJump4
-
-;edgeSlopeX > edgeSlopeY
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeJump10
-
-;++++++++++++++++++++++++++++
-;edgeSigneX plus
-		jmp	edgeSigneXPlus0
-
-;++++++++++++++++++++++++++++
-;edgeSigneX minus
-.edgeJump10:
-		jmp	edgeSigneXMinus0
-
-.edgeJump4:
-;edgeSlopeY >= edgeSlopeX
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeYLoop4
-
-;++++++++++++++++++++++++++++
-;edgeSigneY plus
-		jmp	edgeSigneYPlus0
-
-;++++++++++++++++++++++++++++
-;edgeSigneY minus
-.edgeYLoop4:
-		jmp	edgeSigneYMinus0
-
-;----------------------------
-edgeXEqual0:
-;
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-		lda	<edgeX0
-		ldx	<edgeY0
-
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		setEdgeBuffer1m
-		inx
-.jp6:
-		setEdgeBuffer1m
-		inx
-.jp5:
-		setEdgeBuffer1m
-		inx
-.jp4:
-		setEdgeBuffer1m
-		inx
-.jp3:
-		setEdgeBuffer1m
-		inx
-.jp2:
-		setEdgeBuffer1m
-		inx
-.jp1:
-		setEdgeBuffer1m
-		inx
-.jp0:
-		setEdgeBuffer1m
-		inx
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneXPlus0:
-;
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		tya
-		setEdgeBuffer1m
-
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-		bne	.jpInit
-		rts
-
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-;edgeSlope initialize
-		lda	<edgeSlopeX
-		eor	#$FF
-		inc	a
-
-		ldx	<edgeY0
-		clc
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		edgeSigneXPlus0m
-.jp6:
-		edgeSigneXPlus0m
-.jp5:
-		edgeSigneXPlus0m
-.jp4:
-		edgeSigneXPlus0m
-.jp3:
-		edgeSigneXPlus0m
-.jp2:
-		edgeSigneXPlus0m
-.jp1:
-		edgeSigneXPlus0m
-.jp0:
-		edgeSigneXPlus0m
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneXMinus0:
-;
-		ldy	<edgeX1
-		ldx	<edgeY1
-
-		tya
-		setEdgeBuffer1m
-
-		sec
-		lda	<edgeX0
-		sbc	<edgeX1
-		bne	.jpInit
-		rts
-
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-;edgeSlope initialize
-		lda	<edgeSlopeX
-		eor	#$FF
-		inc	a
-
-		ldx	<edgeY1
-		clc
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		edgeSigneXMinus0m
-.jp6:
-		edgeSigneXMinus0m
-.jp5:
-		edgeSigneXMinus0m
-.jp4:
-		edgeSigneXMinus0m
-.jp3:
-		edgeSigneXMinus0m
-.jp2:
-		edgeSigneXMinus0m
-.jp1:
-		edgeSigneXMinus0m
-.jp0:
-		edgeSigneXMinus0m
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneYPlus0:
-;
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		tya
-		setEdgeBuffer1m
-
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-		bne	.jpInit
-		rts
-
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-;edgeSlope initialize
-		lda	<edgeSlopeY
-		eor	#$FF
-		inc	a
-
-		ldx	<edgeY0
-		clc
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		edgeSigneYPlus0m
-.jp6:
-		edgeSigneYPlus0m
-.jp5:
-		edgeSigneYPlus0m
-.jp4:
-		edgeSigneYPlus0m
-.jp3:
-		edgeSigneYPlus0m
-.jp2:
-		edgeSigneYPlus0m
-.jp1:
-		edgeSigneYPlus0m
-.jp0:
-		edgeSigneYPlus0m
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneYMinus0:
-;
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		tya
-		setEdgeBuffer1m
-
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-		bne	.jpInit
-		rts
-
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-;edgeSlope initialize
-		lda	<edgeSlopeY
-		eor	#$FF
-		inc	a
-
-		ldx	<edgeY0
-		clc
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		edgeSigneYMinus0m
-.jp6:
-		edgeSigneYMinus0m
-.jp5:
-		edgeSigneYMinus0m
-.jp4:
-		edgeSigneYMinus0m
-.jp3:
-		edgeSigneYMinus0m
-.jp2:
-		edgeSigneYMinus0m
-.jp1:
-		edgeSigneYMinus0m
-.jp0:
-		edgeSigneYMinus0m
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
 
 
 ;----------------------------
 calcEdge:
-;
 ;calculation edge Y
 		sec
 		lda	<edgeY1
@@ -5550,9 +5116,9 @@ calcEdge:
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		setEdgeBufferm2
+		setEdgeBufferm
 		ldy	<edgeX1
-		setEdgeBufferm2
+		setEdgeBufferm
 		rts
 
 .edgeJump7:
@@ -5576,7 +5142,16 @@ calcEdge:
 
 .edgeJump1:
 ;edgeX0 = edgeX1
-		jmp	edgeXEqual
+		ldy	<edgeX0
+		ldx	<edgeY0
+.edgeLoop0:
+		setEdgeBufferm
+		cpx	<edgeY1
+		beq	.edgeJump9
+		inx
+		bra	.edgeLoop0
+.edgeJump9:
+		rts
 
 .edgeJump3:
 ;edgeSlope compare
@@ -5585,445 +5160,652 @@ calcEdge:
 		jcs	.edgeJump4
 
 ;edgeSlopeX > edgeSlopeY
+;edgeSlope initialize
+		lda	<edgeSlopeX
+		eor	#$FF
+		inc	a
+
 ;check edgeSigneX
 		bbs7	<edgeSigneX, .edgeJump10
 
-;++++++++++++++++++++++++++++
 ;edgeSigneX plus
-		jmp	edgeSigneXPlus
+		ldy	<edgeX0
+		ldx	<edgeY0
+.edgeXLoop0:
+		pha
+		setEdgeBufferm
+		pla
+.edgeXLoop1:
+		cpy	<edgeX1
+		beq	.edgeXLoop3
 
-;++++++++++++++++++++++++++++
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop1
+
+		sbc	<edgeSlopeX
+		inx
+		bra	.edgeXLoop0
+.edgeXLoop3:
+		rts
+
 ;edgeSigneX minus
 .edgeJump10:
-		jmp	edgeSigneXMinus
-
-.edgeJump4:
-;edgeSlopeY >= edgeSlopeX
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeYLoop4
-
-;++++++++++++++++++++++++++++
-;edgeSigneY plus
-		jmp	edgeSigneYPlus
-
-;++++++++++++++++++++++++++++
-;edgeSigneY minus
-.edgeYLoop4:
-		jmp	edgeSigneYMinus
-
-;----------------------------
-edgeXEqual:
-;
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		setEdgeBufferm2
-		inx
-.jp6:
-		setEdgeBufferm2
-		inx
-.jp5:
-		setEdgeBufferm2
-		inx
-.jp4:
-		setEdgeBufferm2
-		inx
-.jp3:
-		setEdgeBufferm2
-		inx
-.jp2:
-		setEdgeBufferm2
-		inx
-.jp1:
-		setEdgeBufferm2
-		inx
-.jp0:
-		setEdgeBufferm2
-		inx
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneXPlus:
-;
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		setEdgeBufferm2
-
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-		bne	.jpInit
-		rts
-
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
-;edgeSlope initialize
-		lda	<edgeSlopeX
-		eor	#$FF
-		inc	a
-
-		ldx	<edgeY0
-		clc
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		edgeSigneXPlusm
-.jp6:
-		edgeSigneXPlusm
-.jp5:
-		edgeSigneXPlusm
-.jp4:
-		edgeSigneXPlusm
-.jp3:
-		edgeSigneXPlusm
-.jp2:
-		edgeSigneXPlusm
-.jp1:
-		edgeSigneXPlusm
-.jp0:
-		edgeSigneXPlusm
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneXMinus:
-;
 		ldy	<edgeX1
 		ldx	<edgeY1
 
-		setEdgeBufferm2
+.edgeXLoop4:
+		pha
+		setEdgeBufferm
+		pla
+.edgeXLoop5:
+		cpy	<edgeX0
+		beq	.edgeXLoop7
 
-		sec
-		lda	<edgeX0
-		sbc	<edgeX1
-		bne	.jpInit
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop5
+
+		sbc	<edgeSlopeX
+		dex
+		bra	.edgeXLoop4
+.edgeXLoop7:
 		rts
 
-.jpInit:
-		dec	a
+.edgeJump4:
+;edgeSlopeY >= edgeSlopeX
+;edgeSlope initialize
+		lda	<edgeSlopeY
+		eor	#$FF
+		inc	a
+
+		ldy	<edgeX0
+		ldx	<edgeY0
+
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeYLoop4
+
+;edgeSigneX plus
+.edgeYLoop0:
 		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
+		setEdgeBufferm
 		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
+.edgeYLoop1:
+		cpx	<edgeY1
+		beq	.edgeYLoop3
 
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop0
+
+		sbc	<edgeSlopeY
+		iny
+		bra	.edgeYLoop0
+.edgeYLoop3:
+		rts
+
+;edgeSigneX minus
+.edgeYLoop4:
+		pha
+		setEdgeBufferm
+		pla
+.edgeYLoop5:
+		cpx	<edgeY1
+		beq	.edgeYLoop7
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop4
+
+		sbc	<edgeSlopeY
+		dey
+		bra	.edgeYLoop4
+.edgeYLoop7:
+		rts
+
+
+;----------------------------
+calcEdgeL:
+;calculation edge Y
+		sec
+		lda	<edgeY1
+		sbc	<edgeY0
+		beq	.edgeJump6
+
+		sta	<edgeSlopeY
+		jcs	.edgeJump7
+
+		eor	#$FF
+		inc	a
+		sta	<edgeSlopeY
+
+;edgeY0 > edgeY1 exchange X0<->X1 Y0<->Y1
+		lda	<edgeX0
+		ldx	<edgeX1
+		sta	<edgeX1
+		stx	<edgeX0
+
+		lda	<edgeY0
+		ldx	<edgeY1
+		sta	<edgeY1
+		stx	<edgeY0
+
+		jmp	.edgeJump7
+
+.edgeJump6:
+;edgeY0 = edgeY1
+		rts
+
+.edgeJump7:
+;calculation edge X
+		sec
+		lda	<edgeX1
+		sbc	<edgeX0
+		beq	.edgeJump1
+
+		sta	<edgeSlopeX
+		stz	<edgeSigneX
+		bcs	.edgeJump3
+
+		eor	#$FF
+		inc	a
+		sta	<edgeSlopeX
+
+		mov	<edgeSigneX, #$FF
+
+		bra	.edgeJump3
+
+.edgeJump1:
+;edgeX0 = edgeX1
+		sec
+		lda	<edgeY1
+		sbc	<edgeY0
+		lsr	a
+
+		lda	<edgeX0
+		ldx	<edgeY0
+
+		bcc	.edgeLoop0_1
+
+.edgeLoop0_0:
+		sta	edgeLeft, x
+		inx
+
+.edgeLoop0_1:
+		sta	edgeLeft, x
+
+		cpx	<edgeY1
+		beq	.edgeJump9
+		inx
+		bra	.edgeLoop0_0
+
+.edgeJump9:
+		rts
+
+.edgeJump3:
+;edgeSlope compare
+		lda	<edgeSlopeY
+		cmp	<edgeSlopeX
+		jcs	.edgeJump4
+
+;edgeSlopeX > edgeSlopeY
 ;edgeSlope initialize
 		lda	<edgeSlopeX
 		eor	#$FF
 		inc	a
 
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeJump10
+
+;edgeSigneX plus
+		sax
+		sec
+		lda	<edgeX1
+		sbc	<edgeX0
+		lsr	a
+		sax
+
+		ldy	<edgeX0
+		ldx	<edgeY0
+
+		bcc	.edgeXLoop0_1
+
+.edgeXLoop0_0:
+		say
+		sta	edgeLeft, x
+		say
+
+.edgeXLoop1_0:
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop1_1
+
+		sbc	<edgeSlopeX
+		inx
+
+.edgeXLoop0_1:
+		say
+		sta	edgeLeft, x
+		say
+
+.edgeXLoop1_1:
+		cpy	<edgeX1
+		beq	.edgeXLoop3
+
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop1_0
+
+		sbc	<edgeSlopeX
+		inx
+		bra	.edgeXLoop0_0
+.edgeXLoop3:
+		rts
+
+;edgeSigneX minus
+.edgeJump10:
+		sax
+		sec
+		lda	<edgeX0
+		sbc	<edgeX1
+		lsr	a
+		sax
+
+		ldy	<edgeX1
 		ldx	<edgeY1
-		clc
-		jmp	[edgeLoopAddr]
 
-.loop0:
-.jp7:
-		edgeSigneXMinusm
-.jp6:
-		edgeSigneXMinusm
-.jp5:
-		edgeSigneXMinusm
-.jp4:
-		edgeSigneXMinusm
-.jp3:
-		edgeSigneXMinusm
-.jp2:
-		edgeSigneXMinusm
-.jp1:
-		edgeSigneXMinusm
-.jp0:
-		edgeSigneXMinusm
+		bcc	.edgeXLoop4_1
 
-		dec	<edgeLoopCount
-		jpl	.loop0
+.edgeXLoop4_0:
+		say
+		sta	edgeLeft, x
+		say
 
-.jpEnd:
+.edgeXLoop5_0:
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop5_1
+
+		sbc	<edgeSlopeX
+		dex
+
+.edgeXLoop4_1:
+		say
+		sta	edgeLeft, x
+		say
+
+.edgeXLoop5_1:
+		cpy	<edgeX0
+		beq	.edgeXLoop7
+
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop5_0
+
+		sbc	<edgeSlopeX
+		dex
+		bra	.edgeXLoop4_0
+.edgeXLoop7:
 		rts
 
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneYPlus:
-;
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		setEdgeBufferm2
-
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-		bne	.jpInit
-		rts
-
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
-
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
-
+.edgeJump4:
+;edgeSlopeY >= edgeSlopeX
 ;edgeSlope initialize
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
 
-		ldx	<edgeY0
-		clc
-		jmp	[edgeLoopAddr]
-
-.loop0:
-.jp7:
-		edgeSigneYPlusm
-.jp6:
-		edgeSigneYPlusm
-.jp5:
-		edgeSigneYPlusm
-.jp4:
-		edgeSigneYPlusm
-.jp3:
-		edgeSigneYPlusm
-.jp2:
-		edgeSigneYPlusm
-.jp1:
-		edgeSigneYPlusm
-.jp0:
-		edgeSigneYPlusm
-
-		dec	<edgeLoopCount
-		jpl	.loop0
-
-.jpEnd:
-		rts
-
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
-
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
-
-
-;----------------------------
-edgeSigneYMinus:
-;
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		setEdgeBufferm2
-
+		sax
 		sec
 		lda	<edgeY1
 		sbc	<edgeY0
-		bne	.jpInit
+		lsr	a
+		sax
+
+		ldy	<edgeX0
+		ldx	<edgeY0
+
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeYLoop8
+
+;edgeSigneX plus
+		bcc	.edgeYLoop0_1
+
+.edgeYLoop0_0:
+		say
+		sta	edgeLeft, x
+		say
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop0_1
+
+		sbc	<edgeSlopeY
+		iny
+
+.edgeYLoop0_1:
+		say
+		sta	edgeLeft, x
+		say
+
+		cpx	<edgeY1
+		beq	.edgeYLoop3
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop0_0
+
+		sbc	<edgeSlopeY
+		iny
+		bra	.edgeYLoop0_0
+.edgeYLoop3:
 		rts
 
-.jpInit:
-		dec	a
-		pha
-		and	#$07
-		tax
-		lda	.jpTableLow, x
-		sta	<edgeLoopAddr
-		lda	.jpTableHigh, x
-		sta	<edgeLoopAddr+1
+;edgeSigneX minus
+.edgeYLoop8:
+		bcc	.edgeYLoop4_1
 
-		pla
-		lsr	a
-		lsr	a
-		lsr	a
-		sta	<edgeLoopCount
+.edgeYLoop4_0:
+		say
+		sta	edgeLeft, x
+		say
 
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop4_1
+
+		sbc	<edgeSlopeY
+		dey
+
+.edgeYLoop4_1:
+		say
+		sta	edgeLeft, x
+		say
+
+		cpx	<edgeY1
+		beq	.edgeYLoop7
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop4_0
+
+		sbc	<edgeSlopeY
+		dey
+		bra	.edgeYLoop4_0
+.edgeYLoop7:
+		rts
+
+
+;----------------------------
+calcEdgeR:
+;calculation edge Y
+		sec
+		lda	<edgeY1
+		sbc	<edgeY0
+		beq	.edgeJump6
+
+		sta	<edgeSlopeY
+		jcs	.edgeJump7
+
+		eor	#$FF
+		inc	a
+		sta	<edgeSlopeY
+
+;edgeY0 > edgeY1 exchange X0<->X1 Y0<->Y1
+		lda	<edgeX0
+		ldx	<edgeX1
+		sta	<edgeX1
+		stx	<edgeX0
+
+		lda	<edgeY0
+		ldx	<edgeY1
+		sta	<edgeY1
+		stx	<edgeY0
+
+		jmp	.edgeJump7
+
+.edgeJump6:
+;edgeY0 = edgeY1
+		rts
+
+.edgeJump7:
+;calculation edge X
+		sec
+		lda	<edgeX1
+		sbc	<edgeX0
+		beq	.edgeJump1
+
+		sta	<edgeSlopeX
+		stz	<edgeSigneX
+		bcs	.edgeJump3
+
+		eor	#$FF
+		inc	a
+		sta	<edgeSlopeX
+
+		mov	<edgeSigneX, #$FF
+
+		bra	.edgeJump3
+
+.edgeJump1:
+;edgeX0 = edgeX1
+		sec
+		lda	<edgeY1
+		sbc	<edgeY0
+		lsr	a
+
+		lda	<edgeX0
+		ldx	<edgeY0
+
+		bcc	.edgeLoop0_1
+
+.edgeLoop0_0:
+		sta	edgeRight, x
+		inx
+
+.edgeLoop0_1:
+		sta	edgeRight, x
+
+		cpx	<edgeY1
+		beq	.edgeJump9
+		inx
+		bra	.edgeLoop0_0
+
+.edgeJump9:
+		rts
+
+.edgeJump3:
+;edgeSlope compare
+		lda	<edgeSlopeY
+		cmp	<edgeSlopeX
+		jcs	.edgeJump4
+
+;edgeSlopeX > edgeSlopeY
+;edgeSlope initialize
+		lda	<edgeSlopeX
+		eor	#$FF
+		inc	a
+
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeJump10
+
+;edgeSigneX plus
+		sax
+		sec
+		lda	<edgeX1
+		sbc	<edgeX0
+		lsr	a
+		sax
+
+		ldy	<edgeX0
+		ldx	<edgeY0
+
+		bcc	.edgeXLoop0_1
+
+.edgeXLoop0_0:
+		say
+		sta	edgeRight, x
+		say
+
+.edgeXLoop1_0:
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop1_1
+
+		sbc	<edgeSlopeX
+		inx
+
+.edgeXLoop0_1:
+		say
+		sta	edgeRight, x
+		say
+
+.edgeXLoop1_1:
+		cpy	<edgeX1
+		beq	.edgeXLoop3
+
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop1_0
+
+		sbc	<edgeSlopeX
+		inx
+		bra	.edgeXLoop0_0
+.edgeXLoop3:
+		rts
+
+;edgeSigneX minus
+.edgeJump10:
+		sax
+		sec
+		lda	<edgeX0
+		sbc	<edgeX1
+		lsr	a
+		sax
+
+		ldy	<edgeX1
+		ldx	<edgeY1
+
+		bcc	.edgeXLoop4_1
+
+.edgeXLoop4_0:
+		say
+		sta	edgeRight, x
+		say
+
+.edgeXLoop5_0:
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop5_1
+
+		sbc	<edgeSlopeX
+		dex
+
+.edgeXLoop4_1:
+		say
+		sta	edgeRight, x
+		say
+
+.edgeXLoop5_1:
+		cpy	<edgeX0
+		beq	.edgeXLoop7
+
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop5_0
+
+		sbc	<edgeSlopeX
+		dex
+		bra	.edgeXLoop4_0
+.edgeXLoop7:
+		rts
+
+.edgeJump4:
+;edgeSlopeY >= edgeSlopeX
 ;edgeSlope initialize
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
 
+		sax
+		sec
+		lda	<edgeY1
+		sbc	<edgeY0
+		lsr	a
+		sax
+
+		ldy	<edgeX0
 		ldx	<edgeY0
-		clc
-		jmp	[edgeLoopAddr]
 
-.loop0:
-.jp7:
-		edgeSigneYMinusm
-.jp6:
-		edgeSigneYMinusm
-.jp5:
-		edgeSigneYMinusm
-.jp4:
-		edgeSigneYMinusm
-.jp3:
-		edgeSigneYMinusm
-.jp2:
-		edgeSigneYMinusm
-.jp1:
-		edgeSigneYMinusm
-.jp0:
-		edgeSigneYMinusm
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeYLoop8
 
-		dec	<edgeLoopCount
-		jpl	.loop0
+;edgeSigneX plus
+		bcc	.edgeYLoop0_1
 
-.jpEnd:
+.edgeYLoop0_0:
+		say
+		sta	edgeRight, x
+		say
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop0_1
+
+		sbc	<edgeSlopeY
+		iny
+
+.edgeYLoop0_1:
+		say
+		sta	edgeRight, x
+		say
+
+		cpx	<edgeY1
+		beq	.edgeYLoop3
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop0_0
+
+		sbc	<edgeSlopeY
+		iny
+		bra	.edgeYLoop0_0
+.edgeYLoop3:
 		rts
 
-.jpTableLow:
-		.db	LOW(.jp0)
-		.db	LOW(.jp1)
-		.db	LOW(.jp2)
-		.db	LOW(.jp3)
-		.db	LOW(.jp4)
-		.db	LOW(.jp5)
-		.db	LOW(.jp6)
-		.db	LOW(.jp7)
+;edgeSigneX minus
+.edgeYLoop8:
+		bcc	.edgeYLoop4_1
 
-.jpTableHigh:
-		.db	HIGH(.jp0)
-		.db	HIGH(.jp1)
-		.db	HIGH(.jp2)
-		.db	HIGH(.jp3)
-		.db	HIGH(.jp4)
-		.db	HIGH(.jp5)
-		.db	HIGH(.jp6)
-		.db	HIGH(.jp7)
+.edgeYLoop4_0:
+		say
+		sta	edgeRight, x
+		say
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop4_1
+
+		sbc	<edgeSlopeY
+		dey
+
+.edgeYLoop4_1:
+		say
+		sta	edgeRight, x
+		say
+
+		cpx	<edgeY1
+		beq	.edgeYLoop7
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop4_0
+
+		sbc	<edgeSlopeY
+		dey
+		bra	.edgeYLoop4_0
+.edgeYLoop7:
+		rts
 
 
 ;----------------------------
@@ -6066,8 +5848,9 @@ putPolyLineProc:
 		iny
 		iny
 
-.loopStart:	lda	edgeCount, y
-		bpl	.putPolyProc
+.loopStart:	cpy	<maxEdgeY
+		bcc	.putPolyProc
+		beq	.putPolyProc
 		rts
 
 .putPolyProc:

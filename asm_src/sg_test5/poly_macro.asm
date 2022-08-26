@@ -1,134 +1,6 @@
 ;poly_macro.asm
 ;//////////////////////////////////
 ;----------------------------
-edgeSigneXPlus0m	.macro
-;
-		iny
-		adc	<edgeSlopeY
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeX
-		inx
-
-		setEdgeBuffer0m
-
-.jp_\@:
-		.endm
-
-
-;----------------------------
-edgeSigneXMinus0m	.macro
-;
-		iny
-		adc	<edgeSlopeY
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeX
-		dex
-
-		setEdgeBuffer0m
-
-.jp_\@:
-		.endm
-
-
-;----------------------------
-edgeSigneYPlus0m	.macro
-;
-		inx
-		adc	<edgeSlopeX
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeY
-		iny
-
-.jp_\@:
-		setEdgeBuffer0m
-
-		.endm
-
-
-;----------------------------
-edgeSigneYMinus0m	.macro
-;
-		inx
-		adc	<edgeSlopeX
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeY
-		dey
-
-.jp_\@:
-		setEdgeBuffer0m
-
-		.endm
-
-
-;----------------------------
-edgeSigneXPlusm	.macro
-;
-		iny
-		adc	<edgeSlopeY
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeX
-		inx
-
-		setEdgeBufferm
-
-.jp_\@:
-		.endm
-
-
-;----------------------------
-edgeSigneXMinusm	.macro
-;
-		iny
-		adc	<edgeSlopeY
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeX
-		dex
-
-		setEdgeBufferm
-
-.jp_\@:
-		.endm
-
-
-;----------------------------
-edgeSigneYPlusm	.macro
-;
-		inx
-		adc	<edgeSlopeX
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeY
-		iny
-
-.jp_\@:
-		setEdgeBufferm
-
-		.endm
-
-
-;----------------------------
-edgeSigneYMinusm	.macro
-;
-		inx
-		adc	<edgeSlopeX
-		bcc	.jp_\@
-
-		sbc	<edgeSlopeY
-		dey
-
-.jp_\@:
-		setEdgeBufferm
-
-		.endm
-
-
-;----------------------------
 putPolyLineV1m	.macro
 ;
 		sta	VDC1_2
@@ -223,24 +95,6 @@ putPolyLineV2lm	.macro
 
 
 ;----------------------------
-setEdgeBuffer0m	.macro
-;
-		say
-		sta	edgeLeft, x
-		inc	edgeCount, x
-		say
-		.endm
-
-
-;----------------------------
-setEdgeBuffer1m	.macro
-;
-		sta	edgeLeft, x
-		inc	edgeCount, x
-		.endm
-
-
-;----------------------------
 setEdgeBufferm	.macro
 ;set edge buffer
 		pha
@@ -294,57 +148,6 @@ setEdgeBufferm	.macro
 
 .jp2_\@:
 		pla
-		.endm
-
-
-;----------------------------
-setEdgeBufferm2	.macro
-;set edge buffer
-		lda	edgeCount, x
-
-		beq	.jpCount1_\@			;count 1
-		bpl	.jpCount2_\@			;count 2
-
-;count 0
-.jpCount0_\@:
-		tya
-		sta	edgeLeft, x
-		inc	edgeCount, x
-		bra	.jp2_\@
-
-;count 1
-.jpCount1_\@:
-		tya
-		cmp	edgeLeft, x
-		bcc	.jp4_\@			;a < edgeLeft,x
-
-		sta	edgeRight, x
-		inc	edgeCount, x
-		bra	.jp2_\@
-
-.jp4_\@:
-		lda	edgeLeft, x
-		sta	edgeRight, x
-		tya
-		sta	edgeLeft, x
-
-		inc	edgeCount, x
-		bra	.jp2_\@
-
-;count 2
-.jpCount2_\@:
-		tya
-		cmp	edgeLeft, x
-		bcs	.jp3_\@			;a >= edgeLeft,x
-		sta	edgeLeft, x
-		bra	.jp2_\@
-
-.jp3_\@:
-		cmp	edgeRight, x
-		bcc	.jp2_\@			;a < edgeRight,x
-		sta	edgeRight, x
-
-.jp2_\@:
 		.endm
 
 
@@ -759,6 +562,16 @@ ady		.macro
 
 
 ;----------------------------
+sbx		.macro
+;x = x - \1
+		sax
+		sec
+		sbc	\1
+		sax
+		.endm
+
+
+;----------------------------
 stzw		.macro
 ;\1 = 0
 		stz	\1
@@ -937,4 +750,26 @@ st012		.macro
 		st0	#\1
 		st1	#LOW(\2)
 		st2	#HIGH(\2)
+		.endm
+
+
+;----------------------------
+__polygonData	.macro
+;attribute: circle($80 = circlre) + even line skip($40 = skip) + front clip($04 = cancel) + back check($02 = cancel) + back draw($01 = not draw : front side = counterclockwise) 
+;front color(0-63)
+;back color(0-63) or circle radius(1-8192) low byte
+;vertex count: count(3-4) or circle radius(1-8192) high byte
+;vertex index 0,
+;vertex index 1,
+;vertex index 2,
+;vertex index 3
+		.if	(\# = 3)
+			.db	\1, \2, #LOW(\3), #HIGH(\3), 0, 0, 0, 0
+		else
+			.if	(\# = 6)
+				.db	\1, \2, \3, 3, \4*6, \5*6, \6*6, 0
+			.else
+				.db	\1, \2, \3, 4, \4*6, \5*6, \6*6, \7*6
+			.endif
+		.endif
 		.endm

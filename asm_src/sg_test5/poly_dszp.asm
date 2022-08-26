@@ -35,10 +35,11 @@ vertex0Addr		.ds	2
 clip2D0Count		.ds	1
 clip2D1Count		.ds	1
 clip2DFlag		.ds	1
+clipFlag		.ds	1
 
 ;---------------------
 ;---------------------
-;share area
+;share area start
 ;---------------------
 shareAreaTop
 circleX			.ds	2
@@ -50,7 +51,6 @@ circleRadius		.ds	2
 circleCenterX		.ds	2
 circleCenterY		.ds	2
 circleXLeft0		.ds	2
-circleYTop		equ	circleXLeft0	;2Byte
 circleXRight0		.ds	2
 circleXLeft1		.ds	2
 circleXRight1		.ds	2
@@ -109,7 +109,8 @@ work8a			equ	work4a		;8Byte
 work4c			.ds	4
 work4d			.ds	4
 work8b			equ	work4c		;8Byte
-;			total 22 Byte
+backCheckFlag		.ds	1
+;			total 23 Byte
 
 ;---------------------
 			.org	shareAreaTop
@@ -167,7 +168,7 @@ matrixTemp		.ds	4			;4Byte
 ;---------------------
 			.org	shareAreaBottom
 ;---------------------
-;share area
+;share area end
 ;---------------------
 ;---------------------
 
@@ -176,6 +177,7 @@ polygonTopAddress	.ds	1
 
 ;---------------------
 minEdgeY		.ds	1
+maxEdgeY		.ds	1
 
 ;---------------------
 polygonColorIndex	.ds	1
@@ -227,10 +229,6 @@ setModelFrontColor	.ds	1
 setModelBackColor	.ds	1
 setModelAttr		.ds	1
 model2DClipIndexWork	.ds	1
-
-;---------------------
-edgeLoopCount		.ds	1
-edgeLoopAddr		.ds	2
 
 ;---------------------
 satBufferAddr		.ds	2
