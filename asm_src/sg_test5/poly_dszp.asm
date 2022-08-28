@@ -35,7 +35,6 @@ vertex0Addr		.ds	2
 clip2D0Count		.ds	1
 clip2D1Count		.ds	1
 clip2DFlag		.ds	1
-clipFlag		.ds	1
 
 ;---------------------
 ;---------------------

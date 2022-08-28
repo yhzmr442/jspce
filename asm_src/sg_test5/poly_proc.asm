@@ -1841,9 +1841,6 @@ putPolygonBuffer:
 		ldy	#4
 		lda	[polyBufferAddr], y	;COLOR
 
-		pha
-		sta	<polyAttribute
-		and	#$3F
 		clc
 		adc	<polygonColorIndex
 
@@ -1872,7 +1869,11 @@ putPolygonBuffer:
 		rol	a
 		rol	polyLineColorWork_L_P3
 
-		pla
+		ldy	#5
+		lda	[polyBufferAddr], y	;COUNT
+		beq	.putPolyBufferEnd
+
+		sta	<polyAttribute
 		bpl	.polygonProc
 
 ;circle process
@@ -1904,11 +1905,6 @@ putPolygonBuffer:
 		bra	.nextData
 
 .polygonProc:
-		ldy	#5
-		lda	[polyBufferAddr], y	;COUNT
-		beq	.putPolyBufferEnd
-
-		sta	<clipFlag
 		and	#$0F
 		sta	<clip2D0Count
 		pha
@@ -1934,7 +1930,7 @@ putPolygonBuffer:
 		pla
 		sta	<clip2D0Count
 
-		bbr6	<clipFlag, .jp0
+		bbr5	<polyAttribute, .jp0
 		jsr	calcEdge_putPoly
 		bra	.nextData
 
@@ -2115,15 +2111,12 @@ setModel:
 		mov	clip2D0+10, <mul16a+1
 
 		ldy	#5
-		lda	#$80
+		lda	<setModelAttr
+		and	#%11000000
 		sta	[polyBufferAddr], y	;COUNT
 
 		dey
 		lda	<setModelFrontColor
-		ora	#$80			;CIRCLE
-		bbr6	<setModelAttr, .circleJp0
-		ora	#$40			;LINE SKIP
-.circleJp0:
 		sta	[polyBufferAddr], y	;COLOR
 
 		lda	transform2DWork0+0, x	;X
@@ -2156,7 +2149,7 @@ setModel:
 
 		stz	<frontClipCount
 
-		stz	<clipFlag
+		stz	<polyAttribute
 
 		stz	<polyBufferZ0Work0
 		stz	<polyBufferZ0Work0+1
@@ -2291,7 +2284,6 @@ setModel:
 		ora	<work8a+3
 		jeq	.setModelJump0
 
-.setModelJump13:
 ;back side
 		smb0	<backCheckFlag
 		bbr0	<setModelAttr, .setModelJump6
@@ -2299,23 +2291,20 @@ setModel:
 
 .setModelJump6:
 		lda	<setModelBackColor
-		bra	.setModelJump5
+		bra	.setModelJump10
 
 .setModelJump2:
 ;front side
 		lda	<setModelFrontColor
 
-.setModelJump5:
-		bbr6	<setModelAttr, .setModelJump10
-		ora	#$40
-
 .setModelJump10:
 		ldy	#4
 		sta	[polyBufferAddr], y	;COLOR
 
-		lda	<clip2D0Count
-		ora	<clipFlag
-
+		lda	<setModelAttr
+		and	#%11000000
+		ora	<polyAttribute
+		ora	<clip2D0Count
 		ldy	#5
 		sta	[polyBufferAddr], y	;COUNT
 
@@ -2444,6 +2433,7 @@ setModel:
 
 ;----------------------------
 clipFront:
+;
 		ldx	<frontClipData0
 		ldy	<frontClipData1
 
@@ -2461,7 +2451,7 @@ clipFront:
 		jeq	.clipFrontJump9
 
 ;clip front
-		smb6	<clipFlag
+		smb5	<polyAttribute
 
 ;(128-Z0) to mul16a
 		sec
@@ -2760,7 +2750,7 @@ clip2DX255:
 		cmp	#$03
 		jeq	.clip2DX255Jump03
 
-		smb6	<clipFlag
+		smb5	<polyAttribute
 
 ;(255-X0) to mul16a
 		sec
@@ -2924,7 +2914,7 @@ clip2DX0:
 		cmp	#$03
 		jeq	.clip2DX0Jump03
 
-		smb6	<clipFlag
+		smb5	<polyAttribute
 
 ;(0-X0) to mul16a
 		sec
@@ -3094,7 +3084,7 @@ clip2DY255:
 		cmp	#$03
 		jeq	.clip2DY255Jump03
 
-		smb6	<clipFlag
+		smb5	<polyAttribute
 
 ;(191-Y0) to mul16a
 		sec
@@ -3258,7 +3248,7 @@ clip2DY0:
 		cmp	#$03
 		jeq	.clip2DY0Jump03
 
-		smb6	<clipFlag
+		smb5	<polyAttribute
 
 ;(0-Y0) to mul16a
 		sec
@@ -5070,20 +5060,6 @@ setCircleEdge1:
 
 
 ;----------------------------
-calcEdgeEX:
-;
-		lda	<edgeY1
-		cmp	<edgeY0
-		bcc	.jp00
-		jsr	calcEdgeL
-		rts
-
-.jp00:
-		jsr	calcEdgeR
-		rts
-
-
-;----------------------------
 calcEdge:
 ;calculation edge Y
 		sec
@@ -5130,7 +5106,7 @@ calcEdge:
 
 		sta	<edgeSlopeX
 		stz	<edgeSigneX
-		bcs	.edgeJump3
+		jcs	.edgeJump3
 
 		eor	#$FF
 		inc	a
@@ -5138,18 +5114,32 @@ calcEdge:
 
 		mov	<edgeSigneX, #$FF
 
-		bra	.edgeJump3
+		jmp	.edgeJump3
 
 .edgeJump1:
 ;edgeX0 = edgeX1
+		lda	<edgeY1
+		eor	<edgeY0
+		lsr	a
+
 		ldy	<edgeX0
 		ldx	<edgeY0
-.edgeLoop0:
+
+		bcc	.edgeLoop0_1
+
+.edgeLoop0_0:
 		setEdgeBufferm
+
+		inx
+
+.edgeLoop0_1:
+		setEdgeBufferm
+
 		cpx	<edgeY1
 		beq	.edgeJump9
 		inx
-		bra	.edgeLoop0
+		jmp	.edgeLoop0_0
+
 .edgeJump9:
 		rts
 
@@ -5160,60 +5150,111 @@ calcEdge:
 		jcs	.edgeJump4
 
 ;edgeSlopeX > edgeSlopeY
+;check edgeSigneX
+		bbr7	<edgeSigneX, .edgeJump11
+		jmp	.edgeJump10
+.edgeJump11:
+;edgeSigneX plus
+		lda	<edgeX1
+		eor	<edgeX0
+		lsr	a
+
 ;edgeSlope initialize
 		lda	<edgeSlopeX
 		eor	#$FF
 		inc	a
 
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeJump10
-
-;edgeSigneX plus
 		ldy	<edgeX0
 		ldx	<edgeY0
-.edgeXLoop0:
+
+		bcc	.edgeXLoop0_1
+
+.edgeXLoop0_0:
 		pha
 		setEdgeBufferm
 		pla
-.edgeXLoop1:
+
+.edgeXLoop1_0:
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop1_1
+
+		sbc	<edgeSlopeX
+		inx
+
+.edgeXLoop0_1:
+		pha
+		setEdgeBufferm
+		pla
+
+.edgeXLoop1_1:
 		cpy	<edgeX1
 		beq	.edgeXLoop3
 
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop1
+		bcc	.edgeXLoop1_0
 
 		sbc	<edgeSlopeX
 		inx
-		bra	.edgeXLoop0
+		jmp	.edgeXLoop0_0
 .edgeXLoop3:
 		rts
 
 ;edgeSigneX minus
 .edgeJump10:
+		lda	<edgeX0
+		eor	<edgeX1
+		lsr	a
+
+;edgeSlope initialize
+		lda	<edgeSlopeX
+		eor	#$FF
+		inc	a
+
 		ldy	<edgeX1
 		ldx	<edgeY1
 
-.edgeXLoop4:
+		bcc	.edgeXLoop4_1
+
+.edgeXLoop4_0:
 		pha
 		setEdgeBufferm
 		pla
-.edgeXLoop5:
+
+.edgeXLoop5_0:
+		iny
+		adc	<edgeSlopeY
+		bcc	.edgeXLoop5_1
+
+		sbc	<edgeSlopeX
+		dex
+
+.edgeXLoop4_1:
+		pha
+		setEdgeBufferm
+		pla
+
+.edgeXLoop5_1:
 		cpy	<edgeX0
 		beq	.edgeXLoop7
 
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop5
+		bcc	.edgeXLoop5_0
 
 		sbc	<edgeSlopeX
 		dex
-		bra	.edgeXLoop4
+		jmp	.edgeXLoop4_0
 .edgeXLoop7:
 		rts
 
 .edgeJump4:
 ;edgeSlopeY >= edgeSlopeX
+		lda	<edgeY1
+		eor	<edgeY0
+		lsr	a
+
 ;edgeSlope initialize
 		lda	<edgeSlopeY
 		eor	#$FF
@@ -5223,57 +5264,94 @@ calcEdge:
 		ldx	<edgeY0
 
 ;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeYLoop4
+		bbr7	<edgeSigneX, .edgeJump12
+		jmp	.edgeYLoop8
 
 ;edgeSigneX plus
-.edgeYLoop0:
+.edgeJump12:
+		bcc	.edgeYLoop0_1
+
+.edgeYLoop0_0:
 		pha
 		setEdgeBufferm
 		pla
-.edgeYLoop1:
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop0_1
+
+		sbc	<edgeSlopeY
+		iny
+
+.edgeYLoop0_1:
+		pha
+		setEdgeBufferm
+		pla
+
 		cpx	<edgeY1
 		beq	.edgeYLoop3
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop0
+		jcc	.edgeYLoop0_0
 
 		sbc	<edgeSlopeY
 		iny
-		bra	.edgeYLoop0
+		jmp	.edgeYLoop0_0
 .edgeYLoop3:
 		rts
 
 ;edgeSigneX minus
-.edgeYLoop4:
+.edgeYLoop8:
+		bcc	.edgeYLoop4_1
+
+.edgeYLoop4_0:
 		pha
 		setEdgeBufferm
 		pla
-.edgeYLoop5:
+
+		inx
+		adc	<edgeSlopeX
+		bcc	.edgeYLoop4_1
+
+		sbc	<edgeSlopeY
+		dey
+
+.edgeYLoop4_1:
+		pha
+		setEdgeBufferm
+		pla
+
 		cpx	<edgeY1
 		beq	.edgeYLoop7
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop4
+		jcc	.edgeYLoop4_0
 
 		sbc	<edgeSlopeY
 		dey
-		bra	.edgeYLoop4
+		jmp	.edgeYLoop4_0
 .edgeYLoop7:
 		rts
 
 
 ;----------------------------
-calcEdgeL:
+calcEdgeEX:
+;
+		lda	<edgeY1
+		cmp	<edgeY0
+		jcc	.jp00
+
+;calculation left edge
 ;calculation edge Y
 		sec
 		lda	<edgeY1
 		sbc	<edgeY0
-		beq	.edgeJump6
+		beq	.edgeJump6L
 
 		sta	<edgeSlopeY
-		jcs	.edgeJump7
+		jcs	.edgeJump7L
 
 		eor	#$FF
 		inc	a
@@ -5290,22 +5368,22 @@ calcEdgeL:
 		sta	<edgeY1
 		stx	<edgeY0
 
-		jmp	.edgeJump7
+		jmp	.edgeJump7L
 
-.edgeJump6:
+.edgeJump6L:
 ;edgeY0 = edgeY1
 		rts
 
-.edgeJump7:
+.edgeJump7L:
 ;calculation edge X
 		sec
 		lda	<edgeX1
 		sbc	<edgeX0
-		beq	.edgeJump1
+		beq	.edgeJump1L
 
 		sta	<edgeSlopeX
 		stz	<edgeSigneX
-		bcs	.edgeJump3
+		bcs	.edgeJump3L
 
 		eor	#$FF
 		inc	a
@@ -5313,239 +5391,233 @@ calcEdgeL:
 
 		mov	<edgeSigneX, #$FF
 
-		bra	.edgeJump3
+		bra	.edgeJump3L
 
-.edgeJump1:
+.edgeJump1L:
 ;edgeX0 = edgeX1
-		sec
 		lda	<edgeY1
-		sbc	<edgeY0
+		eor	<edgeY0
 		lsr	a
 
 		lda	<edgeX0
 		ldx	<edgeY0
 
-		bcc	.edgeLoop0_1
+		bcc	.edgeLoop0_1L
 
-.edgeLoop0_0:
+.edgeLoop0_0L:
 		sta	edgeLeft, x
 		inx
 
-.edgeLoop0_1:
+.edgeLoop0_1L:
 		sta	edgeLeft, x
 
 		cpx	<edgeY1
-		beq	.edgeJump9
+		beq	.edgeJump9L
 		inx
-		bra	.edgeLoop0_0
+		bra	.edgeLoop0_0L
 
-.edgeJump9:
+.edgeJump9L:
 		rts
 
-.edgeJump3:
+.edgeJump3L:
 ;edgeSlope compare
 		lda	<edgeSlopeY
 		cmp	<edgeSlopeX
-		jcs	.edgeJump4
+		jcs	.edgeJump4L
 
 ;edgeSlopeX > edgeSlopeY
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeJump10L
+
+;edgeSigneX plus
+		lda	<edgeX1
+		eor	<edgeX0
+		lsr	a
+
 ;edgeSlope initialize
 		lda	<edgeSlopeX
 		eor	#$FF
 		inc	a
 
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeJump10
-
-;edgeSigneX plus
-		sax
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-		lsr	a
-		sax
-
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		bcc	.edgeXLoop0_1
+		bcc	.edgeXLoop0_1L
 
-.edgeXLoop0_0:
+.edgeXLoop0_0L:
 		say
 		sta	edgeLeft, x
 		say
 
-.edgeXLoop1_0:
+.edgeXLoop1_0L:
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop1_1
+		bcc	.edgeXLoop1_1L
 
 		sbc	<edgeSlopeX
 		inx
 
-.edgeXLoop0_1:
+.edgeXLoop0_1L:
 		say
 		sta	edgeLeft, x
 		say
 
-.edgeXLoop1_1:
+.edgeXLoop1_1L:
 		cpy	<edgeX1
-		beq	.edgeXLoop3
+		beq	.edgeXLoop3L
 
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop1_0
+		bcc	.edgeXLoop1_0L
 
 		sbc	<edgeSlopeX
 		inx
-		bra	.edgeXLoop0_0
-.edgeXLoop3:
+		bra	.edgeXLoop0_0L
+.edgeXLoop3L:
 		rts
 
 ;edgeSigneX minus
-.edgeJump10:
-		sax
-		sec
+.edgeJump10L:
 		lda	<edgeX0
-		sbc	<edgeX1
+		eor	<edgeX1
 		lsr	a
-		sax
+
+;edgeSlope initialize
+		lda	<edgeSlopeX
+		eor	#$FF
+		inc	a
 
 		ldy	<edgeX1
 		ldx	<edgeY1
 
-		bcc	.edgeXLoop4_1
+		bcc	.edgeXLoop4_1L
 
-.edgeXLoop4_0:
+.edgeXLoop4_0L:
 		say
 		sta	edgeLeft, x
 		say
 
-.edgeXLoop5_0:
+.edgeXLoop5_0L:
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop5_1
+		bcc	.edgeXLoop5_1L
 
 		sbc	<edgeSlopeX
 		dex
 
-.edgeXLoop4_1:
+.edgeXLoop4_1L:
 		say
 		sta	edgeLeft, x
 		say
 
-.edgeXLoop5_1:
+.edgeXLoop5_1L:
 		cpy	<edgeX0
-		beq	.edgeXLoop7
+		beq	.edgeXLoop7L
 
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop5_0
+		bcc	.edgeXLoop5_0L
 
 		sbc	<edgeSlopeX
 		dex
-		bra	.edgeXLoop4_0
-.edgeXLoop7:
+		bra	.edgeXLoop4_0L
+.edgeXLoop7L:
 		rts
 
-.edgeJump4:
+.edgeJump4L:
 ;edgeSlopeY >= edgeSlopeX
+		lda	<edgeY1
+		eor	<edgeY0
+		lsr	a
+
 ;edgeSlope initialize
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
 
-		sax
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-		lsr	a
-		sax
-
 		ldy	<edgeX0
 		ldx	<edgeY0
 
 ;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeYLoop8
+		bbs7	<edgeSigneX, .edgeYLoop8L
 
 ;edgeSigneX plus
-		bcc	.edgeYLoop0_1
+		bcc	.edgeYLoop0_1L
 
-.edgeYLoop0_0:
+.edgeYLoop0_0L:
 		say
 		sta	edgeLeft, x
 		say
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop0_1
+		bcc	.edgeYLoop0_1L
 
 		sbc	<edgeSlopeY
 		iny
 
-.edgeYLoop0_1:
+.edgeYLoop0_1L:
 		say
 		sta	edgeLeft, x
 		say
 
 		cpx	<edgeY1
-		beq	.edgeYLoop3
+		beq	.edgeYLoop3L
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop0_0
+		bcc	.edgeYLoop0_0L
 
 		sbc	<edgeSlopeY
 		iny
-		bra	.edgeYLoop0_0
-.edgeYLoop3:
+		bra	.edgeYLoop0_0L
+.edgeYLoop3L:
 		rts
 
 ;edgeSigneX minus
-.edgeYLoop8:
-		bcc	.edgeYLoop4_1
+.edgeYLoop8L:
+		bcc	.edgeYLoop4_1L
 
-.edgeYLoop4_0:
+.edgeYLoop4_0L:
 		say
 		sta	edgeLeft, x
 		say
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop4_1
+		bcc	.edgeYLoop4_1L
 
 		sbc	<edgeSlopeY
 		dey
 
-.edgeYLoop4_1:
+.edgeYLoop4_1L:
 		say
 		sta	edgeLeft, x
 		say
 
 		cpx	<edgeY1
-		beq	.edgeYLoop7
+		beq	.edgeYLoop7L
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop4_0
+		bcc	.edgeYLoop4_0L
 
 		sbc	<edgeSlopeY
 		dey
-		bra	.edgeYLoop4_0
-.edgeYLoop7:
+		bra	.edgeYLoop4_0L
+.edgeYLoop7L:
 		rts
 
-
-;----------------------------
-calcEdgeR:
+.jp00:
+;calculation right edge
 ;calculation edge Y
 		sec
 		lda	<edgeY1
 		sbc	<edgeY0
-		beq	.edgeJump6
+		beq	.edgeJump6R
 
 		sta	<edgeSlopeY
-		jcs	.edgeJump7
+		jcs	.edgeJump7R
 
 		eor	#$FF
 		inc	a
@@ -5562,22 +5634,22 @@ calcEdgeR:
 		sta	<edgeY1
 		stx	<edgeY0
 
-		jmp	.edgeJump7
+		jmp	.edgeJump7R
 
-.edgeJump6:
+.edgeJump6R:
 ;edgeY0 = edgeY1
 		rts
 
-.edgeJump7:
+.edgeJump7R:
 ;calculation edge X
 		sec
 		lda	<edgeX1
 		sbc	<edgeX0
-		beq	.edgeJump1
+		beq	.edgeJump1R
 
 		sta	<edgeSlopeX
 		stz	<edgeSigneX
-		bcs	.edgeJump3
+		bcs	.edgeJump3R
 
 		eor	#$FF
 		inc	a
@@ -5585,226 +5657,220 @@ calcEdgeR:
 
 		mov	<edgeSigneX, #$FF
 
-		bra	.edgeJump3
+		bra	.edgeJump3R
 
-.edgeJump1:
+.edgeJump1R:
 ;edgeX0 = edgeX1
-		sec
 		lda	<edgeY1
-		sbc	<edgeY0
+		eor	<edgeY0
 		lsr	a
 
 		lda	<edgeX0
 		ldx	<edgeY0
 
-		bcc	.edgeLoop0_1
+		bcc	.edgeLoop0_1R
 
-.edgeLoop0_0:
+.edgeLoop0_0R:
 		sta	edgeRight, x
 		inx
 
-.edgeLoop0_1:
+.edgeLoop0_1R:
 		sta	edgeRight, x
 
 		cpx	<edgeY1
-		beq	.edgeJump9
+		beq	.edgeJump9R
 		inx
-		bra	.edgeLoop0_0
+		bra	.edgeLoop0_0R
 
-.edgeJump9:
+.edgeJump9R:
 		rts
 
-.edgeJump3:
+.edgeJump3R:
 ;edgeSlope compare
 		lda	<edgeSlopeY
 		cmp	<edgeSlopeX
-		jcs	.edgeJump4
+		jcs	.edgeJump4R
 
-;edgeSlopeX > edgeSlopeY
+;check edgeSigneX
+		bbs7	<edgeSigneX, .edgeJump10R
+
+;edgeSigneX plus
+		lda	<edgeX1
+		eor	<edgeX0
+		lsr	a
+
 ;edgeSlope initialize
 		lda	<edgeSlopeX
 		eor	#$FF
 		inc	a
 
-;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeJump10
-
-;edgeSigneX plus
-		sax
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-		lsr	a
-		sax
-
 		ldy	<edgeX0
 		ldx	<edgeY0
 
-		bcc	.edgeXLoop0_1
+		bcc	.edgeXLoop0_1R
 
-.edgeXLoop0_0:
+.edgeXLoop0_0R:
 		say
 		sta	edgeRight, x
 		say
 
-.edgeXLoop1_0:
+.edgeXLoop1_0R:
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop1_1
+		bcc	.edgeXLoop1_1R
 
 		sbc	<edgeSlopeX
 		inx
 
-.edgeXLoop0_1:
+.edgeXLoop0_1R:
 		say
 		sta	edgeRight, x
 		say
 
-.edgeXLoop1_1:
+.edgeXLoop1_1R:
 		cpy	<edgeX1
-		beq	.edgeXLoop3
+		beq	.edgeXLoop3R
 
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop1_0
+		bcc	.edgeXLoop1_0R
 
 		sbc	<edgeSlopeX
 		inx
-		bra	.edgeXLoop0_0
-.edgeXLoop3:
+		bra	.edgeXLoop0_0R
+.edgeXLoop3R:
 		rts
 
 ;edgeSigneX minus
-.edgeJump10:
-		sax
-		sec
+.edgeJump10R:
 		lda	<edgeX0
-		sbc	<edgeX1
+		eor	<edgeX1
 		lsr	a
-		sax
+
+;edgeSlope initialize
+		lda	<edgeSlopeX
+		eor	#$FF
+		inc	a
 
 		ldy	<edgeX1
 		ldx	<edgeY1
 
-		bcc	.edgeXLoop4_1
+		bcc	.edgeXLoop4_1R
 
-.edgeXLoop4_0:
+.edgeXLoop4_0R:
 		say
 		sta	edgeRight, x
 		say
 
-.edgeXLoop5_0:
+.edgeXLoop5_0R:
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop5_1
+		bcc	.edgeXLoop5_1R
 
 		sbc	<edgeSlopeX
 		dex
 
-.edgeXLoop4_1:
+.edgeXLoop4_1R:
 		say
 		sta	edgeRight, x
 		say
 
-.edgeXLoop5_1:
+.edgeXLoop5_1R:
 		cpy	<edgeX0
-		beq	.edgeXLoop7
+		beq	.edgeXLoop7R
 
 		iny
 		adc	<edgeSlopeY
-		bcc	.edgeXLoop5_0
+		bcc	.edgeXLoop5_0R
 
 		sbc	<edgeSlopeX
 		dex
-		bra	.edgeXLoop4_0
-.edgeXLoop7:
+		bra	.edgeXLoop4_0R
+.edgeXLoop7R:
 		rts
 
-.edgeJump4:
+.edgeJump4R:
 ;edgeSlopeY >= edgeSlopeX
+		lda	<edgeY1
+		eor	<edgeY0
+		lsr	a
+
 ;edgeSlope initialize
 		lda	<edgeSlopeY
 		eor	#$FF
 		inc	a
 
-		sax
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-		lsr	a
-		sax
-
 		ldy	<edgeX0
 		ldx	<edgeY0
 
 ;check edgeSigneX
-		bbs7	<edgeSigneX, .edgeYLoop8
+		bbs7	<edgeSigneX, .edgeYLoop8R
 
 ;edgeSigneX plus
-		bcc	.edgeYLoop0_1
+		bcc	.edgeYLoop0_1R
 
-.edgeYLoop0_0:
+.edgeYLoop0_0R:
 		say
 		sta	edgeRight, x
 		say
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop0_1
+		bcc	.edgeYLoop0_1R
 
 		sbc	<edgeSlopeY
 		iny
 
-.edgeYLoop0_1:
+.edgeYLoop0_1R:
 		say
 		sta	edgeRight, x
 		say
 
 		cpx	<edgeY1
-		beq	.edgeYLoop3
+		beq	.edgeYLoop3R
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop0_0
+		bcc	.edgeYLoop0_0R
 
 		sbc	<edgeSlopeY
 		iny
-		bra	.edgeYLoop0_0
-.edgeYLoop3:
+		bra	.edgeYLoop0_0R
+.edgeYLoop3R:
 		rts
 
 ;edgeSigneX minus
-.edgeYLoop8:
-		bcc	.edgeYLoop4_1
+.edgeYLoop8R:
+		bcc	.edgeYLoop4_1R
 
-.edgeYLoop4_0:
+.edgeYLoop4_0R:
 		say
 		sta	edgeRight, x
 		say
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop4_1
+		bcc	.edgeYLoop4_1R
 
 		sbc	<edgeSlopeY
 		dey
 
-.edgeYLoop4_1:
+.edgeYLoop4_1R:
 		say
 		sta	edgeRight, x
 		say
 
 		cpx	<edgeY1
-		beq	.edgeYLoop7
+		beq	.edgeYLoop7R
 
 		inx
 		adc	<edgeSlopeX
-		bcc	.edgeYLoop4_0
+		bcc	.edgeYLoop4_0R
 
 		sbc	<edgeSlopeY
 		dey
-		bra	.edgeYLoop4_0
-.edgeYLoop7:
+		bra	.edgeYLoop4_0R
+.edgeYLoop7R:
 		rts
 
 
@@ -5822,7 +5888,7 @@ putPolyLine:
 		tay
 		jsr	putPolyLineProc
 
-		bbs6	<polyAttribute, .functionEnd
+		bbs6	<polyAttribute, .functionEnd	;skip line
 
 		mov	<polyLineColorDataWork0, polyLineColorWork_L_P0
 		mov	<polyLineColorDataWork1, polyLineColorWork_L_P1
