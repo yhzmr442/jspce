@@ -95,63 +95,6 @@ putPolyLineV2lm	.macro
 
 
 ;----------------------------
-setEdgeBufferm	.macro
-;set edge buffer
-		pha
-
-		lda	edgeCount, x
-
-		beq	.jpCount1_\@			;count 1
-		bpl	.jpCount2_\@			;count 2
-
-;count 0
-.jpCount0_\@:
-		tya
-		sta	edgeLeft, x
-		inc	edgeCount, x
-		bra	.jp5_\@
-
-;count 1
-.jpCount1_\@:
-		tya
-		cmp	edgeLeft, x
-		bcc	.jp4_\@			;a < edgeLeft,x
-
-		sta	edgeRight, x
-		inc	edgeCount, x
-		bra	.jp5_\@
-
-.jp4_\@:
-		lda	edgeLeft, x
-		sta	edgeRight, x
-		tya
-		sta	edgeLeft, x
-
-		inc	edgeCount, x
-		bra	.jp2_\@
-
-;count 2
-.jpCount2_\@:
-		tya
-		cmp	edgeLeft, x
-		bcs	.jp3_\@			;a >= edgeLeft,x
-		sta	edgeLeft, x
-		bra	.jp2_\@
-
-.jp3_\@:
-		cmp	edgeRight, x
-		bcc	.jp2_\@			;a < edgeRight,x
-		sta	edgeRight, x
-
-.jp5_\@:
-		clc
-
-.jp2_\@:
-		pla
-		.endm
-
-
-;----------------------------
 mov		.macro
 ;\1 = \2
 		lda	\2

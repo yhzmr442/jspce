@@ -109,7 +109,9 @@ work4c			.ds	4
 work4d			.ds	4
 work8b			equ	work4c		;8Byte
 backCheckFlag		.ds	1
-;			total 23 Byte
+yCheckWork		.ds	1
+yCheckFlag		.ds	1
+;			total 25 Byte
 
 ;---------------------
 			.org	shareAreaTop

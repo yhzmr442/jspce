@@ -110,11 +110,11 @@ setMatrixRotationZ:
 		jsr	setZeroMatrix
 
 		ldy	#(0*3+1)*2
-		lda	sinDataLow,x			;sin
+		lda	sinDataLow, x			;sin
 		sta	<vertexRotationSin
 		sta	[matrix0], y
 		iny
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationSin+1
 		sta	[matrix0], y
 
@@ -133,11 +133,11 @@ setMatrixRotationZ:
 		adc	#64
 		tax
 		ldy	#(0*3+0)*2
-		lda	sinDataLow,x			;cos
+		lda	sinDataLow, x			;cos
 		sta	<vertexRotationCos
 		sta	[matrix0], y
 		iny
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationCos+1
 		sta	[matrix0], y
 
@@ -169,11 +169,11 @@ setMatrixRotationY:
 		jsr	setZeroMatrix
 
 		ldy	#(0*3+2)*2
-		lda	sinDataLow,x			;sin
+		lda	sinDataLow, x			;sin
 		sta	<vertexRotationSin
 		sta	[matrix0], y
 		iny
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationSin+1
 		sta	[matrix0], y
 
@@ -192,11 +192,11 @@ setMatrixRotationY:
 		adc	#64
 		tax
 		ldy	#(0*3+0)*2
-		lda	sinDataLow,x			;cos
+		lda	sinDataLow, x			;cos
 		sta	<vertexRotationCos
 		sta	[matrix0], y
 		iny
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationCos+1
 		sta	[matrix0], y
 
@@ -228,11 +228,11 @@ setMatrixRotationX:
 		jsr	setZeroMatrix
 
 		ldy	#(2*3+1)*2
-		lda	sinDataLow,x			;sin
+		lda	sinDataLow, x			;sin
 		sta	<vertexRotationSin
 		sta	[matrix0], y
 		iny
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationSin+1
 		sta	[matrix0], y
 
@@ -251,11 +251,11 @@ setMatrixRotationX:
 		adc	#64
 		tax
 		ldy	#(1*3+1)*2
-		lda	sinDataLow,x			;cos
+		lda	sinDataLow, x			;cos
 		sta	<vertexRotationCos
 		sta	[matrix0], y
 		iny
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationCos+1
 		sta	[matrix0], y
 
@@ -1087,18 +1087,18 @@ vertexRotationZ:
 		lda	<vertexCount
 		jeq	.vertexRotationZEnd
 
-		lda	sinDataLow,x			;sin
+		lda	sinDataLow, x			;sin
 		sta	<vertexRotationSin
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationSin+1
 
 		txa
 		clc
 		adc	#64
 		tax
-		lda	sinDataLow,x			;cos
+		lda	sinDataLow, x			;cos
 		sta	<vertexRotationCos
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationCos+1
 
 		ldx	<vertexCount
@@ -1209,18 +1209,18 @@ vertexRotationY:
 		lda	<vertexCount
 		jeq	.vertexRotationYEnd
 
-		lda	sinDataLow,x			;sin
+		lda	sinDataLow, x			;sin
 		sta	<vertexRotationSin
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationSin+1
 
 		txa
 		clc
 		adc	#64
 		tax
-		lda	sinDataLow,x			;cos
+		lda	sinDataLow, x			;cos
 		sta	<vertexRotationCos
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationCos+1
 
 		ldx	<vertexCount
@@ -1331,18 +1331,18 @@ vertexRotationX:
 		lda	<vertexCount
 		jeq	.vertexRotationXEnd
 
-		lda	sinDataLow,x			;sin
+		lda	sinDataLow, x			;sin
 		sta	<vertexRotationSin
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationSin+1
 
 		txa
 		clc
 		adc	#64
 		tax
-		lda	sinDataLow,x			;cos
+		lda	sinDataLow, x			;cos
 		sta	<vertexRotationCos
-		lda	sinDataHigh,x
+		lda	sinDataHigh, x
 		sta	<vertexRotationCos+1
 
 		ldx	<vertexCount
@@ -1784,21 +1784,21 @@ moveToTransform2DWork0:
 		lda	[vertex0Addr], y
 		sta	transform2DWork0, y
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	transform2DWork0, y
 		iny
 
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	transform2DWork0, y
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	transform2DWork0, y
 		iny
 
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	transform2DWork0, y
 		iny
-		lda	[vertex0Addr],y
+		lda	[vertex0Addr], y
 		sta	transform2DWork0, y
 		iny
 
@@ -1908,34 +1908,43 @@ putPolygonBuffer:
 		and	#$0F
 		sta	<clip2D0Count
 		pha
+
+;check Y coordinate
+		stz	<yCheckFlag
+		ldy	#7
+		lda	[polyBufferAddr], y
+		sta	<yCheckWork
+
 		clx
-		ldy	#6
+		dey
 
 .putPolyBufferLoop1:
 		lda	[polyBufferAddr], y
-		sta	clip2D0,x
+		sta	clip2D0, x
 		inx
 		inx
 		iny
 
 		lda	[polyBufferAddr], y
-		sta	clip2D0,x
+		sta	clip2D0, x
 		inx
 		inx
 		iny
+
+		cmp	<yCheckWork
+		beq	.jp01
+		smb7	<yCheckFlag
+.jp01:
 
 		dec	<clip2D0Count
 		bne	.putPolyBufferLoop1
 
 		pla
+
+		bbr7	<yCheckFlag, .nextData
+
 		sta	<clip2D0Count
-
-		bbr5	<polyAttribute, .jp0
 		jsr	calcEdge_putPoly
-		bra	.nextData
-
-.jp0:
-		jsr	calcEdge_putPolyEX
 
 .nextData:
 		cly
@@ -4686,10 +4695,6 @@ calcEdge_putPoly:
 		mov	<minEdgeY, #$FF
 		stz	<maxEdgeY
 
-		lda	#$FF
-		sta	edgeCount
-		tii	edgeCount, edgeCount+1, 193
-
 		sxy
 
 .calcEdge_putPolyLoop0:
@@ -4715,85 +4720,6 @@ calcEdge_putPoly:
 
 		phx
 		jsr	calcEdge
-		plx
-
-		inx
-		inx
-		inx
-		inx
-
-		dec	<clip2D0Count
-		beq	.loopEnd
-
-		cpx	<calcEdgeLastAddr
-		bne	.calcEdge_putPolyLoop0
-		clx
-		bra	.calcEdge_putPolyLoop0
-.loopEnd:
-
-		jsr	putPolyLine
-
-		rts
-
-
-;----------------------------
-calcEdge_putPolyEX:
-;
-		lda	<clip2D0Count
-		asl	a
-		asl	a
-		sta	<calcEdgeLastAddr
-		tax
-		lda	clip2D0
-		sta	clip2D0, x
-		lda	clip2D0+2
-		sta	clip2D0+2, x
-
-		cly
-		ldx	#$04
-.minLoop:
-		lda	clip2D0+2, y
-		cmp	clip2D0+2, x
-		bcc	.minJp
-
-		txa
-		tay
-.minJp:
-		inx
-		inx
-		inx
-		inx
-		cpx	<calcEdgeLastAddr
-		bne	.minLoop
-
-		mov	<minEdgeY, #$FF
-		stz	<maxEdgeY
-
-		sxy
-
-.calcEdge_putPolyLoop0:
-		lda	clip2D0, x
-		sta	<edgeX0
-		lda	clip2D0+2, x
-		sta	<edgeY0
-
-		cmp	<minEdgeY
-		jcs	.calcEdge_putPolyJump2
-		sta	<minEdgeY
-
-.calcEdge_putPolyJump2:
-		cmp	<maxEdgeY
-		jcc	.calcEdge_putPolyJump6
-		sta	<maxEdgeY
-
-.calcEdge_putPolyJump6:
-		lda	clip2D0+4, x
-		sta	<edgeX1
-		lda	clip2D0+6, x
-		sta	<edgeY1
-
-		phx
-		jsr	calcEdgeEX
 		plx
 
 		inx
@@ -5061,283 +4987,6 @@ setCircleEdge1:
 
 ;----------------------------
 calcEdge:
-;calculation edge Y
-		sec
-		lda	<edgeY1
-		sbc	<edgeY0
-		beq	.edgeJump6
-
-		sta	<edgeSlopeY
-		jcs	.edgeJump7
-
-		eor	#$FF
-		inc	a
-		sta	<edgeSlopeY
-
-;edgeY0 > edgeY1 exchange X0<->X1 Y0<->Y1
-		lda	<edgeX0
-		ldx	<edgeX1
-		sta	<edgeX1
-		stx	<edgeX0
-
-		lda	<edgeY0
-		ldx	<edgeY1
-		sta	<edgeY1
-		stx	<edgeY0
-
-		jmp	.edgeJump7
-
-.edgeJump6:
-;edgeY0 = edgeY1
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		setEdgeBufferm
-		ldy	<edgeX1
-		setEdgeBufferm
-		rts
-
-.edgeJump7:
-;calculation edge X
-		sec
-		lda	<edgeX1
-		sbc	<edgeX0
-		beq	.edgeJump1
-
-		sta	<edgeSlopeX
-		stz	<edgeSigneX
-		jcs	.edgeJump3
-
-		eor	#$FF
-		inc	a
-		sta	<edgeSlopeX
-
-		mov	<edgeSigneX, #$FF
-
-		jmp	.edgeJump3
-
-.edgeJump1:
-;edgeX0 = edgeX1
-		lda	<edgeY1
-		eor	<edgeY0
-		lsr	a
-
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		bcc	.edgeLoop0_1
-
-.edgeLoop0_0:
-		setEdgeBufferm
-
-		inx
-
-.edgeLoop0_1:
-		setEdgeBufferm
-
-		cpx	<edgeY1
-		beq	.edgeJump9
-		inx
-		jmp	.edgeLoop0_0
-
-.edgeJump9:
-		rts
-
-.edgeJump3:
-;edgeSlope compare
-		lda	<edgeSlopeY
-		cmp	<edgeSlopeX
-		jcs	.edgeJump4
-
-;edgeSlopeX > edgeSlopeY
-;check edgeSigneX
-		bbr7	<edgeSigneX, .edgeJump11
-		jmp	.edgeJump10
-.edgeJump11:
-;edgeSigneX plus
-		lda	<edgeX1
-		eor	<edgeX0
-		lsr	a
-
-;edgeSlope initialize
-		lda	<edgeSlopeX
-		eor	#$FF
-		inc	a
-
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-		bcc	.edgeXLoop0_1
-
-.edgeXLoop0_0:
-		pha
-		setEdgeBufferm
-		pla
-
-.edgeXLoop1_0:
-		iny
-		adc	<edgeSlopeY
-		bcc	.edgeXLoop1_1
-
-		sbc	<edgeSlopeX
-		inx
-
-.edgeXLoop0_1:
-		pha
-		setEdgeBufferm
-		pla
-
-.edgeXLoop1_1:
-		cpy	<edgeX1
-		beq	.edgeXLoop3
-
-		iny
-		adc	<edgeSlopeY
-		bcc	.edgeXLoop1_0
-
-		sbc	<edgeSlopeX
-		inx
-		jmp	.edgeXLoop0_0
-.edgeXLoop3:
-		rts
-
-;edgeSigneX minus
-.edgeJump10:
-		lda	<edgeX0
-		eor	<edgeX1
-		lsr	a
-
-;edgeSlope initialize
-		lda	<edgeSlopeX
-		eor	#$FF
-		inc	a
-
-		ldy	<edgeX1
-		ldx	<edgeY1
-
-		bcc	.edgeXLoop4_1
-
-.edgeXLoop4_0:
-		pha
-		setEdgeBufferm
-		pla
-
-.edgeXLoop5_0:
-		iny
-		adc	<edgeSlopeY
-		bcc	.edgeXLoop5_1
-
-		sbc	<edgeSlopeX
-		dex
-
-.edgeXLoop4_1:
-		pha
-		setEdgeBufferm
-		pla
-
-.edgeXLoop5_1:
-		cpy	<edgeX0
-		beq	.edgeXLoop7
-
-		iny
-		adc	<edgeSlopeY
-		bcc	.edgeXLoop5_0
-
-		sbc	<edgeSlopeX
-		dex
-		jmp	.edgeXLoop4_0
-.edgeXLoop7:
-		rts
-
-.edgeJump4:
-;edgeSlopeY >= edgeSlopeX
-		lda	<edgeY1
-		eor	<edgeY0
-		lsr	a
-
-;edgeSlope initialize
-		lda	<edgeSlopeY
-		eor	#$FF
-		inc	a
-
-		ldy	<edgeX0
-		ldx	<edgeY0
-
-;check edgeSigneX
-		bbr7	<edgeSigneX, .edgeJump12
-		jmp	.edgeYLoop8
-
-;edgeSigneX plus
-.edgeJump12:
-		bcc	.edgeYLoop0_1
-
-.edgeYLoop0_0:
-		pha
-		setEdgeBufferm
-		pla
-
-		inx
-		adc	<edgeSlopeX
-		bcc	.edgeYLoop0_1
-
-		sbc	<edgeSlopeY
-		iny
-
-.edgeYLoop0_1:
-		pha
-		setEdgeBufferm
-		pla
-
-		cpx	<edgeY1
-		beq	.edgeYLoop3
-
-		inx
-		adc	<edgeSlopeX
-		jcc	.edgeYLoop0_0
-
-		sbc	<edgeSlopeY
-		iny
-		jmp	.edgeYLoop0_0
-.edgeYLoop3:
-		rts
-
-;edgeSigneX minus
-.edgeYLoop8:
-		bcc	.edgeYLoop4_1
-
-.edgeYLoop4_0:
-		pha
-		setEdgeBufferm
-		pla
-
-		inx
-		adc	<edgeSlopeX
-		bcc	.edgeYLoop4_1
-
-		sbc	<edgeSlopeY
-		dey
-
-.edgeYLoop4_1:
-		pha
-		setEdgeBufferm
-		pla
-
-		cpx	<edgeY1
-		beq	.edgeYLoop7
-
-		inx
-		adc	<edgeSlopeX
-		jcc	.edgeYLoop4_0
-
-		sbc	<edgeSlopeY
-		dey
-		jmp	.edgeYLoop4_0
-.edgeYLoop7:
-		rts
-
-
-;----------------------------
-calcEdgeEX:
 ;
 		lda	<edgeY1
 		cmp	<edgeY0
@@ -5920,7 +5569,20 @@ putPolyLineProc:
 		rts
 
 .putPolyProc:
-;set poly color
+		bbr5	<polyAttribute, .jp0
+
+		lda	edgeLeft, y
+		cmp	edgeRight, y
+
+		bcc	.jp0
+
+		tax
+		lda	edgeRight, y
+		sta	edgeLeft, y
+		tax
+		sta	edgeRight, y
+
+.jp0:
 ;calation vram address
 ;left
 ;calation counts

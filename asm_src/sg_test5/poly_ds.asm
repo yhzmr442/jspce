@@ -51,7 +51,6 @@ polygonColorP3		.ds	64
 ;---------------------
 edgeLeft		.ds	192
 edgeRight		.ds	192
-edgeCount		.ds	192
 			.ds	2
 
 ;---------------------
