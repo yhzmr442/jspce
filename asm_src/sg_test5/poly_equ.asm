@@ -77,7 +77,6 @@ ATTR_NONE		.equ	%00000000
 ;----------------------------
 ATTR_2D_CIRCLE		.equ	%10000000
 ATTR_2D_LINESKIP	.equ	%01000000
-ATTR_2D_BADDATALIST	.equ	%00100000
 
 ;----------------------------
 ROT_X			.equ	0

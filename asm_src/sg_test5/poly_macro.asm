@@ -697,7 +697,17 @@ st012		.macro
 
 
 ;----------------------------
-__polygonData	.macro
+MODEL_DATA	.macro
+;
+				.dw	\1
+				.db	\2
+				.dw	\3
+				.db	\4
+		.endm
+
+
+;----------------------------
+POLYGON_DATA	.macro
 ;attribute: circle($80 = circlre) + even line skip($40 = skip) + front clip($04 = cancel) + back check($02 = cancel) + back draw($01 = not draw : front side = counterclockwise) 
 ;front color(0-63)
 ;back color(0-63) or circle radius(1-8192) low byte
@@ -715,4 +725,11 @@ __polygonData	.macro
 				.db	\1, \2, \3, 4, \4*6, \5*6, \6*6, \7*6
 			.endif
 		.endif
+		.endm
+
+
+;----------------------------
+VERTEX_DATA	.macro
+;
+				.dw	\1, \2, \3
 		.endm

@@ -842,7 +842,6 @@ umul16:
 		lda	<mul16b
 		and	#$0F
 		asl	a
-		clc
 		adc	#$40
 		stz	<mulAddr
 		sta	<mulAddr+1
@@ -857,7 +856,6 @@ umul16:
 
 		inc	<mulAddr+1
 
-		clc
 		ldy	<mul16a
 		lda	[mulAddr], y
 		adc	<mul16c+1
@@ -880,7 +878,6 @@ umul16:
 		lda	<mul16b+1
 		and	#$0F
 		asl	a
-		clc
 		adc	#$40
 		sta	<mulAddr+1
 
@@ -2158,8 +2155,6 @@ setModel:
 
 		stz	<frontClipCount
 
-		stz	<polyAttribute
-
 		stz	<polyBufferZ0Work0
 		stz	<polyBufferZ0Work0+1
 
@@ -2312,7 +2307,6 @@ setModel:
 
 		lda	<setModelAttr
 		and	#%11000000
-		ora	<polyAttribute
 		ora	<clip2D0Count
 		ldy	#5
 		sta	[polyBufferAddr], y	;COUNT
@@ -2460,8 +2454,6 @@ clipFront:
 		jeq	.clipFrontJump9
 
 ;clip front
-		smb5	<polyAttribute
-
 ;(128-Z0) to mul16a
 		sec
 		lda	#SCREEN_Z
@@ -2759,8 +2751,6 @@ clip2DX255:
 		cmp	#$03
 		jeq	.clip2DX255Jump03
 
-		smb5	<polyAttribute
-
 ;(255-X0) to mul16a
 		sec
 		lda	#255
@@ -2922,8 +2912,6 @@ clip2DX0:
 
 		cmp	#$03
 		jeq	.clip2DX0Jump03
-
-		smb5	<polyAttribute
 
 ;(0-X0) to mul16a
 		sec
@@ -3093,8 +3081,6 @@ clip2DY255:
 		cmp	#$03
 		jeq	.clip2DY255Jump03
 
-		smb5	<polyAttribute
-
 ;(191-Y0) to mul16a
 		sec
 		lda	#191
@@ -3256,8 +3242,6 @@ clip2DY0:
 
 		cmp	#$03
 		jeq	.clip2DY0Jump03
-
-		smb5	<polyAttribute
 
 ;(0-Y0) to mul16a
 		sec
@@ -5569,11 +5553,8 @@ putPolyLineProc:
 		rts
 
 .putPolyProc:
-		bbr5	<polyAttribute, .jp0
-
 		lda	edgeLeft, y
 		cmp	edgeRight, y
-
 		bcc	.jp0
 
 		tax
@@ -5582,11 +5563,11 @@ putPolyLineProc:
 		tax
 		sta	edgeRight, y
 
-.jp0:
 ;calation vram address
 ;left
 ;calation counts
 		lda	edgeLeft, y
+.jp0:
 		lsr	a
 		lsr	a
 		lsr	a

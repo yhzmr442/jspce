@@ -1588,216 +1588,186 @@ _nmi:
 ;----------------------------
 ;Wall Delta
 modelData009
-		.dw	modelData009Polygon
-		.db	1
-		.dw	modelData009Vertex
-		.db	3
+		MODEL_DATA	modelData009Polygon, 1, modelData009Vertex, 3
 
 modelData009Polygon
-		__polygonData	ATTR_NONE, $01, $01, 0, 1, 2
+		POLYGON_DATA	ATTR_NONE, $01, $01, 0, 1, 2
 
 modelData009Vertex
-		.dw	    0,    0, -256
-		.dw	  256,    0,  256
-		.dw	 -256,    0,  256
+		VERTEX_DATA	    0,    0, -256
+		VERTEX_DATA	  256,    0,  256
+		VERTEX_DATA	 -256,    0,  256
 
 
 ;----------------------------
 ;Wall Enemy
 modelData008
-		.dw	modelData008Polygon
-		.db	5
-		.dw	modelData008Vertex
-		.db	8
+		MODEL_DATA	modelData008Polygon, 5, modelData008Vertex, 8
 
 modelData008Polygon
-		__polygonData	ATTR_BACKDRAW_CXL, $19, $00, 0, 1, 2, 3
-		__polygonData	ATTR_BACKDRAW_CXL, $1A, $00, 4, 5, 1, 0
-		__polygonData	ATTR_BACKDRAW_CXL, $1B, $00, 3, 2, 6, 7
-		__polygonData	ATTR_BACKDRAW_CXL, $1C, $00, 4, 0, 3, 7
-		__polygonData	ATTR_BACKDRAW_CXL, $1D, $00, 1, 5, 6, 2
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $19, $00, 0, 1, 2, 3
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1A, $00, 4, 5, 1, 0
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1B, $00, 3, 2, 6, 7
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1C, $00, 4, 0, 3, 7
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1D, $00, 1, 5, 6, 2
 
 modelData008Vertex
-		.dw	 -128,  128, -128
-		.dw	 -128, -128, -128
-		.dw	  128, -128, -128
-		.dw	  128,  128, -128
+		VERTEX_DATA	 -128,  128, -128
+		VERTEX_DATA	 -128, -128, -128
+		VERTEX_DATA	  128, -128, -128
+		VERTEX_DATA	  128,  128, -128
 
-		.dw	 -128,  128,  128
-		.dw	 -128, -128,  128
-		.dw	  128, -128,  128
-		.dw	  128,  128,  128
+		VERTEX_DATA	 -128,  128,  128
+		VERTEX_DATA	 -128, -128,  128
+		VERTEX_DATA	  128, -128,  128
+		VERTEX_DATA	  128,  128,  128
 
 
 ;----------------------------
 ;Outer Wall
 modelData007
-		.dw	modelData007Polygon
-		.db	4	;polygon count
-		.dw	modelData007Vertex
-		.db	16	;vertex count
+		MODEL_DATA	modelData007Polygon, 4, modelData007Vertex, 16
 
 modelData007Polygon
-		__polygonData	ATTR_NONE, $07, $07,  0,  1,  2,  3
-		__polygonData	ATTR_NONE, $07, $07,  7,  6,  5,  4
-		__polygonData	ATTR_NONE, $07, $07,  8,  9, 10, 11
-		__polygonData	ATTR_NONE, $07, $07, 15, 14, 13, 12
+		POLYGON_DATA	ATTR_NONE, $07, $07,  0,  1,  2,  3
+		POLYGON_DATA	ATTR_NONE, $07, $07,  7,  6,  5,  4
+		POLYGON_DATA	ATTR_NONE, $07, $07,  8,  9, 10, 11
+		POLYGON_DATA	ATTR_NONE, $07, $07, 15, 14, 13, 12
 
 modelData007Vertex
-		.dw	 -1020,  1024,   128
-		.dw	 -1024,  1020,   128
-		.dw	 -1024,  1020,  8192
-		.dw	 -1020,  1024,  8192
+		VERTEX_DATA	 -1020,  1024,   128
+		VERTEX_DATA	 -1024,  1020,   128
+		VERTEX_DATA	 -1024,  1020,  8192
+		VERTEX_DATA	 -1020,  1024,  8192
 
-		.dw	  1020,  1024,   128
-		.dw	  1024,  1020,   128
-		.dw	  1024,  1020,  8192
-		.dw	  1020,  1024,  8192
+		VERTEX_DATA	  1020,  1024,   128
+		VERTEX_DATA	  1024,  1020,   128
+		VERTEX_DATA	  1024,  1020,  8192
+		VERTEX_DATA	  1020,  1024,  8192
 
-		.dw	 -1024, -1020,   128
-		.dw	 -1020, -1024,   128
-		.dw	 -1020, -1024,  8192
-		.dw	 -1024, -1020,  8192
+		VERTEX_DATA	 -1024, -1020,   128
+		VERTEX_DATA	 -1020, -1024,   128
+		VERTEX_DATA	 -1020, -1024,  8192
+		VERTEX_DATA	 -1024, -1020,  8192
 
-		.dw	  1024, -1020,   128
-		.dw	  1020, -1024,   128
-		.dw	  1020, -1024,  8192
-		.dw	  1024, -1020,  8192
+		VERTEX_DATA	  1024, -1020,   128
+		VERTEX_DATA	  1020, -1024,   128
+		VERTEX_DATA	  1020, -1024,  8192
+		VERTEX_DATA	  1024, -1020,  8192
 
 
 ;----------------------------
 ;Circle Enemy Shot
 modelData003
-		.dw	modelData003Polygon
-		.db	1	;polygon count
-		.dw	modelData003Vertex
-		.db	1	;vertex count
+		MODEL_DATA	modelData003Polygon, 1, modelData003Vertex, 1
 
 modelData003Polygon
-		__polygonData	ATTR_CIRCLE, $03, $0080
+		POLYGON_DATA	ATTR_CIRCLE, $03, $0080
 
 modelData003Vertex
-		.dw	   0,   0,   0
+		VERTEX_DATA	   0,   0,   0
 
 
 ;----------------------------
 ;Circle blast
 modelData004
-		.dw	modelData004Polygon
-		.db	1
-		.dw	modelData004Vertex
-		.db	1
+		MODEL_DATA	modelData004Polygon, 1, modelData004Vertex, 1
 
 modelData004Polygon
-		__polygonData	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0100
+		POLYGON_DATA	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0100
 
 modelData004Vertex
-		.dw	   0,   0,   0
+		VERTEX_DATA	   0,   0,   0
 
 
 ;----------------------------
 ;Circle blast
 modelData005
-		.dw	modelData005Polygon
-		.db	1
-		.dw	modelData005Vertex
-		.db	1
+		MODEL_DATA	modelData005Polygon, 1, modelData005Vertex, 1
 
 modelData005Polygon
-		__polygonData	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0080
+		POLYGON_DATA	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0080
 
 modelData005Vertex
-		.dw	   0,   0,   0
+		VERTEX_DATA	   0,   0,   0
 
 
 ;----------------------------
 ;Circle blast
 modelData006
-		.dw	modelData006Polygon
-		.db	1
-		.dw	modelData006Vertex
-		.db	1
+		MODEL_DATA	modelData006Polygon, 1, modelData006Vertex, 1
 
 modelData006Polygon
-		__polygonData	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0040
+		POLYGON_DATA	ATTR_CIRCLE+ATTR_LINESKIP, $11, $0040
 
 modelData006Vertex
-		.dw	   0,    0,   0
+		VERTEX_DATA	   0,    0,   0
 
 
 ;----------------------------
 ;Shot
 modelData000
-		.dw	modelData000Polygon
-		.db	2
-		.dw	modelData000Vertex
-		.db	6
+		MODEL_DATA	modelData000Polygon, 2, modelData000Vertex, 6
 
 modelData000Polygon
-		__polygonData	ATTR_NONE, $0C, $0C, 0, 2, 1
-		__polygonData	ATTR_NONE, $0C, $0C, 3, 5, 4
+		POLYGON_DATA	ATTR_NONE, $0C, $0C, 0, 2, 1
+		POLYGON_DATA	ATTR_NONE, $0C, $0C, 3, 5, 4
 
 modelData000Vertex
-		.dw	 -128,  -32,    0
-		.dw	 -128,    0,  256
-		.dw	 -128,   32,    0
-		.dw	  128,  -32,    0
-		.dw	  128,    0,  256
-		.dw	  128,   32,    0
+		VERTEX_DATA	 -128,  -32,    0
+		VERTEX_DATA	 -128,    0,  256
+		VERTEX_DATA	 -128,   32,    0
+		VERTEX_DATA	  128,  -32,    0
+		VERTEX_DATA	  128,    0,  256
+		VERTEX_DATA	  128,   32,    0
 
 
 ;----------------------------
 ;Enemy
 modelData001
-		.dw	modelData001Polygon
-		.db	6
-		.dw	modelData001Vertex
-		.db	10
+		MODEL_DATA	modelData001Polygon, 6, modelData001Vertex, 10
 
 modelData001Polygon
-		__polygonData	ATTR_BACKDRAW_CXL, $19, $00, 0, 2, 1
-		__polygonData	ATTR_BACKDRAW_CXL, $1A, $00, 0, 1, 3
-		__polygonData	ATTR_BACKDRAW_CXL, $1B, $00, 0, 3, 2
-		__polygonData	ATTR_BACKDRAW_CXL, $1C, $00, 3, 1, 2
-		__polygonData	ATTR_NONE, $02, $02, 4, 6, 5
-		__polygonData	ATTR_NONE, $02, $02, 7, 9, 8
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $19, $00, 0, 2, 1
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1A, $00, 0, 1, 3
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1B, $00, 0, 3, 2
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1C, $00, 3, 1, 2
+		POLYGON_DATA	ATTR_NONE, $02, $02, 4, 6, 5
+		POLYGON_DATA	ATTR_NONE, $02, $02, 7, 9, 8
 
 modelData001Vertex
-		.dw	    0,    0,  128
-		.dw	 -128,    0,    0
-		.dw	  128,    0,    0
-		.dw	    0,  128,    0
+		VERTEX_DATA	    0,    0,  128
+		VERTEX_DATA	 -128,    0,    0
+		VERTEX_DATA	  128,    0,    0
+		VERTEX_DATA	    0,  128,    0
 
-		.dw	 -128,    0,  256
-		.dw	 -128,  128, -256
-		.dw	 -128, -128, -256
+		VERTEX_DATA	 -128,    0,  256
+		VERTEX_DATA	 -128,  128, -256
+		VERTEX_DATA	 -128, -128, -256
 
-		.dw	  128,    0,  256
-		.dw	  128, -128, -256
-		.dw	  128,  128, -256
+		VERTEX_DATA	  128,    0,  256
+		VERTEX_DATA	  128, -128, -256
+		VERTEX_DATA	  128,  128, -256
 
 
 ;----------------------------
 ;Rock
 modelData002
-		.dw	modelData002Polygon
-		.db	4
-		.dw	modelData002Vertex
-		.db	5
+		MODEL_DATA	modelData002Polygon, 4, modelData002Vertex, 5
 
 modelData002Polygon
-		__polygonData	ATTR_BACKDRAW_CXL, $1A, $00, 0, 4, 1
-		__polygonData	ATTR_BACKDRAW_CXL, $19, $00, 1, 4, 2
-		__polygonData	ATTR_BACKDRAW_CXL, $1B, $00, 2, 4, 3
-		__polygonData	ATTR_BACKDRAW_CXL, $1C, $00, 3, 4, 0
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1A, $00, 0, 4, 1
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $19, $00, 1, 4, 2
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1B, $00, 2, 4, 3
+		POLYGON_DATA	ATTR_BACKDRAW_CXL, $1C, $00, 3, 4, 0
 
 modelData002Vertex
-		.dw	  -96,  192,    0
-		.dw	  212,  144,    0
-		.dw	    0, -240,    0
-		.dw	 -384,  -96,    0
+		VERTEX_DATA	  -96,  192,    0
+		VERTEX_DATA	  212,  144,    0
+		VERTEX_DATA	    0, -240,    0
+		VERTEX_DATA	 -384,  -96,    0
 
-		.dw	   48,  -48, -192
+		VERTEX_DATA	   48,  -48, -192
 
 
 ;----------------------------
